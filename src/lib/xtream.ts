@@ -31,10 +31,13 @@ export class XtreamProvider implements ContentProvider {
 
   constructor(playlist: Playlist) {
     this.base = normalizeServer(playlist.server ?? '');
-    this.user = playlist.username ?? '';
-    this.pass = playlist.password ?? '';
+    this.user = (playlist.username ?? '').trim();
+    this.pass = (playlist.password ?? '').trim();
     this.liveExt = playlist.liveFormat ?? 'm3u8';
-    if (playlist.userAgent) this.headers = { 'User-Agent': playlist.userAgent };
+    this.headers = {
+      'User-Agent': playlist.userAgent?.trim() || 'IPTVSmartersPlayer',
+      Accept: '*/*',
+    };
   }
 
   private async api(action?: string, extra: Record<string, string> = {}): Promise<any> {
@@ -44,13 +47,19 @@ export class XtreamProvider implements ContentProvider {
       action,
       ...extra,
     })}`;
-    const res = await fetch(url, { headers: this.headers });
+    let res: Response;
+    try {
+      res = await fetch(url, { headers: this.headers });
+    } catch {
+      // Retry without custom headers if CORS/network rejects custom headers
+      res = await fetch(url);
+    }
     if (!res.ok) throw new Error(`Erro do servidor (HTTP ${res.status})`);
     const text = await res.text();
     try {
       return JSON.parse(text);
     } catch {
-      throw new Error('Resposta inválida do servidor');
+      throw new Error('Resposta inválida do servidor Xtream. Verifique o URL do servidor.');
     }
   }
 

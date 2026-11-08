@@ -34,8 +34,12 @@ export function decodeBase64(input?: string | null): string {
 }
 
 export function normalizeServer(server: string): string {
-  let s = server.trim().replace(/\/+$/, '');
+  let s = server.trim().replace(/\s+/g, '');
+  if (!s) return '';
   if (!/^https?:\/\//i.test(s)) s = `http://${s}`;
+  // Strip common portal suffixes if the user pasted a full portal/API path
+  s = s.replace(/\/(c|player_api\.php|panel_api\.php|get\.php|xmltv\.php)(\?.*)?$/i, '');
+  s = s.replace(/\/+$/, '');
   return s;
 }
 
@@ -60,16 +64,24 @@ export function formatDate(ts: number): string {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 }
 
-/** Detects an Xtream Codes M3U link (get.php?username=..&password=..) */
+/** Detects an Xtream Codes M3U link (get.php?username=..&password=..), even if http:// was omitted */
 export function parseXtreamM3uUrl(url: string): { server: string; username: string; password: string } | null {
-  const m = url.trim().match(/^(https?:\/\/[^/]+)\/get\.php\?(.*)$/i);
+  let u = url.trim();
+  if (!u) return null;
+  if (!/^https?:\/\//i.test(u) && /\/get\.php\?/i.test(u)) {
+    u = `http://${u}`;
+  }
+  const m = u.match(/^(https?:\/\/[^/\s]+)\/get\.php\?(.*)$/i);
   if (!m) return null;
   const params: Record<string, string> = {};
   for (const part of m[2].split('&')) {
     const [k, v = ''] = part.split('=');
-    params[decodeURIComponent(k)] = decodeURIComponent(v);
+    if (k) params[decodeURIComponent(k)] = decodeURIComponent(v);
   }
   if (!params.username || !params.password) return null;
-  return { server: m[1], username: params.username, password: params.password };
+  return {
+    server: m[1].trim(),
+    username: params.username.trim(),
+    password: params.password.trim(),
+  };
 }
-

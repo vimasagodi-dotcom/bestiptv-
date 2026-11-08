@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,6 +26,7 @@ export default function Home() {
   const { ready, active, playlists, selectPlaylist, removePlaylist, provider, reload } = useApp();
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<TabKey>('live');
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -38,41 +40,49 @@ export default function Home() {
   if (!active) return <Redirect href="/playlists" />;
 
   const exp = account.data?.expDate;
+  const hideBars = isFullscreen && tab === 'live';
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      {/* MYTVOnline+ Top Header */}
-      <View style={styles.topBar}>
-        <View style={styles.brandRow}>
-          <View style={styles.logoBadge}>
-            <Ionicons name="play" size={16} color="#fff" />
-          </View>
-          <View>
-            <Text style={styles.brandTitle}>
-              Kiko<Text style={{ color: colors.primary }}>IPTV</Text>
-            </Text>
-            <Text style={styles.portalSub} numberOfLines={1}>
-              <Text style={{ color: colors.success }}>● </Text>
-              {active.name}
-            </Text>
-          </View>
-        </View>
+    <View style={[styles.root, !hideBars && { paddingTop: insets.top }]}>
+      <StatusBar hidden={hideBars} style="light" />
 
-        <View style={styles.topActions}>
-          <Text style={styles.clockText}>{formatTime(now)}</Text>
-          <Pressable onPress={reload} hitSlop={8} style={styles.headerBtn}>
-            <Ionicons name="refresh" size={18} color={colors.text} />
-          </Pressable>
-          <Pressable onPress={() => setTab('portals')} hitSlop={8} style={styles.headerBtn}>
-            <Ionicons name="swap-horizontal" size={18} color={colors.text} />
-          </Pressable>
+      {/* MYTVOnline+ Top Header (hidden in fullscreen video mode) */}
+      {!hideBars && (
+        <View style={styles.topBar}>
+          <View style={styles.brandRow}>
+            <View style={styles.logoBadge}>
+              <Ionicons name="play" size={16} color="#fff" />
+            </View>
+            <View>
+              <Text style={styles.brandTitle}>
+                Kiko<Text style={{ color: colors.primary }}>IPTV</Text>
+              </Text>
+              <Text style={styles.portalSub} numberOfLines={1}>
+                <Text style={{ color: colors.success }}>● </Text>
+                {active.name}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.topActions}>
+            <Text style={styles.clockText}>{formatTime(now)}</Text>
+            <Pressable onPress={reload} hitSlop={8} style={styles.headerBtn}>
+              <Ionicons name="refresh" size={18} color={colors.text} />
+            </Pressable>
+            <Pressable onPress={() => router.push('/admin-panel')} hitSlop={8} style={styles.headerBtn}>
+              <Ionicons name="settings-outline" size={18} color={colors.text} />
+            </Pressable>
+            <Pressable onPress={() => setTab('portals')} hitSlop={8} style={styles.headerBtn}>
+              <Ionicons name="swap-horizontal" size={18} color={colors.text} />
+            </Pressable>
+          </View>
         </View>
-      </View>
+      )}
 
       {/* Main Content Area */}
       <View style={{ flex: 1 }}>
         <View style={{ flex: 1, display: tab === 'live' ? 'flex' : 'none' }}>
-          <LiveTvView activeTab={tab === 'live'} />
+          <LiveTvView activeTab={tab === 'live'} onFullscreenChange={setIsFullscreen} />
         </View>
 
         {tab === 'vod' && (
@@ -111,6 +121,23 @@ export default function Home() {
 
         {tab === 'portals' && (
           <ScrollView contentContainerStyle={styles.portalsContainer}>
+            {/* Control Panel Banner */}
+            <Pressable
+              onPress={() => router.push('/admin-panel')}
+              style={styles.controlPanelBanner}
+            >
+              <View style={styles.cpIconBox}>
+                <Ionicons name="settings" size={22} color="#fff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cpTitle}>Painel de Controlo KikoIPTV</Text>
+                <Text style={styles.cpSub}>
+                  Inserir listas IPTV e definir Utilizador e Password para login
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={22} color="#fff" />
+            </Pressable>
+
             {/* Active Portal Status Card */}
             <View style={styles.portalActiveCard}>
               <View style={styles.portalCardHeader}>
@@ -145,13 +172,13 @@ export default function Home() {
             </View>
 
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Os Meus Portais / Listas</Text>
+              <Text style={styles.sectionTitle}>Os Meus Portais / Contas</Text>
               <Pressable
                 onPress={() => router.push('/playlist-form')}
                 style={styles.addPortalBtn}
               >
                 <Ionicons name="add" size={18} color="#fff" />
-                <Text style={styles.addPortalText}>Adicionar Portal</Text>
+                <Text style={styles.addPortalText}>Novo Login / Portal</Text>
               </Pressable>
             </View>
 
@@ -201,29 +228,31 @@ export default function Home() {
         )}
       </View>
 
-      {/* MYTVOnline+ Bottom Tab Bar */}
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-        {TABS.map((t) => {
-          const isSelected = tab === t.key;
-          return (
-            <Pressable
-              key={t.key}
-              onPress={() => setTab(t.key)}
-              style={styles.tabItem}
-            >
-              {isSelected && <View style={styles.tabIndicator} />}
-              <Ionicons
-                name={isSelected ? t.iconActive : t.icon}
-                size={21}
-                color={isSelected ? colors.primary : colors.textMuted}
-              />
-              <Text style={[styles.tabLabel, isSelected && styles.tabLabelActive]}>
-                {t.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {/* MYTVOnline+ Bottom Tab Bar (hidden in fullscreen video mode) */}
+      {!hideBars && (
+        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+          {TABS.map((t) => {
+            const isSelected = tab === t.key;
+            return (
+              <Pressable
+                key={t.key}
+                onPress={() => setTab(t.key)}
+                style={styles.tabItem}
+              >
+                {isSelected && <View style={styles.tabIndicator} />}
+                <Ionicons
+                  name={isSelected ? t.iconActive : t.icon}
+                  size={21}
+                  color={isSelected ? colors.primary : colors.textMuted}
+                />
+                <Text style={[styles.tabLabel, isSelected && styles.tabLabelActive]}>
+                  {t.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
     </View>
   );
 }
@@ -289,6 +318,24 @@ const styles = StyleSheet.create({
   tabLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
   tabLabelActive: { color: '#fff', fontWeight: '800' },
   portalsContainer: { padding: 16, gap: 16, paddingBottom: 40 },
+  controlPanelBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.primary,
+    borderRadius: radius.lg,
+    padding: 16,
+  },
+  cpIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 10,
+    backgroundColor: '#0003',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cpTitle: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  cpSub: { color: '#fffd', fontSize: 12, marginTop: 2 },
   portalActiveCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,

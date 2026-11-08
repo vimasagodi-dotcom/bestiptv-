@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel de Controlo - KikoIPTV</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0B0C10;
+      --surface: #14161E;
+      --surface-alt: #1D202B;
+      --border: #282C3A;
+      --primary: #E50914;
+      --primary-hover: #C40812;
+      --success: #10B981;
+      --danger: #EF4444;
+      --text: #F8FAFC;
+      --text-muted: #94A3B8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header {
+      padding: 16px 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 20px;
+      color: #fff;
+      text-decoration: none;
+    }
+    .logo-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .logo span { color: var(--primary); }
+    .container { max-width: 1040px; margin: 0 auto; padding: 28px 20px 60px; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    h1, h2, h3 { font-weight: 800; }
+    .sub { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+    .field { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+    label { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    input, select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--primary); }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      transition: 0.15s;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { background: var(--surface-alt); color: var(--text); border: 1px solid var(--border); }
+    .btn-danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
+    .user-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 16px;
+      border-radius: 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      margin-top: 12px;
+    }
+    .pill {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .pill-ok { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+    .pill-off { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+    .alert {
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .alert-err { background: rgba(239, 68, 68, 0.15); border: 1px solid var(--danger); color: #FCA5A5; }
+    .alert-ok { background: rgba(16, 185, 129, 0.15); border: 1px solid var(--success); color: #6EE7B7; }
+    .tabs { display: flex; gap: 8px; margin-top: 12px; }
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .tab-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/" class="logo">
+      <div class="logo-badge">▶</div>
+      <div>Kiko<span>IPTV</span> · Painel de Controlo</div>
+    </a>
+    <div style="display:flex;gap:10px;">
+      <a href="/" class="btn btn-secondary">← Voltar ao Site</a>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="alertBox" class="alert"></div>
+
+    <!-- LOGIN ADMIN -->
+    <div id="loginCard" class="card" style="max-width: 460px; margin: 40px auto;">
+      <h2>🔒 Acesso ao Painel de Controlo</h2>
+      <p class="sub">Gerencie as listas IPTV e defina o Utilizador e Password para login na app KikoIPTV.</p>
+      <div class="field" style="margin-top: 20px;">
+        <label>Password de Administrador</label>
+        <input type="password" id="adminPassInput" placeholder="Introduza a password (padrão inicial: admin)" onkeydown="if(event.key==='Enter') loginAdmin()">
+      </div>
+      <button class="btn btn-primary" style="width: 100%; margin-top: 18px;" onclick="loginAdmin()">Entrar no Painel</button>
+    </div>
+
+    <!-- DASHBOARD ADMIN -->
+    <div id="dashboard" style="display: none;">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+          <div>
+            <h2 id="formTitle">➕ Criar / Editar Acesso KikoIPTV</h2>
+            <p class="sub">O cliente só precisará de escrever o <strong>Utilizador</strong> e a <strong>Password</strong> abaixo na opção "Login KikoIPTV" da aplicação.</p>
+          </div>
+          <button class="btn btn-secondary" onclick="resetForm()">Limpar Formulário</button>
+        </div>
+
+        <input type="hidden" id="editId">
+
+        <div class="grid-2" style="margin-top: 10px;">
+          <div class="field">
+            <label>Utilizador (Login na App)</label>
+            <input type="text" id="uUsername" placeholder="Ex: renato ou cliente1">
+          </div>
+          <div class="field">
+            <label>Password (Login na App)</label>
+            <input type="text" id="uPassword" placeholder="Ex: 123456">
+          </div>
+          <div class="field">
+            <label>Nome da Lista (aparece no topo da App)</label>
+            <input type="text" id="uName" placeholder="Ex: KikoIPTV Premium">
+          </div>
+          <div class="field">
+            <label>Estado da Conta</label>
+            <select id="uActive">
+              <option value="true">Ativa (Pode entrar)</option>
+              <option value="false">Suspensa / Desativada</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top: 20px;">
+          <label>Tipo de Fonte IPTV associada a este Utilizador</label>
+          <div class="tabs">
+            <button type="button" id="tabM3u" class="tab-btn active" onclick="setSourceType('m3u')">Colar Link M3U Completo (Automático)</button>
+            <button type="button" id="tabXtream" class="tab-btn" onclick="setSourceType('xtream')">Dados Xtream Codes (Servidor / User / Pass)</button>
+          </div>
+        </div>
+
+        <div id="boxM3u" style="margin-top: 8px;">
+          <div class="field">
+            <label>URL da Linha M3U / get.php (extrai servidor, user e pass automaticamente)</label>
+            <input type="text" id="uM3uUrl" placeholder="http://servidor:8080/get.php?username=...&password=...&type=m3u_plus" oninput="autoDetectM3u(this.value)">
+          </div>
+        </div>
+
+        <div id="boxXtream" style="display: none; margin-top: 8px;">
+          <div class="grid-2">
+            <div class="field">
+              <label>URL do Servidor Xtream</label>
+              <input type="text" id="uServer" placeholder="http://wh.gktxp.com:8080">
+            </div>
+            <div class="field">
+              <label>Utilizador da Linha (Xtream)</label>
+              <input type="text" id="uXtreamUser" placeholder="username da linha">
+            </div>
+            <div class="field">
+              <label>Password da Linha (Xtream)</label>
+              <input type="text" id="uXtreamPass" placeholder="password da linha">
+            </div>
+            <div class="field">
+              <label>Formato Direto</label>
+              <select id="uFormat">
+                <option value="m3u8">HLS (.m3u8) - Recomendado</option>
+                <option value="ts">MPEG-TS (.ts)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" style="margin-top: 20px; width: 100%;" onclick="saveUser()" id="saveBtn">
+          💾 Guardar Utilizador e Lista no Painel
+        </button>
+      </div>
+
+      <!-- LISTA DE UTILIZADORES -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <h3>👥 Utilizadores e Listas Configuradas</h3>
+            <p class="sub">Clique em "Editar" para alterar a lista ou password de qualquer utilizador.</p>
+          </div>
+          <button class="btn btn-secondary" onclick="loadUsers()">↻ Atualizar</button>
+        </div>
+        <div id="usersList" style="margin-top: 14px;"></div>
+      </div>
+
+      <!-- ALTERAR SENHA ADMIN -->
+      <div class="card">
+        <h3>🔑 Alterar Password de Administrador do Painel</h3>
+        <div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;">
+          <input type="password" id="newAdminPass" placeholder="Nova password de administrador" style="flex:1;min-width:220px;">
+          <button class="btn btn-secondary" onclick="changeAdminPass()">Guardar Nova Password Admin</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let adminPassword = sessionStorage.getItem('kiko_admin_pass') || '';
+    let sourceType = 'm3u';
+    let currentUsers = [];
+
+    function showAlert(msg, ok = false) {
+      const el = document.getElementById('alertBox');
+      el.textContent = msg;
+      el.className = 'alert ' + (ok ? 'alert-ok' : 'alert-err');
+      el.style.display = 'block';
+      setTimeout(() => { el.style.display = 'none'; }, 5000);
+    }
+
+    function setSourceType(t) {
+      sourceType = t;
+      document.getElementById('tabM3u').className = 'tab-btn' + (t === 'm3u' ? ' active' : '');
+      document.getElementById('tabXtream').className = 'tab-btn' + (t === 'xtream' ? ' active' : '');
+      document.getElementById('boxM3u').style.display = t === 'm3u' ? 'block' : 'none';
+      document.getElementById('boxXtream').style.display = t === 'xtream' ? 'block' : 'none';
+    }
+
+    function autoDetectM3u(val) {
+      const m = val.trim().match(/^(https?:\/\/[^/\s]+)\/get\.php\?(.*)$/i);
+      if (!m) return;
+      const params = {};
+      m[2].split('&').forEach(p => {
+        const [k, v = ''] = p.split('=');
+        if (k) params[decodeURIComponent(k)] = decodeURIComponent(v);
+      });
+      if (params.username && params.password) {
+        document.getElementById('uServer').value = m[1];
+        document.getElementById('uXtreamUser').value = params.username;
+        document.getElementById('uXtreamPass').value = params.password;
+      }
+    }
+
+    async function apiCall(payload) {
+      const res = await fetch('/api/panel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, adminPassword }),
+      });
+      return res.json();
+    }
+
+    async function loginAdmin() {
+      const pass = document.getElementById('adminPassInput').value.trim();
+      if (!pass) return showAlert('Introduza a password de administrador.');
+      adminPassword = pass;
+      const data = await apiCall({ action: 'admin_list' });
+      if (!data.ok) {
+        return showAlert(data.error || 'Password incorreta.');
+      }
+      sessionStorage.setItem('kiko_admin_pass', adminPassword);
+      document.getElementById('loginCard').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      currentUsers = data.users || [];
+      renderUsers();
+    }
+
+    async function loadUsers() {
+      const data = await apiCall({ action: 'admin_list' });
+      if (data.ok) {
+        currentUsers = data.users || [];
+        renderUsers();
+      }
+    }
+
+    function renderUsers() {
+      const box = document.getElementById('usersList');
+      if (!currentUsers.length) {
+        box.innerHTML = '<p style="color:var(--text-muted);padding:16px 0;">Ainda não existem utilizadores criados. Preencha o formulário acima para criar o primeiro acesso!</p>';
+        return;
+      }
+      box.innerHTML = currentUsers.map(u => `
+        <div class="user-row">
+          <div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <strong style="font-size:17px;">👤 ${u.username}</strong>
+              <span style="color:var(--text-muted);font-size:13px;">(Password: <code>${u.password}</code>)</span>
+              <span class="pill ${u.active !== false ? 'pill-ok' : 'pill-off'}">${u.active !== false ? 'ATIVO' : 'SUSPENSO'}</span>
+            </div>
+            <div style="font-size:13px;color:var(--text-muted);margin-top:4px;">
+              Lista: <strong>${u.name || u.username}</strong> · ${u.playlistType === 'xtream' ? `Xtream (${u.server} · user: ${u.xtreamUser})` : `M3U Direto`}
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-secondary" onclick='editUser(${JSON.stringify(u.id)})'>✏️ Editar</button>
+            <button class="btn btn-danger" onclick='deleteUser(${JSON.stringify(u.id)}, ${JSON.stringify(u.username)})'>🗑️ Apagar</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function resetForm() {
+      document.getElementById('editId').value = '';
+      document.getElementById('uUsername').value = '';
+      document.getElementById('uPassword').value = '';
+      document.getElementById('uName').value = '';
+      document.getElementById('uActive').value = 'true';
+      document.getElementById('uM3uUrl').value = '';
+      document.getElementById('uServer').value = '';
+      document.getElementById('uXtreamUser').value = '';
+      document.getElementById('uXtreamPass').value = '';
+      document.getElementById('formTitle').textContent = '➕ Criar / Editar Acesso KikoIPTV';
+    }
+
+    function editUser(id) {
+      const u = currentUsers.find(x => x.id === id);
+      if (!u) return;
+      document.getElementById('editId').value = u.id;
+      document.getElementById('uUsername').value = u.username || '';
+      document.getElementById('uPassword').value = u.password || '';
+      document.getElementById('uName').value = u.name || '';
+      document.getElementById('uActive').value = u.active !== false ? 'true' : 'false';
+      document.getElementById('uM3uUrl').value = u.m3uUrl || '';
+      document.getElementById('uServer').value = u.server || '';
+      document.getElementById('uXtreamUser').value = u.xtreamUser || '';
+      document.getElementById('uXtreamPass').value = u.xtreamPass || '';
+      document.getElementById('uFormat').value = u.liveFormat || 'm3u8';
+      setSourceType(u.playlistType === 'xtream' && !u.m3uUrl ? 'xtream' : 'm3u');
+      document.getElementById('formTitle').textContent = '✏️ A Editar Utilizador: ' + u.username;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function saveUser() {
+      const btn = document.getElementById('saveBtn');
+      btn.disabled = true;
+      btn.textContent = 'A guardar...';
+      try {
+        const user = {
+          id: document.getElementById('editId').value || undefined,
+          username: document.getElementById('uUsername').value.trim(),
+          password: document.getElementById('uPassword').value.trim(),
+          name: document.getElementById('uName').value.trim(),
+          active: document.getElementById('uActive').value === 'true',
+          playlistType: sourceType,
+          m3uUrl: document.getElementById('uM3uUrl').value.trim(),
+          server: document.getElementById('uServer').value.trim(),
+          xtreamUser: document.getElementById('uXtreamUser').value.trim(),
+          xtreamPass: document.getElementById('uXtreamPass').value.trim(),
+          liveFormat: document.getElementById('uFormat').value,
+        };
+        const data = await apiCall({ action: 'admin_save_user', user });
+        if (!data.ok) {
+          showAlert(data.error || 'Erro ao guardar utilizador.');
+        } else {
+          currentUsers = data.users || [];
+          renderUsers();
+          resetForm();
+          showAlert('Utilizador guardado com sucesso! Já pode fazer login na App KikoIPTV.', true);
+        }
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '💾 Guardar Utilizador e Lista no Painel';
+      }
+    }
+
+    async function deleteUser(id, username) {
+      if (!confirm('Tem a certeza que deseja apagar o utilizador "' + username + '"?')) return;
+      const data = await apiCall({ action: 'admin_delete_user', id });
+      if (data.ok) {
+        currentUsers = data.users || [];
+        renderUsers();
+        showAlert('Utilizador removido.', true);
+      } else {
+        showAlert(data.error || 'Erro ao apagar.');
+      }
+    }
+
+    async function changeAdminPass() {
+      const next = document.getElementById('newAdminPass').value.trim();
+      if (!next) return showAlert('Escreva a nova password.');
+      const data = await apiCall({ action: 'admin_change_password', newAdminPassword: next });
+      if (data.ok) {
+        adminPassword = next;
+        sessionStorage.setItem('kiko_admin_pass', next);
+        document.getElementById('newAdminPass').value = '';
+        showAlert('Password de Administrador alterada com sucesso!', true);
+      } else {
+        showAlert(data.error || 'Erro ao alterar password.');
+      }
+    }
+
+    if (adminPassword) {
+      document.getElementById('adminPassInput').value = adminPassword;
+      loginAdmin();
+    }
+  </script>
+</body>
+</html>
+

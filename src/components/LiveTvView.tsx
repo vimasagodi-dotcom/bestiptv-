@@ -27,19 +27,27 @@ import { EmptyView, ErrorView, IconButton, Loading, SearchBar } from './ui';
 
 const RECENT = '__recent';
 
-export function LiveTvView({ activeTab }: { activeTab: boolean }) {
+export function LiveTvView({
+  activeTab,
+  onFullscreenChange,
+}: {
+  activeTab: boolean;
+  onFullscreenChange?: (fs: boolean) => void;
+}) {
   const { provider, active, favorites, recentLiveIds, isFavorite, toggleFavorite, addRecentLive, reload } = useApp();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const isWide = width >= 700;
+  const isPhoneLandscape = width > height && Math.min(width, height) < 540;
+  const isWide = width >= 700 && Math.min(width, height) >= 540;
 
   const [categoryId, setCategoryId] = useState<string>(ALL);
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const isFull = fullscreen || isPhoneLandscape;
   const [locked, setLocked] = useState(false);
   const [fit, setFit] = useState<'contain' | 'cover'>('contain');
-  const [overlay, setOverlay] = useState(true);
+  const [overlay, setOverlay] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [retrying, setRetrying] = useState(false);
@@ -100,9 +108,13 @@ export function LiveTvView({ activeTab }: { activeTab: boolean }) {
   );
 
   // ---- Orientation & Back button for Fullscreen ----
+  useEffect(() => {
+    onFullscreenChange?.(isFull);
+  }, [isFull, onFullscreenChange]);
+
   const enterFullscreen = useCallback(() => {
     setFullscreen(true);
-    setOverlay(true);
+    setOverlay(false);
     ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
   }, []);
 
@@ -110,11 +122,20 @@ export function LiveTvView({ activeTab }: { activeTab: boolean }) {
     setFullscreen(false);
     setDrawerOpen(false);
     setLocked(false);
-    ScreenOrientation.unlockAsync().catch(() => {});
+    setOverlay(false);
+    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP)
+      .then(() => {
+        setTimeout(() => {
+          ScreenOrientation.unlockAsync().catch(() => {});
+        }, 1200);
+      })
+      .catch(() => {
+        ScreenOrientation.unlockAsync().catch(() => {});
+      });
   }, []);
 
   useEffect(() => {
-    if (!fullscreen) return;
+    if (!isFull) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (drawerOpen) {
         setDrawerOpen(false);
@@ -124,7 +145,7 @@ export function LiveTvView({ activeTab }: { activeTab: boolean }) {
       return true;
     });
     return () => sub.remove();
-  }, [fullscreen, drawerOpen, exitFullscreen]);
+  }, [isFull, drawerOpen, exitFullscreen]);
 
   // ---- Video Player with connection release & auto-retry ----
   const player = useVideoPlayer(null, (p) => {
@@ -247,15 +268,14 @@ export function LiveTvView({ activeTab }: { activeTab: boolean }) {
   const bumpOverlay = useCallback(() => {
     setOverlay(true);
     if (hideTimer.current) clearTimeout(hideTimer.current);
-    hideTimer.current = setTimeout(() => setOverlay(false), 5000);
+    hideTimer.current = setTimeout(() => setOverlay(false), 3500);
   }, []);
 
   useEffect(() => {
-    if (fullscreen) bumpOverlay();
     return () => {
       if (hideTimer.current) clearTimeout(hideTimer.current);
     };
-  }, [fullscreen, bumpOverlay, selectedId]);
+  }, []);
 
   const zap = useCallback(
     (delta: number) => {
@@ -287,7 +307,7 @@ export function LiveTvView({ activeTab }: { activeTab: boolean }) {
 
   // ---- Player Surface (shared between docked and fullscreen) ----
   const playerBox = (
-    <View style={fullscreen ? styles.fsPlayerWrap : isWide ? styles.widePlayerWrap : styles.dockedPlayerWrap}>
+    <View style={isFull ? styles.fsPlayerWrap : isWide ? styles.widePlayerWrap : styles.dockedPlayerWrap}>
       <VideoView
         player={player}
         style={StyleSheet.absoluteFill}
@@ -319,7 +339,7 @@ export function LiveTvView({ activeTab }: { activeTab: boolean }) {
         </View>
       )}
 
-      {!fullscreen ? (
+      {!isFull ? (
         /* Docked / Wide quick overlay controls */
         <Pressable style={StyleSheet.absoluteFill} onPress={enterFullscreen}>
           <View style={styles.dockedBadges}>
@@ -608,7 +628,7 @@ export function LiveTvView({ activeTab }: { activeTab: boolean }) {
     </View>
   );
 
-  if (fullscreen) {
+  if (isFull) {
     return (
       <View style={styles.fsContainer}>
         <StatusBar hidden />
