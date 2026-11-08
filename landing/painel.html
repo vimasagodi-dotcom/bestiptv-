@@ -267,6 +267,19 @@
 
     <!-- DASHBOARD ADMIN -->
     <div id="dashboard" style="display: none;">
+      <div id="firebaseBanner" class="card" style="padding:14px 20px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;border-color:rgba(245,158,11,0.4);">
+        <div style="display:flex;align-items:center;gap:10px;font-size:13px;">
+          <span style="font-size:18px;">🔥</span>
+          <div>
+            <strong>Base de Dados Segura Firebase (<code>cocas-iptv</code>) + Cofre Encriptado AES-256</strong>
+            <div id="firebaseStatusSub" style="color:var(--text-muted);font-size:12px;">Sincronização ativa e encriptada de ponta a ponta.</div>
+          </div>
+        </div>
+        <a href="https://console.firebase.google.com/project/cocas-iptv/firestore" target="_blank" class="btn btn-secondary" style="padding:7px 12px;font-size:12px;">
+          Abrir Consola Firebase ↗
+        </a>
+      </div>
+
       <!-- STATS -->
       <div class="stats-grid">
         <div class="stat-card">
@@ -616,6 +629,18 @@
       return res.json();
     }
 
+    function updateFirebaseBanner(fbInfo) {
+      const sub = document.getElementById('firebaseStatusSub');
+      const banner = document.getElementById('firebaseBanner');
+      if (!sub || !fbInfo) return;
+      if (fbInfo.status === 'connected') {
+        sub.innerHTML = '🟢 <strong style="color:#34D399;">Cloud Firestore Ativo (`cocas-iptv`)</strong> · Dados encriptados com AES-256-GCM.';
+        if (banner) banner.style.borderColor = 'rgba(16,185,129,0.45)';
+      } else {
+        sub.innerHTML = '🛡️ <strong>Cofre Encriptado Ativo</strong> · Para ativar também o Cloud Firestore no Firebase, clique em "Abrir Consola Firebase" → "Create database" (Test Mode).';
+      }
+    }
+
     async function loginAdmin() {
       const pass = document.getElementById('adminPassInput').value.trim();
       if (!pass) return showAlert('Introduza a password de administrador.');
@@ -629,6 +654,7 @@
       document.getElementById('dashboard').style.display = 'block';
       currentUsers = data.users || [];
       if (data.chatTopic) document.getElementById('chatTopicInput').value = data.chatTopic;
+      updateFirebaseBanner(data.firebaseInfo);
       renderUsers();
       renderChatUsers(data.chatUsers || []);
     }
@@ -639,6 +665,7 @@
       if (data.ok) {
         currentUsers = data.users || [];
         if (data.chatTopic) document.getElementById('chatTopicInput').value = data.chatTopic;
+        updateFirebaseBanner(data.firebaseInfo);
         renderUsers();
         renderChatUsers(data.chatUsers || []);
       }

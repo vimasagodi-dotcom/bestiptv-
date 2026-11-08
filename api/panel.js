@@ -4,6 +4,22 @@ const REPO = 'vimasagodi-dotcom/bestiptv-';
 const BRANCH = 'panel-data';
 const FILE_PATH = 'panel-db.enc';
 
+// Configuração Oficial Firebase — Projeto: cocas-iptv
+const FIREBASE_CONFIG = {
+  apiKey: process.env.FIREBASE_API_KEY || 'AIzaSyBlKw07SpE40G38CaZ6viJNFpCVcwHo3Gw',
+  authDomain: 'cocas-iptv.firebaseapp.com',
+  projectId: 'cocas-iptv',
+  storageBucket: 'cocas-iptv.firebasestorage.app',
+  messagingSenderId: '425316020423',
+  appId: '1:425316020423:web:1833d9fa8925ff181a0ee2',
+  measurementId: 'G-Q8FV1PDF5N',
+};
+
+const FIRESTORE_DOC_URL =
+  `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/cocas_vault/main?key=${FIREBASE_CONFIG.apiKey}`;
+const FIRESTORE_PUBLIC_DOC_URL =
+  `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/cocas_chat/public_state?key=${FIREBASE_CONFIG.apiKey}`;
+
 const PLANS = {
   1: { years: 1, price: 5, label: '1 Ano — 5 €' },
   2: { years: 2, price: 9, label: '2 Anos — 9 €' },
@@ -79,7 +95,7 @@ function ensureDbShape(db) {
   return db;
 }
 
-async function loadDb() {
+async function loadBackupVault() {
   const url = `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}?ref=${BRANCH}`;
   const res = await fetch(url, { headers: ghHeaders(), cache: 'no-store' });
   if (res.status === 404) {
@@ -100,8 +116,96 @@ async function loadDb() {
   }
 }
 
+async function saveToFirestore(db, encryptedStr) {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
+    const body = {
+      fields: {
+        encryptedPayload: { stringValue: encryptedStr },
+        updatedAt: { integerValue: String(Date.now()) },
+        usersCount: { integerValue: String((db.users || []).length) },
+        chatUsersCount: { integerValue: String((db.chatUsers || []).length) },
+      },
+    };
+    const res = await fetch(FIRESTORE_DOC_URL, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+
+    // Also sync public chat state document for easy inspection in Firebase Console
+    fetch(FIRESTORE_PUBLIC_DOC_URL, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fields: {
+          chatTopic: { stringValue: String(db.chatTopic || '') },
+          chatUsersJson: { stringValue: JSON.stringify(db.chatUsers || []) },
+          recentMessagesJson: { stringValue: JSON.stringify((db.chatMessages || []).slice(-60)) },
+          updatedAt: { integerValue: String(Date.now()) },
+        },
+      }),
+    }).catch(() => {});
+
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function loadDb() {
+  let firebaseStatus = 'pending_firestore_init';
+  let fbDb = null;
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2800);
+    const fbRes = await fetch(FIRESTORE_DOC_URL, { cache: 'no-store', signal: controller.signal });
+    clearTimeout(timer);
+
+    if (fbRes.ok) {
+      const doc = await fbRes.json();
+      const rawEnc = doc?.fields?.encryptedPayload?.stringValue;
+      if (rawEnc) {
+        fbDb = ensureDbShape(decrypt(rawEnc));
+        firebaseStatus = 'connected';
+      }
+    } else if (fbRes.status === 404) {
+      // Firestore is enabled and reachable, document not created yet -> migrate immediately!
+      firebaseStatus = 'connected';
+    }
+  } catch {
+    // Fallback to backup vault
+  }
+
+  const backup = await loadBackupVault().catch(() => ({ db: ensureDbShape({}), sha: null }));
+
+  if (fbDb) {
+    fbDb._firebaseStatus = firebaseStatus;
+    return { db: fbDb, sha: backup.sha };
+  }
+
+  // If Firestore was just enabled (404), auto-seed Firestore from the existing vault
+  if (firebaseStatus === 'connected' && backup.db) {
+    saveToFirestore(backup.db, encrypt(backup.db)).catch(() => {});
+  }
+
+  backup.db._firebaseStatus = firebaseStatus;
+  return backup;
+}
+
 async function saveDb(db, sha) {
-  const encrypted = encrypt(db);
+  const cleanDb = { ...db };
+  delete cleanDb._firebaseStatus;
+  const encrypted = encrypt(cleanDb);
+
+  // 1. Write to Firebase Cloud Firestore (cocas-iptv)
+  const fbPromise = saveToFirestore(cleanDb, encrypted);
+
+  // 2. Write to encrypted backup vault
   const contentB64 = Buffer.from(encrypted, 'utf8').toString('base64');
   const url = `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`;
   const body = {
@@ -116,7 +220,7 @@ async function saveDb(db, sha) {
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    const fresh = await loadDb();
+    const fresh = await loadBackupVault();
     body.sha = fresh.sha || undefined;
     const retryRes = await fetch(url, {
       method: 'PUT',
@@ -124,9 +228,13 @@ async function saveDb(db, sha) {
       body: JSON.stringify(body),
     });
     if (!retryRes.ok) {
-      throw new Error(`Storage write error (${retryRes.status})`);
+      const fbOk = await fbPromise;
+      if (!fbOk) {
+        throw new Error(`Storage write error (${retryRes.status})`);
+      }
     }
   }
+  await fbPromise;
 }
 
 function parseXtreamUrl(rawUrl) {
@@ -543,6 +651,10 @@ module.exports = async function handler(req, res) {
         chatUsers: db.chatUsers,
         chatTopic: db.chatTopic,
         adConfig: db.adConfig,
+        firebaseInfo: {
+          projectId: FIREBASE_CONFIG.projectId,
+          status: db._firebaseStatus || 'pending_firestore_init',
+        },
       });
     }
 
