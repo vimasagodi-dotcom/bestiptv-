@@ -15,7 +15,7 @@
         "buildType": "apk"
       },
       "ios": {
-        "simulator": false
+        "simulator": true
       },
       "channel": "preview"
     },
