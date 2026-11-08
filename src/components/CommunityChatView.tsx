@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -42,6 +43,11 @@ interface ChatMessage {
   role: ChatRole;
   text: string;
   ts: number;
+}
+
+interface PrivateRoom {
+  id: string;
+  targetNick: string;
 }
 
 async function requestChatApi(payload: Record<string, any>): Promise<any> {
@@ -89,6 +95,7 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
   const [savedNick, setSavedNick] = useState<string | null>(null);
   const [nickInput, setNickInput] = useState('');
   const [room, setRoom] = useState('geral');
+  const [privateRooms, setPrivateRooms] = useState<PrivateRoom[]>([]);
   const [showUsersList, setShowUsersList] = useState(false);
 
   const [topic, setTopic] = useState('🔥 Bem-vindo ao Chat da Comunidade Cocas!');
@@ -119,6 +126,7 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
     setMyProfile(null);
     setMessages([]);
     setNickInput('');
+    setPrivateRooms([]);
     AsyncStorage.getItem(nickStorageKey)
       .then((val) => {
         if (val) {
@@ -146,6 +154,16 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
           if (data.myProfile) setMyProfile(data.myProfile);
           if (Array.isArray(data.chatUsers)) setChatUsers(data.chatUsers);
           if (Array.isArray(data.messages)) setMessages(data.messages);
+          if (Array.isArray(data.privateRooms)) {
+            setPrivateRooms((prev) => {
+              const map = new Map<string, PrivateRoom>();
+              prev.forEach((p) => map.set(p.id, p));
+              data.privateRooms.forEach((p: PrivateRoom) => {
+                if (!map.has(p.id)) map.set(p.id, p);
+              });
+              return Array.from(map.values());
+            });
+          }
         } else if (data?.code === 'nick_taken' && !readOnly) {
           AsyncStorage.removeItem(nickStorageKey).catch(() => {});
           setSavedNick(null);
@@ -169,6 +187,18 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
     }, 4000);
     return () => clearInterval(t);
   }, [activeTab, savedNick, readOnly, room, fetchChatState]);
+
+  // Keep latest message pinned to bottom smoothly
+  useEffect(() => {
+    if (messages.length > 0) {
+      const timer = setTimeout(() => {
+        try {
+          listRef.current?.scrollToEnd?.({ animated: true });
+        } catch {}
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [messages.length]);
 
   const handleSaveNick = async () => {
     const clean = nickInput.trim().replace(/\s+/g, '_').slice(0, 20);
@@ -226,7 +256,50 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
     }
   };
 
+  const openPrivateRoom = (targetNick: string) => {
+    if (!savedNick) return;
+    if (targetNick.toLowerCase() === savedNick.toLowerCase()) return;
+    const pair = [savedNick.toLowerCase(), targetNick.toLowerCase()].sort();
+    const privId = `priv_${pair[0]}__${pair[1]}`;
+    setPrivateRooms((prev) => {
+      if (prev.some((p) => p.id === privId)) return prev;
+      return [...prev, { id: privId, targetNick }];
+    });
+    setRoom(privId);
+    setShowUsersList(false);
+  };
+
+  const closePrivateRoom = (privId: string) => {
+    setPrivateRooms((prev) => prev.filter((p) => p.id !== privId));
+    if (room === privId) {
+      setRoom('geral');
+    }
+  };
+
   const canModerate = myProfile && ['owner', 'admin', 'mod'].includes(myProfile.role);
+
+  const handleUserClick = (target: ChatUser) => {
+    if (!savedNick) return;
+    const isSelf = target.nick.toLowerCase() === savedNick.toLowerCase();
+    if (isSelf) return;
+
+    const options: { text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void }[] = [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: `💬 Sala Privada com ${target.nick}`,
+        onPress: () => openPrivateRoom(target.nick),
+      },
+    ];
+
+    if (canModerate) {
+      options.push({
+        text: '⚙️ Opções de Moderação',
+        onPress: () => handleModAction(target.nick),
+      });
+    }
+
+    Alert.alert(`Membro: ${target.nick}`, 'Escolha a opção pretendida:', options);
+  };
 
   const handleModAction = (targetNick: string, msgId?: string) => {
     if (!canModerate || !savedNick) return;
@@ -256,7 +329,7 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
           await requestChatApi({
             action: 'chat_mod_action',
             actorNick: savedNick,
-                  ownerKey,
+            ownerKey,
             targetNick,
             modOp: 'mute',
           });
@@ -330,6 +403,10 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
   }
 
   const myRoleMeta = ROLE_META[myProfile?.role || 'guest'];
+  const activePrivate = privateRooms.find((p) => p.id === room);
+  const inputPlaceholder = activePrivate
+    ? `Mensagem privada para ${activePrivate.targetNick}...`
+    : `Escrever em #${room}...`;
 
   return (
     <KeyboardAvoidingView
@@ -337,29 +414,79 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={compact ? 0 : 90}
     >
-      {/* Top xat.com Header: Rooms + Users Online Toggle + My Nickname */}
-      <View style={[styles.topHeader, compact && { paddingHorizontal: 8, paddingVertical: 6 }]}>
-        <View style={styles.roomsRow}>
+      {/* Top Header: Rooms + Private Rooms + Users Online Toggle + My Nickname */}
+      <View style={[styles.topHeader, compact && { paddingHorizontal: 6, paddingVertical: 4 }]}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.roomsRow}
+          style={{ flex: 1, marginRight: 6 }}
+        >
           {ROOMS.map((r) => {
             const activeRoom = room === r.id;
             return (
               <Pressable
                 key={r.id}
                 onPress={() => setRoom(r.id)}
-                style={[styles.roomChip, compact && { paddingHorizontal: 10, paddingVertical: 4 }, activeRoom && styles.roomChipActive]}
+                style={[
+                  styles.roomChip,
+                  compact && { paddingHorizontal: 8, paddingVertical: 4 },
+                  activeRoom && styles.roomChipActive,
+                ]}
               >
-                <Text style={[styles.roomChipText, compact && { fontSize: 11 }, activeRoom && { color: '#fff' }]}>{r.label}</Text>
+                <Text style={[styles.roomChipText, compact && { fontSize: 11 }, activeRoom && { color: '#fff' }]}>
+                  {r.label}
+                </Text>
               </Pressable>
             );
           })}
-        </View>
+
+          {privateRooms.map((pr) => {
+            const activeRoom = room === pr.id;
+            return (
+              <Pressable
+                key={pr.id}
+                onPress={() => setRoom(pr.id)}
+                style={[
+                  styles.roomChip,
+                  styles.roomChipPrivate,
+                  compact && { paddingHorizontal: 8, paddingVertical: 4 },
+                  activeRoom && styles.roomChipActivePrivate,
+                ]}
+              >
+                <Ionicons
+                  name="lock-closed"
+                  size={compact ? 10 : 11}
+                  color={activeRoom ? '#fff' : colors.primary}
+                  style={{ marginRight: 3 }}
+                />
+                <Text
+                  style={[styles.roomChipText, compact && { fontSize: 11 }, activeRoom && { color: '#fff' }]}
+                  numberOfLines={1}
+                >
+                  {pr.targetNick}
+                </Text>
+                <Pressable
+                  hitSlop={8}
+                  onPress={(e: any) => {
+                    e?.stopPropagation?.();
+                    closePrivateRoom(pr.id);
+                  }}
+                  style={styles.closePrivChip}
+                >
+                  <Ionicons name="close" size={11} color={activeRoom ? '#ffffffcc' : colors.textMuted} />
+                </Pressable>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
 
         <View style={styles.headerRight}>
           <Pressable
             onPress={() => setShowUsersList((v) => !v)}
-            style={[styles.usersToggleBtn, compact && { paddingHorizontal: 8, paddingVertical: 4 }, showUsersList && { backgroundColor: colors.primary }]}
+            style={[styles.usersToggleBtn, compact && { paddingHorizontal: 7, paddingVertical: 4 }, showUsersList && { backgroundColor: colors.primary }]}
           >
-            <Ionicons name="people" size={compact ? 13 : 16} color="#fff" />
+            <Ionicons name="people" size={compact ? 13 : 15} color="#fff" />
             <Text style={[styles.usersToggleText, compact && { fontSize: 11 }]}>{chatUsers.length}</Text>
           </Pressable>
           <Pressable
@@ -368,7 +495,7 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
               setSavedNick(null);
               setMyProfile(null);
             }}
-            style={[styles.nickBadgeBtn, compact && { paddingHorizontal: 8, paddingVertical: 4 }]}>
+            style={[styles.nickBadgeBtn, compact && { paddingHorizontal: 7, paddingVertical: 4 }]}>
             <Text style={[styles.nickBadgeText, compact && { fontSize: 11 }]}>
               {myRoleMeta.badge} {savedNick}
             </Text>
@@ -380,7 +507,7 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
       {!compact && (
         <View style={styles.topicBar}>
           <Text style={styles.topicText} numberOfLines={1}>
-            {topic}
+            {activePrivate ? `🔒 Conversa privada com ${activePrivate.targetNick}` : topic}
           </Text>
         </View>
       )}
@@ -397,8 +524,17 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
               ref={listRef}
               data={messages}
               keyExtractor={(m) => m.id}
-              contentContainerStyle={styles.msgList}
-              onContentSizeChange={() => listRef.current?.scrollToEnd?.({ animated: true })}
+              contentContainerStyle={[styles.msgList, { flexGrow: 1, justifyContent: 'flex-end' }]}
+              onContentSizeChange={() => {
+                try {
+                  listRef.current?.scrollToEnd?.({ animated: true });
+                } catch {}
+              }}
+              onLayout={() => {
+                try {
+                  listRef.current?.scrollToEnd?.({ animated: false });
+                } catch {}
+              }}
               renderItem={({ item }) => {
                 const rMeta = ROLE_META[item.role] || ROLE_META.guest;
                 const isMe = Boolean(savedNick && item.nick.toLowerCase() === savedNick.toLowerCase());
@@ -411,9 +547,6 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
                       <Text style={[styles.msgNick, { color: rMeta.color }]}>
                         {rMeta.badge} {item.nick}
                       </Text>
-                      <View style={[styles.roleTag, { borderColor: rMeta.color }]}>
-                        <Text style={[styles.roleTagText, { color: rMeta.color }]}>{rMeta.label}</Text>
-                      </View>
                       <Text style={styles.msgTime}>{formatTime(item.ts)}</Text>
                     </View>
                     <Text style={styles.msgText}>{item.text}</Text>
@@ -424,29 +557,43 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
           )}
         </View>
 
-        {/* xat.com Right Sidebar: Online Users by Rank */}
+        {/* Online Users List (with Private Room button) */}
         {showUsersList && (
-          <View style={styles.usersSidebar}>
-            <Text style={styles.sidebarTitle}>NA SALA ({chatUsers.length})</Text>
+          <View style={[styles.usersSidebar, compact && { width: 145 }]}>
+            <View style={styles.sidebarHeader}>
+              <Text style={styles.sidebarTitle}>UTILIZADORES ({chatUsers.length})</Text>
+              <Pressable hitSlop={8} onPress={() => setShowUsersList(false)}>
+                <Ionicons name="close" size={14} color={colors.textMuted} />
+              </Pressable>
+            </View>
             <FlatList
               data={chatUsers}
               keyExtractor={(u) => u.nick}
               renderItem={({ item: u }) => {
                 const rMeta = ROLE_META[u.role] || ROLE_META.guest;
+                const isSelf = Boolean(savedNick && u.nick.toLowerCase() === savedNick.toLowerCase());
                 return (
                   <Pressable
-                    onPress={() => canModerate && handleModAction(u.nick)}
+                    onPress={() => handleUserClick(u)}
                     style={styles.userPawnRow}
                   >
-                    <Text style={{ fontSize: 14 }}>{rMeta.badge}</Text>
-                    <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13 }}>{rMeta.badge}</Text>
+                    <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={[styles.userPawnNick, { color: rMeta.color }]} numberOfLines={1}>
                         {u.nick}
                       </Text>
-                      <Text style={styles.userPawnRole}>
-                        {rMeta.label} {u.muted ? '· 🔇' : ''}
-                      </Text>
+                      {u.muted && <Text style={styles.userPawnMuted}>🔇 Mudo</Text>}
                     </View>
+                    {!isSelf && (
+                      <Pressable
+                        onPress={() => openPrivateRoom(u.nick)}
+                        style={styles.privBtn}
+                        hitSlop={4}
+                      >
+                        <Ionicons name="lock-closed" size={10} color="#fff" />
+                        <Text style={styles.privBtnText}>Privado</Text>
+                      </Pressable>
+                    )}
                   </Pressable>
                 );
               }}
@@ -461,14 +608,14 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
           <TextInput
             value={text}
             onChangeText={setText}
-            placeholder={`Escrever em #${room}...`}
+            placeholder={inputPlaceholder}
             placeholderTextColor={colors.textMuted}
-            style={[styles.chatInput, compact && { height: 38, fontSize: 13, paddingHorizontal: 10 }]}
+            style={[styles.chatInput, compact && { height: 36, fontSize: 12, paddingHorizontal: 10 }]}
             onSubmitEditing={handleSend}
             returnKeyType="send"
           />
-          <Pressable onPress={handleSend} style={[styles.sendBtn, compact && { width: 38, height: 38, borderRadius: 19 }]}>
-            <Ionicons name="send" size={compact ? 15 : 18} color="#fff" />
+          <Pressable onPress={handleSend} style={[styles.sendBtn, compact && { width: 36, height: 36, borderRadius: 18 }]}>
+            <Ionicons name="send" size={compact ? 14 : 16} color="#fff" />
           </Pressable>
         </View>
       )}
@@ -548,41 +695,53 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    gap: 8,
   },
-  roomsRow: { flexDirection: 'row', gap: 6 },
+  roomsRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   roomChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
     borderRadius: radius.sm,
     backgroundColor: colors.bg,
     borderWidth: 1,
     borderColor: colors.border,
   },
   roomChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  roomChipText: { color: colors.textMuted, fontSize: 12, fontWeight: '800' },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  roomChipPrivate: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderColor: '#E5091444',
+  },
+  roomChipActivePrivate: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  closePrivChip: {
+    marginLeft: 5,
+    padding: 1,
+  },
+  roomChipText: { color: colors.textMuted, fontSize: 11, fontWeight: '800' },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   usersToggleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     backgroundColor: colors.surfaceAlt,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 5,
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  usersToggleText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  usersToggleText: { color: '#fff', fontSize: 11, fontWeight: '800' },
   nickBadgeBtn: {
     backgroundColor: colors.surfaceAlt,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 5,
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
@@ -590,66 +749,82 @@ const styles = StyleSheet.create({
   nickBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   topicBar: {
     backgroundColor: '#191C26',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  topicText: { color: colors.accent, fontSize: 12, fontWeight: '700' },
+  topicText: { color: colors.accent, fontSize: 11, fontWeight: '700' },
   bodyWrap: { flex: 1, flexDirection: 'row' },
-  msgList: { padding: 10, gap: 8 },
+  msgList: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    gap: 3,
+  },
   msgRow: {
-    backgroundColor: colors.surface,
-    padding: 10,
-    borderRadius: radius.md,
+    backgroundColor: '#111522',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: colors.border,
-    gap: 4,
+    borderColor: '#ffffff0d',
+    gap: 1,
   },
   msgRowMe: {
-    borderColor: '#E5091466',
-    backgroundColor: '#19151B',
+    borderColor: '#E5091444',
+    backgroundColor: '#1a131b',
   },
-  msgHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  msgNick: { fontSize: 13, fontWeight: '800' },
-  roleTag: {
-    borderWidth: 1,
-    borderRadius: 4,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-  },
-  roleTagText: { fontSize: 9, fontWeight: '800', textTransform: 'uppercase' },
-  msgTime: { marginLeft: 'auto', color: colors.textMuted, fontSize: 10 },
-  msgText: { color: '#fff', fontSize: 14, lineHeight: 19 },
+  msgHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 },
+  msgNick: { fontSize: 11, fontWeight: '800' },
+  msgTime: { color: colors.textMuted, fontSize: 9 },
+  msgText: { color: '#e2e8f0', fontSize: 12, lineHeight: 16 },
   usersSidebar: {
     width: 155,
     backgroundColor: colors.surface,
     borderLeftWidth: 1,
     borderLeftColor: colors.border,
-    padding: 8,
+    padding: 6,
+  },
+  sidebarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   sidebarTitle: {
     color: colors.textMuted,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '800',
-    marginBottom: 8,
     letterSpacing: 0.5,
   },
   userPawnRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 6,
+    gap: 5,
+    paddingVertical: 5,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    borderBottomColor: '#ffffff10',
   },
-  userPawnNick: { fontSize: 12, fontWeight: '800' },
-  userPawnRole: { color: colors.textMuted, fontSize: 10 },
+  userPawnNick: { fontSize: 11, fontWeight: '800' },
+  userPawnMuted: { color: colors.accent, fontSize: 8 },
+  privBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  privBtnText: { color: '#fff', fontSize: 9, fontWeight: '800' },
   inputBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    padding: 8,
+    gap: 6,
+    padding: 6,
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.border,
@@ -658,20 +833,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
     borderRadius: radius.md,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     color: '#fff',
-    fontSize: 14,
+    fontSize: 12,
     borderWidth: 1,
     borderColor: colors.border,
   },
   sendBtn: {
-    width: 42,
-    height: 42,
+    width: 38,
+    height: 38,
     borderRadius: radius.md,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
 });
-

@@ -437,6 +437,27 @@ module.exports = async function handler(req, res) {
         .filter((u) => !u.banned)
         .sort((a, b) => (roleOrder[a.role] ?? 4) - (roleOrder[b.role] ?? 4));
 
+      // Active private rooms where this user is a participant
+      let privateRooms = [];
+      if (nick) {
+        const myLower = nick.toLowerCase();
+        const privMap = new Map();
+        for (const m of db.chatMessages) {
+          const r = String(m.room || '').toLowerCase();
+          if (r.startsWith('priv_')) {
+            const raw = r.replace('priv_', '');
+            const parts = raw.split('__');
+            if (parts.includes(myLower)) {
+              const other = parts.find((p) => p !== myLower) || myLower;
+              const matchUser = db.chatUsers.find((u) => u.nick.toLowerCase() === other);
+              const displayNick = matchUser ? matchUser.nick : other;
+              privMap.set(r, { id: r, targetNick: displayNick });
+            }
+          }
+        }
+        privateRooms = Array.from(privMap.values());
+      }
+
       const messages = db.chatMessages.filter((m) => (m.room || 'geral') === room).slice(-60);
       return res.status(200).json({
         ok: true,
@@ -444,6 +465,7 @@ module.exports = async function handler(req, res) {
         myProfile,
         chatUsers: sortedUsers,
         messages,
+        privateRooms,
       });
     }
 
