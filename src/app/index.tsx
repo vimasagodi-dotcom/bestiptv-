@@ -48,36 +48,6 @@ export default function Home() {
     <View style={[styles.root, !hideBars && { paddingTop: insets.top }]}>
       <StatusBar hidden={hideBars} style="light" />
 
-      {/* MYTVOnline+ Top Header (hidden in fullscreen video mode) */}
-      {!hideBars && (
-        <View style={styles.topBar}>
-          <View style={styles.brandRow}>
-            <View style={styles.logoBadge}>
-              <Ionicons name="play" size={16} color="#fff" />
-            </View>
-            <View>
-              <Text style={styles.brandTitle}>
-                Cocas<Text style={{ color: colors.primary }}>IPTV</Text>
-              </Text>
-              <Text style={styles.portalSub} numberOfLines={1}>
-                <Text style={{ color: colors.success }}>● </Text>
-                {active.name}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.topActions}>
-            <Text style={styles.clockText}>{formatTime(now)}</Text>
-            <Pressable onPress={reload} hitSlop={8} style={styles.headerBtn}>
-              <Ionicons name="refresh" size={18} color={colors.text} />
-            </Pressable>
-            <Pressable onPress={() => setTab('portals')} hitSlop={8} style={styles.headerBtn}>
-              <Ionicons name="swap-horizontal" size={18} color={colors.text} />
-            </Pressable>
-          </View>
-        </View>
-      )}
-
       {/* Main Content Area */}
       <View style={{ flex: 1 }}>
         <View style={{ flex: 1, display: tab === 'live' ? 'flex' : 'none' }}>

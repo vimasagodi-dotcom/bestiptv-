@@ -18,7 +18,10 @@ import { useApp } from '../context/AppContext';
 import { formatTime } from '../lib/utils';
 import { colors, radius } from '../theme';
 
-const PANEL_API_URL = 'https://iptvcocas.vercel.app/api/panel';
+const PANEL_API_URLS = [
+  'https://www.cocas.online/api/panel',
+  'https://iptvcocas.vercel.app/api/panel',
+];
 const NICK_STORAGE_KEY = '@cocas/chatNick.v1';
 
 type ChatRole = 'owner' | 'admin' | 'mod' | 'member' | 'guest';
@@ -41,11 +44,25 @@ interface ChatMessage {
   ts: number;
 }
 
-const ROOMS = [
-  { id: 'geral', label: '#Geral' },
-  { id: 'desporto', label: '#Desporto' },
-  { id: 'ajuda', label: '#Ajuda' },
-];
+async function requestChatApi(payload: Record<string, any>): Promise<any> {
+  let lastErr = null;
+  for (const url of PANEL_API_URLS) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok || res.status === 400 || res.status === 403) {
+        return await res.json();
+      }
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  if (lastErr) throw lastErr;
+  return null;
+}
 
 const ROLE_META: Record<ChatRole, { label: string; badge: string; color: string }> = {
   owner: { label: 'Dono', badge: '👑', color: '#F59E0B' },
@@ -55,7 +72,18 @@ const ROLE_META: Record<ChatRole, { label: string; badge: string; color: string 
   guest: { label: 'Visitante', badge: '👤', color: '#94A3B8' },
 };
 
-export function CommunityChatView({ activeTab }: { activeTab: boolean }) {
+const ROOMS = [
+  { id: 'geral', label: '#Geral' },
+  { id: 'desporto', label: '#Desporto' },
+  { id: 'ajuda', label: '#Ajuda' },
+];
+
+export interface CommunityChatViewProps {
+  activeTab?: boolean;
+  compact?: boolean;
+}
+
+export function CommunityChatView({ activeTab = true, compact = false }: CommunityChatViewProps) {
   const { active } = useApp();
   const [savedNick, setSavedNick] = useState<string | null>(null);
   const [nickInput, setNickInput] = useState('');
@@ -90,17 +118,12 @@ export function CommunityChatView({ activeTab }: { activeTab: boolean }) {
       if (!savedNick) return;
       if (!silent) setLoading(true);
       try {
-        const res = await fetch(PANEL_API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'chat_state',
-            room,
-            nick: savedNick,
-            panelUsername: active?.panelUsername || '',
-          }),
+        const data = await requestChatApi({
+          action: 'chat_state',
+          room,
+          nick: savedNick,
+          panelUsername: active?.panelUsername || '',
         });
-        const data = await res.json();
         if (data?.ok) {
           if (data.topic) setTopic(data.topic);
           if (data.myProfile) setMyProfile(data.myProfile);
@@ -145,18 +168,13 @@ export function CommunityChatView({ activeTab }: { activeTab: boolean }) {
     setSending(true);
     setText('');
     try {
-      const res = await fetch(PANEL_API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'chat_send',
-          room,
-          nick: savedNick,
-          text: msgText,
-          panelUsername: active?.panelUsername || '',
-        }),
+      const data = await requestChatApi({
+        action: 'chat_send',
+        room,
+        nick: savedNick,
+        text: msgText,
+        panelUsername: active?.panelUsername || '',
       });
-      const data = await res.json();
       if (!data?.ok) {
         Alert.alert('Chat Cocas', data?.error || 'Não foi possível enviar a mensagem.');
       } else {
@@ -181,16 +199,12 @@ export function CommunityChatView({ activeTab }: { activeTab: boolean }) {
             {
               text: '🗑️ Apagar Mensagem',
               onPress: async () => {
-                await fetch(PANEL_API_URL, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    action: 'chat_mod_action',
-                    actorNick: savedNick,
-                    targetNick,
-                    modOp: 'delete_msg',
-                    msgId,
-                  }),
+                await requestChatApi({
+                  action: 'chat_mod_action',
+                  actorNick: savedNick,
+                  targetNick,
+                  modOp: 'delete_msg',
+                  msgId,
                 });
                 fetchChatState(true);
               },
@@ -200,15 +214,11 @@ export function CommunityChatView({ activeTab }: { activeTab: boolean }) {
       {
         text: '🔇 Silenciar / Desilenciar (Mute)',
         onPress: async () => {
-          await fetch(PANEL_API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'chat_mod_action',
-              actorNick: savedNick,
-              targetNick,
-              modOp: 'mute',
-            }),
+          await requestChatApi({
+            action: 'chat_mod_action',
+            actorNick: savedNick,
+            targetNick,
+            modOp: 'mute',
           });
           fetchChatState(true);
         },
@@ -219,15 +229,11 @@ export function CommunityChatView({ activeTab }: { activeTab: boolean }) {
               text: '🚫 Banir do Chat',
               style: 'destructive' as const,
               onPress: async () => {
-                await fetch(PANEL_API_URL, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    action: 'chat_mod_action',
-                    actorNick: savedNick,
-                    targetNick,
-                    modOp: 'ban',
-                  }),
+                await requestChatApi({
+                  action: 'chat_mod_action',
+                  actorNick: savedNick,
+                  targetNick,
+                  modOp: 'ban',
                 });
                 fetchChatState(true);
               },
@@ -240,14 +246,14 @@ export function CommunityChatView({ activeTab }: { activeTab: boolean }) {
   // Screen 1: Create Nickname before entering xat-style chat
   if (!savedNick) {
     return (
-      <View style={styles.nickSetupWrap}>
-        <View style={styles.nickCard}>
-          <View style={styles.nickIconCircle}>
-            <Ionicons name="chatbubbles" size={32} color="#fff" />
+      <View style={[styles.nickSetupWrap, compact && { padding: 12 }]}>
+        <View style={[styles.nickCard, compact && { padding: 16 }]}>
+          <View style={[styles.nickIconCircle, compact && { width: 44, height: 44, borderRadius: 22, marginBottom: 8 }]}>
+            <Ionicons name="chatbubbles" size={compact ? 22 : 32} color="#fff" />
           </View>
-          <Text style={styles.nickTitle}>Chat da Comunidade Cocas</Text>
-          <Text style={styles.nickSub}>
-            Escolha o seu nome de utilizador (Nickname) para entrar nas salas da comunidade.
+          <Text style={[styles.nickTitle, compact && { fontSize: 16 }]}>Chat da Comunidade Cocas</Text>
+          <Text style={[styles.nickSub, compact && { fontSize: 12, marginBottom: 10 }]}>
+            Escolha o seu Nickname para conversar enquanto vê TV.
           </Text>
 
           <TextInput
@@ -257,22 +263,24 @@ export function CommunityChatView({ activeTab }: { activeTab: boolean }) {
             placeholderTextColor={colors.textMuted}
             autoCapitalize="none"
             autoCorrect={false}
-            style={styles.nickInput}
+            style={[styles.nickInput, compact && { paddingVertical: 8, fontSize: 14 }]}
           />
 
-          <View style={styles.rankLegendBox}>
-            <Text style={styles.rankLegendTitle}>Estatutos na Sala (Estilo xat):</Text>
-            <View style={styles.rankLegendRow}>
-              <Text style={styles.rankLegendItem}>👑 Dono</Text>
-              <Text style={styles.rankLegendItem}>🛡️ Admin</Text>
-              <Text style={styles.rankLegendItem}>⚔️ Mod</Text>
-              <Text style={styles.rankLegendItem}>⭐ Membro VIP</Text>
-              <Text style={styles.rankLegendItem}>👤 Visitante</Text>
+          {!compact && (
+            <View style={styles.rankLegendBox}>
+              <Text style={styles.rankLegendTitle}>Estatutos na Sala (Estilo xat):</Text>
+              <View style={styles.rankLegendRow}>
+                <Text style={styles.rankLegendItem}>👑 Dono</Text>
+                <Text style={styles.rankLegendItem}>🛡️ Admin</Text>
+                <Text style={styles.rankLegendItem}>⚔️ Mod</Text>
+                <Text style={styles.rankLegendItem}>⭐ Membro VIP</Text>
+                <Text style={styles.rankLegendItem}>👤 Visitante</Text>
+              </View>
             </View>
-          </View>
+          )}
 
-          <Pressable onPress={handleSaveNick} style={styles.enterChatBtn}>
-            <Ionicons name="enter-outline" size={20} color="#fff" />
+          <Pressable onPress={handleSaveNick} style={[styles.enterChatBtn, compact && { paddingVertical: 10, marginTop: 8 }]}>
+            <Ionicons name="enter-outline" size={18} color="#fff" />
             <Text style={styles.enterChatBtnText}>Entrar no Chat</Text>
           </Pressable>
         </View>
@@ -286,10 +294,10 @@ export function CommunityChatView({ activeTab }: { activeTab: boolean }) {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={90}
+      keyboardVerticalOffset={compact ? 0 : 90}
     >
       {/* Top xat.com Header: Rooms + Users Online Toggle + My Nickname */}
-      <View style={styles.topHeader}>
+      <View style={[styles.topHeader, compact && { paddingHorizontal: 8, paddingVertical: 6 }]}>
         <View style={styles.roomsRow}>
           {ROOMS.map((r) => {
             const activeRoom = room === r.id;
@@ -297,9 +305,9 @@ export function CommunityChatView({ activeTab }: { activeTab: boolean }) {
               <Pressable
                 key={r.id}
                 onPress={() => setRoom(r.id)}
-                style={[styles.roomChip, activeRoom && styles.roomChipActive]}
+                style={[styles.roomChip, compact && { paddingHorizontal: 10, paddingVertical: 4 }, activeRoom && styles.roomChipActive]}
               >
-                <Text style={[styles.roomChipText, activeRoom && { color: '#fff' }]}>{r.label}</Text>
+                <Text style={[styles.roomChipText, compact && { fontSize: 11 }, activeRoom && { color: '#fff' }]}>{r.label}</Text>
               </Pressable>
             );
           })}
@@ -308,13 +316,13 @@ export function CommunityChatView({ activeTab }: { activeTab: boolean }) {
         <View style={styles.headerRight}>
           <Pressable
             onPress={() => setShowUsersList((v) => !v)}
-            style={[styles.usersToggleBtn, showUsersList && { backgroundColor: colors.primary }]}
+            style={[styles.usersToggleBtn, compact && { paddingHorizontal: 8, paddingVertical: 4 }, showUsersList && { backgroundColor: colors.primary }]}
           >
-            <Ionicons name="people" size={16} color="#fff" />
-            <Text style={styles.usersToggleText}>{chatUsers.length}</Text>
+            <Ionicons name="people" size={compact ? 13 : 16} color="#fff" />
+            <Text style={[styles.usersToggleText, compact && { fontSize: 11 }]}>{chatUsers.length}</Text>
           </Pressable>
-          <Pressable onPress={() => setSavedNick(null)} style={styles.nickBadgeBtn}>
-            <Text style={styles.nickBadgeText}>
+          <Pressable onPress={() => setSavedNick(null)} style={[styles.nickBadgeBtn, compact && { paddingHorizontal: 8, paddingVertical: 4 }]}>
+            <Text style={[styles.nickBadgeText, compact && { fontSize: 11 }]}>
               {myRoleMeta.badge} {savedNick}
             </Text>
           </Pressable>
@@ -322,11 +330,13 @@ export function CommunityChatView({ activeTab }: { activeTab: boolean }) {
       </View>
 
       {/* Topic Banner */}
-      <View style={styles.topicBar}>
-        <Text style={styles.topicText} numberOfLines={1}>
-          {topic}
-        </Text>
-      </View>
+      {!compact && (
+        <View style={styles.topicBar}>
+          <Text style={styles.topicText} numberOfLines={1}>
+            {topic}
+          </Text>
+        </View>
+      )}
 
       <View style={styles.bodyWrap}>
         {/* Messages Area */}
@@ -399,18 +409,18 @@ export function CommunityChatView({ activeTab }: { activeTab: boolean }) {
       </View>
 
       {/* Message Input Bar */}
-      <View style={styles.inputBar}>
+      <View style={[styles.inputBar, compact && { paddingHorizontal: 8, paddingVertical: 6 }]}>
         <TextInput
           value={text}
           onChangeText={setText}
           placeholder={`Escrever em #${room}...`}
           placeholderTextColor={colors.textMuted}
-          style={styles.chatInput}
+          style={[styles.chatInput, compact && { height: 38, fontSize: 13, paddingHorizontal: 10 }]}
           onSubmitEditing={handleSend}
           returnKeyType="send"
         />
-        <Pressable onPress={handleSend} style={styles.sendBtn}>
-          <Ionicons name="send" size={18} color="#fff" />
+        <Pressable onPress={handleSend} style={[styles.sendBtn, compact && { width: 38, height: 38, borderRadius: 19 }]}>
+          <Ionicons name="send" size={compact ? 15 : 18} color="#fff" />
         </Pressable>
       </View>
     </KeyboardAvoidingView>

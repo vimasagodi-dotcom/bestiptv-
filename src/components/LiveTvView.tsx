@@ -23,6 +23,7 @@ import { sendPlayerHeartbeat } from '../lib/panel';
 import type { EpgEntry, LiveChannel } from '../lib/types';
 import { formatTime } from '../lib/utils';
 import { colors, radius } from '../theme';
+import { CommunityChatView } from './CommunityChatView';
 import { ALL, FAV } from './ContentBrowser';
 import { EmptyView, ErrorView, IconButton, Loading, SearchBar } from './ui';
 
@@ -52,6 +53,7 @@ export function LiveTvView({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [retrying, setRetrying] = useState(false);
+  const [subView, setSubView] = useState<'channels' | 'chat'>('channels');
 
   // Channel-switch Ad state for free users (users without a paid Cocas Community login)
   const isPaidMember = Boolean(active?.panelUsername);
@@ -723,6 +725,14 @@ export function LiveTvView({
         >
           <Ionicons name={isFav ? 'star' : 'star-outline'} size={20} color={isFav ? colors.accent : colors.textMuted} />
         </Pressable>
+        <Pressable
+          hitSlop={8}
+          onPress={() => setSubView((v) => (v === 'chat' ? 'channels' : 'chat'))}
+          style={[styles.stripExpandBtn, { backgroundColor: subView === 'chat' ? colors.primary : colors.surfaceAlt }]}
+        >
+          <Ionicons name="chatbubbles" size={15} color="#fff" />
+          <Text style={styles.stripExpandText}>{subView === 'chat' ? 'Canais' : 'Chat'}</Text>
+        </Pressable>
         <Pressable hitSlop={8} onPress={enterFullscreen} style={styles.stripExpandBtn}>
           <Ionicons name="expand" size={16} color="#fff" />
           <Text style={styles.stripExpandText}>Ecrã Inteiro</Text>
@@ -873,58 +883,66 @@ export function LiveTvView({
       {/* Current Channel & EPG Bar */}
       {infoStrip}
 
-      {/* Group Pills + Search */}
-      <View style={styles.groupBar}>
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={categories}
-          keyExtractor={(c) => c.id}
-          contentContainerStyle={{ gap: 6, paddingHorizontal: 10, alignItems: 'center' }}
-          renderItem={({ item: c }) => {
-            const activeCat = c.id === categoryId;
-            return (
-              <Pressable
-                onPress={() => setCategoryId(c.id)}
-                style={[styles.groupChip, activeCat && styles.groupChipActive]}
-              >
-                <Ionicons
-                  name={c.icon}
-                  size={14}
-                  color={activeCat ? '#fff' : c.id === FAV ? colors.accent : colors.textMuted}
-                />
-                <Text style={[styles.groupChipText, activeCat && { color: '#fff' }]}>{c.name}</Text>
-                <Text style={[styles.groupChipCount, activeCat && { color: '#fffa' }]}>{c.count}</Text>
-              </Pressable>
-            );
-          }}
-        />
-      </View>
+      {subView === 'chat' ? (
+        <View style={{ flex: 1 }}>
+          <CommunityChatView activeTab={activeTab} compact />
+        </View>
+      ) : (
+        <>
+          {/* Group Pills + Search */}
+          <View style={styles.groupBar}>
+            <FlatList
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              data={categories}
+              keyExtractor={(c) => c.id}
+              contentContainerStyle={{ gap: 6, paddingHorizontal: 10, alignItems: 'center' }}
+              renderItem={({ item: c }) => {
+                const activeCat = c.id === categoryId;
+                return (
+                  <Pressable
+                    onPress={() => setCategoryId(c.id)}
+                    style={[styles.groupChip, activeCat && styles.groupChipActive]}
+                  >
+                    <Ionicons
+                      name={c.icon}
+                      size={14}
+                      color={activeCat ? '#fff' : c.id === FAV ? colors.accent : colors.textMuted}
+                    />
+                    <Text style={[styles.groupChipText, activeCat && { color: '#fff' }]}>{c.name}</Text>
+                    <Text style={[styles.groupChipCount, activeCat && { color: '#fffa' }]}>{c.count}</Text>
+                  </Pressable>
+                );
+              }}
+            />
+          </View>
 
-      <View style={{ paddingHorizontal: 10, paddingBottom: 6 }}>
-        <SearchBar value={search} onChange={setSearch} placeholder="Pesquisar nos canais..." />
-      </View>
+          <View style={{ paddingHorizontal: 10, paddingBottom: 6 }}>
+            <SearchBar value={search} onChange={setSearch} placeholder="Pesquisar nos canais..." />
+          </View>
 
-      {/* Channel List */}
-      <FlatList
-        data={filteredChannels}
-        keyExtractor={(i) => i.id}
-        renderItem={renderChannelRow}
-        initialNumToRender={18}
-        maxToRenderPerBatch={25}
-        windowSize={10}
-        removeClippedSubviews
-        keyboardShouldPersistTaps="handled"
-        ListEmptyComponent={
-          <EmptyView
-            message={
-              categoryId === FAV
-                ? 'Sem canais favoritos.\nToque na estrela para guardar canais.'
-                : 'Nenhum canal encontrado.'
+          {/* Channel List */}
+          <FlatList
+            data={filteredChannels}
+            keyExtractor={(i) => i.id}
+            renderItem={renderChannelRow}
+            initialNumToRender={18}
+            maxToRenderPerBatch={25}
+            windowSize={10}
+            removeClippedSubviews
+            keyboardShouldPersistTaps="handled"
+            ListEmptyComponent={
+              <EmptyView
+                message={
+                  categoryId === FAV
+                    ? 'Sem canais favoritos.\nToque na estrela para guardar canais.'
+                    : 'Nenhum canal encontrado.'
+                }
+              />
             }
           />
-        }
-      />
+        </>
+      )}
     </View>
   );
 }
