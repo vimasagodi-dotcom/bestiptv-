@@ -359,9 +359,9 @@ export function LiveTvView({
   const showSpinner = status === 'loading' || status === 'idle' || retrying;
   const showError = status === 'error' && !retrying && retryCount >= 3;
 
-  // ---- Player Surface (shared between docked and fullscreen) ----
+  // ---- Docked Player Surface (Portrait / Wide Tablet) ----
   const playerBox = (
-    <View style={isFull ? styles.fsPlayerWrap : isWide ? styles.widePlayerWrap : styles.dockedPlayerWrap}>
+    <View style={isWide ? styles.widePlayerWrap : styles.dockedPlayerWrap}>
       <VideoView
         player={player}
         style={StyleSheet.absoluteFill}
@@ -418,309 +418,371 @@ export function LiveTvView({
         </View>
       )}
 
-      {!isFull ? (
-        /* Docked / Wide quick overlay controls */
-        <Pressable style={StyleSheet.absoluteFill} onPress={enterFullscreen}>
-          <View style={styles.dockedBadges}>
-            <View style={styles.liveBadge}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveBadgeText}>DIRETO</Text>
-            </View>
-            <View style={{ flex: 1 }} />
-            <Pressable
-              hitSlop={10}
-              onPress={() => loadChannel(currentChannel, 1)}
-              style={styles.miniControlBtn}
-            >
-              <Ionicons name="refresh" size={18} color="#fff" />
-            </Pressable>
-            <Pressable hitSlop={10} onPress={enterFullscreen} style={styles.miniControlBtn}>
-              <Ionicons name="scan-outline" size={18} color="#fff" />
-            </Pressable>
+      {/* Docked / Wide quick overlay controls */}
+      <Pressable style={StyleSheet.absoluteFill} onPress={enterFullscreen}>
+        <View style={styles.dockedBadges}>
+          <View style={styles.liveBadge}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveBadgeText}>DIRETO</Text>
           </View>
-        </Pressable>
-      ) : (
-        /* Fullscreen MYTVOnline+ OSD */
-        <>
+          <View style={{ flex: 1 }} />
           <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={() => (overlay ? setOverlay(false) : bumpOverlay())}
-          />
+            hitSlop={10}
+            onPress={() => loadChannel(currentChannel, 1)}
+            style={styles.miniControlBtn}
+          >
+            <Ionicons name="refresh" size={18} color="#fff" />
+          </Pressable>
+          <Pressable hitSlop={10} onPress={enterFullscreen} style={styles.miniControlBtn}>
+            <Ionicons name="scan-outline" size={18} color="#fff" />
+          </Pressable>
+        </View>
+      </Pressable>
+    </View>
+  );
 
-          {overlay && locked && (
-            <View style={[styles.lockFloating, { top: insets.top + 16, left: Math.max(insets.left, 20) }]}>
-              <Pressable
-                onPress={() => {
-                  setLocked(false);
-                  bumpOverlay();
-                }}
-                style={styles.osdCircleBtnActive}
-              >
-                <Ionicons name="lock-closed" size={22} color="#fff" />
-              </Pressable>
-              <Text style={styles.lockHint}>Toque para desbloquear</Text>
-            </View>
-          )}
-
-          {overlay && !locked && (
-            <>
-              {/* Top OSD Bar */}
+  // ---- FULLSCREEN VIEW (TV reajustada à esquerda, Chat fixo de cima abaixo à direita, Banner na barra inferior) ----
+  if (isFull) {
+    return (
+      <View style={styles.fsContainer}>
+        <StatusBar hidden />
+        <View style={styles.fsMainLayout}>
+          {/* Left Column: TV Player (reajustada ao lado esquerdo quando chat está aberto) */}
+          <View style={styles.fsTvCol}>
+            {/* Top Black Bar (Letterbox) with Logo / Channel Info */}
+            {fsChatVisible && (
               <View
                 style={[
-                  styles.fsTopBar,
+                  styles.fsTopBarLetterbox,
                   {
-                    paddingTop: insets.top + 10,
-                    paddingLeft: Math.max(insets.left, 16),
-                    paddingRight: Math.max(insets.right, 16),
+                    paddingTop: Math.max(insets.top, 6),
+                    paddingLeft: Math.max(insets.left, 12),
                   },
                 ]}
               >
-                <Pressable onPress={exitFullscreen} style={styles.osdCircleBtn}>
-                  <Ionicons name="chevron-down" size={24} color="#fff" />
-                </Pressable>
-                <Pressable
-                  onPress={() => setDrawerOpen((v) => !v)}
-                  style={[styles.osdPillBtn, drawerOpen && { backgroundColor: colors.primary }]}
-                >
-                  <Ionicons name="list" size={18} color="#fff" />
-                  <Text style={styles.osdPillText}>Canais</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => setFsChatVisible((v) => !v)}
-                  style={[styles.osdPillBtn, fsChatVisible && { backgroundColor: '#E50914' }]}
-                >
-                  <Ionicons name="chatbubbles" size={17} color="#fff" />
-                  <Text style={styles.osdPillText}>Chat</Text>
-                </Pressable>
-                <View style={{ flex: 1 }} />
-                <Pressable
-                  onPress={() => setFit((f) => (f === 'contain' ? 'cover' : 'contain'))}
-                  style={styles.osdPillBtn}
-                >
-                  <Ionicons name="resize-outline" size={17} color="#fff" />
-                  <Text style={styles.osdPillText}>{fit === 'contain' ? '16:9' : 'Preencher'}</Text>
-                </Pressable>
-                <Pressable onPress={() => loadChannel(currentChannel, 1)} style={styles.osdCircleBtn}>
-                  <Ionicons name="refresh" size={20} color="#fff" />
-                </Pressable>
-                <Pressable onPress={() => setLocked(true)} style={styles.osdCircleBtn}>
-                  <Ionicons name="lock-open-outline" size={20} color="#fff" />
-                </Pressable>
-              </View>
-
-              {/* Center Zap & Play/Pause Controls */}
-              <View style={styles.fsCenterControls} pointerEvents="box-none">
-                <Pressable
-                  onPress={() => {
-                    zap(-1);
-                    bumpOverlay();
-                  }}
-                  style={styles.osdZapBtn}
-                >
-                  <Ionicons name="play-skip-back" size={26} color="#fff" />
-                </Pressable>
-                <Pressable
-                  onPress={() => {
-                    if (isPlaying) player.pause();
-                    else player.play();
-                    bumpOverlay();
-                  }}
-                  style={styles.osdPlayBtn}
-                >
-                  <Ionicons name={isPlaying ? 'pause' : 'play'} size={34} color="#fff" />
-                </Pressable>
-                <Pressable
-                  onPress={() => {
-                    zap(1);
-                    bumpOverlay();
-                  }}
-                  style={styles.osdZapBtn}
-                >
-                  <Ionicons name="play-skip-forward" size={26} color="#fff" />
-                </Pressable>
-              </View>
-
-              {/* MYTVOnline+ Bottom Channel Info & EPG Card */}
-              <View
-                style={[
-                  styles.fsBottomCard,
-                  {
-                    marginBottom: Math.max(insets.bottom, 12),
-                    marginLeft: Math.max(insets.left, 16),
-                    marginRight: Math.max(insets.right, 16),
-                  },
-                ]}
-              >
-                <View style={styles.fsChannelHeader}>
-                  <View style={styles.fsNumBadge}>
-                    <Text style={styles.fsNumText}>
+                <View style={styles.fsTopBrandingRow}>
+                  {currentChannel?.icon ? (
+                    <Image source={currentChannel.icon} style={styles.fsTopChannelLogo} contentFit="contain" />
+                  ) : (
+                    <View style={styles.fsTopBrandBadge}>
+                      <Ionicons name="tv" size={13} color="#fff" />
+                    </View>
+                  )}
+                  <View style={styles.fsTopNumBadge}>
+                    <Text style={styles.fsTopNumText}>
                       {String(currentChannel?.num ?? 1).padStart(3, '0')}
                     </Text>
                   </View>
-                  <View style={styles.fsLogoBox}>
-                    {currentChannel?.icon ? (
-                      <Image source={currentChannel.icon} style={styles.fsLogo} contentFit="contain" />
-                    ) : (
-                      <Ionicons name="tv-outline" size={22} color={colors.textMuted} />
-                    )}
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.fsChTitle} numberOfLines={1}>
-                      {currentChannel?.name}
-                    </Text>
-                    <Text style={styles.fsPortalSub} numberOfLines={1}>
-                      {active?.name} · HLS
-                    </Text>
-                  </View>
-                  { currentChannel && (
-                    <Pressable
-                      hitSlop={10}
-                      onPress={() =>
-                        toggleFavorite({
-                          kind: 'live',
-                          id: currentChannel.id,
-                          name: currentChannel.name,
-                          icon: currentChannel.icon,
-                        })
-                      }
-                    >
-                      <Ionicons
-                        name={isFav ? 'star' : 'star-outline'}
-                        size={24}
-                        color={isFav ? colors.accent : '#fff'}
-                      />
-                    </Pressable>
-                  )}
-                </View>
-
-                <View style={styles.fsEpgBox}>
-                  {nowEpg ? (
-                    <>
-                      <View style={styles.fsEpgRow}>
-                        <View style={styles.epgTagNow}>
-                          <Text style={styles.epgTagText}>AGORA</Text>
-                        </View>
-                        <Text style={styles.fsEpgTime}>
-                          {formatTime(nowEpg.start)} - {formatTime(nowEpg.end)}
-                        </Text>
-                        <Text style={styles.fsEpgTitle} numberOfLines={1}>
-                          {nowEpg.title}
-                        </Text>
-                      </View>
-                      <View style={styles.epgBarBg}>
-                        <View style={[styles.epgBarFg, { width: `${epgProgress * 100}%` }]} />
-                      </View>
-                      {nextEpg && (
-                        <View style={styles.fsEpgRow}>
-                          <View style={styles.epgTagNext}>
-                            <Text style={styles.epgTagNextText}>A SEGUIR</Text>
-                          </View>
-                          <Text style={styles.fsEpgTime}>
-                            {formatTime(nextEpg.start)} - {formatTime(nextEpg.end)}
-                          </Text>
-                          <Text style={styles.fsEpgNextTitle} numberOfLines={1}>
-                            {nextEpg.title}
-                          </Text>
-                        </View>
-                      )}
-                    </>
-                  ) : (
-                    <Text style={styles.noEpgText}>Sem informação de programação (EPG)</Text>
-                  )}
-                </View>
-              </View>
-            </>
-          )}
-
-          {/* Left Channel & Category Drawer in Fullscreen (MYTVOnline+ style) */}
-          {drawerOpen && !locked && (
-            <View
-              style={[
-                styles.fsDrawer,
-                {
-                  paddingTop: insets.top + 8,
-                  paddingBottom: insets.bottom + 8,
-                  paddingLeft: Math.max(insets.left, 8),
-                },
-              ]}
-            >
-              {/* Categories column */}
-              <View style={styles.fsDrawerCats}>
-                <Text style={styles.fsDrawerHeader}>GRUPOS</Text>
-                <FlatList
-                  data={categories}
-                  keyExtractor={(c) => c.id}
-                  renderItem={({ item: c }) => (
-                    <Pressable
-                      onPress={() => setCategoryId(c.id)}
-                      style={[styles.fsDrawerCatRow, c.id === categoryId && styles.fsDrawerCatActive]}
-                    >
-                      <Text
-                        style={[styles.fsDrawerCatText, c.id === categoryId && { color: '#fff' }]}
-                        numberOfLines={1}
-                      >
-                        {c.name}
+                  <Text style={styles.fsTopChannelName} numberOfLines={1}>
+                    {currentChannel?.name || 'TV em Direto'}
+                  </Text>
+                  {nowEpg && (
+                    <View style={styles.fsTopEpgBadge}>
+                      <View style={styles.liveDot} />
+                      <Text style={styles.fsTopEpgText} numberOfLines={1}>
+                        {nowEpg.title}
                       </Text>
-                      <Text style={styles.fsDrawerCatCount}>{c.count}</Text>
-                    </Pressable>
+                    </View>
                   )}
-                />
-              </View>
-              {/* Channels column */}
-              <View style={styles.fsDrawerChannels}>
-                <View style={styles.fsDrawerTopRow}>
-                  <Text style={styles.fsDrawerHeader}>CANAIS ({filteredChannels.length})</Text>
-                  <IconButton name="close" size={20} onPress={() => setDrawerOpen(false)} />
                 </View>
-                <FlatList
-                  data={filteredChannels}
-                  keyExtractor={(c) => c.id}
-                  initialNumToRender={18}
-                  renderItem={({ item }) => {
-                    const activeCh = item.id === selectedId;
-                    return (
-                      <Pressable
-                        onPress={() => {
-                          setSelectedId(item.id);
-                          setDrawerOpen(false);
-                        }}
-                        style={[styles.fsDrawerChRow, activeCh && styles.fsDrawerChActive]}
-                      >
-                        <Text style={styles.fsDrawerChNum}>
-                          {String(item.num ?? '').padStart(3, '0')}
-                        </Text>
-                        {item.icon ? (
-                          <Image
-                            source={item.icon}
-                            style={styles.fsDrawerChLogo}
-                            contentFit="contain"
-                            recyclingKey={item.id}
-                          />
-                        ) : (
-                          <Ionicons name="tv-outline" size={16} color={colors.textMuted} />
-                        )}
-                        <Text style={styles.fsDrawerChName} numberOfLines={1}>
-                          {item.name}
-                        </Text>
-                      </Pressable>
-                    );
-                  }}
-                />
               </View>
+            )}
+
+            {/* Video View Surface */}
+            <View style={styles.fsVideoSurface}>
+              <VideoView
+                player={player}
+                style={StyleSheet.absoluteFill}
+                contentFit={fit}
+                nativeControls={false}
+                allowsPictureInPicture
+              />
+
+              {showSpinner && (
+                <View style={styles.playerCenter} pointerEvents="none">
+                  <ActivityIndicator size="large" color={colors.primary} />
+                  {retrying && <Text style={styles.retryingText}>A ligar ao canal ({retryCount}/3)...</Text>}
+                </View>
+              )}
+
+              {showError && (
+                <View style={styles.playerCenter}>
+                  <Ionicons name="warning-outline" size={36} color={colors.danger} />
+                  <Text style={styles.errorTitle}>Canal temporariamente indisponível</Text>
+                  {playerError?.message ? (
+                    <Text style={styles.errorSub} numberOfLines={2}>
+                      {playerError.message}
+                    </Text>
+                  ) : null}
+                  <Pressable onPress={() => loadChannel(currentChannel, 1)} style={styles.retryBtn}>
+                    <Ionicons name="refresh" size={16} color="#fff" />
+                    <Text style={styles.retryBtnText}>Reconectar</Text>
+                  </Pressable>
+                </View>
+              )}
+
+              {/* Channel-switch Ad Overlay for Free Users */}
+              {adVisible && !isPaidMember && (
+                <View style={styles.adOverlay}>
+                  <View style={styles.adCard}>
+                    <View style={styles.adBadgeRow}>
+                      <Text style={styles.adTag}>PUBLICIDADE · COMUNIDADE COCAS</Text>
+                      {adCountdown > 0 ? (
+                        <Text style={styles.adTimerText}>Fechar em {adCountdown}s</Text>
+                      ) : (
+                        <Pressable onPress={() => setAdVisible(false)} style={styles.adCloseBtn}>
+                          <Text style={styles.adCloseBtnText}>Fechar ✕</Text>
+                        </Pressable>
+                      )}
+                    </View>
+                    <Text style={styles.adTitle}>Torne-se Membro VIP da Comunidade Cocas</Text>
+                    <Text style={styles.adDesc}>
+                      Remova toda a publicidade ao mudar de canal e receba estatuto VIP no Chat da Comunidade:
+                    </Text>
+                    <Text style={styles.adPlans}>
+                      1 Ano: 5€ · 2 Anos: 9€ · 3 Anos: 13€ · 4 Anos: 16€ · 5 Anos: 19€
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Fullscreen Overlay click to toggle controls */}
+              <Pressable
+                style={StyleSheet.absoluteFill}
+                onPress={() => (overlay ? setOverlay(false) : bumpOverlay())}
+              />
+
+              {/* Lock Button */}
+              {overlay && locked && (
+                <View style={[styles.lockFloating, { top: insets.top + 16, left: Math.max(insets.left, 20) }]}>
+                  <Pressable
+                    onPress={() => {
+                      setLocked(false);
+                      bumpOverlay();
+                    }}
+                    style={styles.osdCircleBtnActive}
+                  >
+                    <Ionicons name="lock-closed" size={22} color="#fff" />
+                  </Pressable>
+                  <Text style={styles.lockHint}>Toque para desbloquear</Text>
+                </View>
+              )}
+
+              {/* Fullscreen OSD Controls */}
+              {overlay && !locked && (
+                <>
+                  {/* Top OSD Bar */}
+                  <View
+                    style={[
+                      styles.fsTopBar,
+                      {
+                        paddingTop: insets.top + 8,
+                        paddingLeft: Math.max(insets.left, 16),
+                        paddingRight: Math.max(insets.right, 16),
+                      },
+                    ]}
+                  >
+                    <Pressable onPress={exitFullscreen} style={styles.osdCircleBtn}>
+                      <Ionicons name="chevron-down" size={24} color="#fff" />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => setDrawerOpen((v) => !v)}
+                      style={[styles.osdPillBtn, drawerOpen && { backgroundColor: colors.primary }]}
+                    >
+                      <Ionicons name="list" size={18} color="#fff" />
+                      <Text style={styles.osdPillText}>Canais</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => setFsChatVisible((v) => !v)}
+                      style={[styles.osdPillBtn, fsChatVisible && { backgroundColor: '#E50914' }]}
+                    >
+                      <Ionicons name="chatbubbles" size={17} color="#fff" />
+                      <Text style={styles.osdPillText}>Chat</Text>
+                    </Pressable>
+                    <View style={{ flex: 1 }} />
+                    <Pressable
+                      onPress={() => setFit((f) => (f === 'contain' ? 'cover' : 'contain'))}
+                      style={styles.osdPillBtn}
+                    >
+                      <Ionicons name="resize-outline" size={17} color="#fff" />
+                      <Text style={styles.osdPillText}>{fit === 'contain' ? '16:9' : 'Preencher'}</Text>
+                    </Pressable>
+                    <Pressable onPress={() => loadChannel(currentChannel, 1)} style={styles.osdCircleBtn}>
+                      <Ionicons name="refresh" size={20} color="#fff" />
+                    </Pressable>
+                    <Pressable onPress={() => setLocked(true)} style={styles.osdCircleBtn}>
+                      <Ionicons name="lock-open-outline" size={20} color="#fff" />
+                    </Pressable>
+                  </View>
+
+                  {/* Center Zap Controls */}
+                  <View style={styles.fsCenterControls} pointerEvents="box-none">
+                    <Pressable
+                      onPress={() => {
+                        zap(-1);
+                        bumpOverlay();
+                      }}
+                      style={styles.osdZapBtn}
+                    >
+                      <Ionicons name="play-skip-back" size={26} color="#fff" />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => {
+                        if (isPlaying) player.pause();
+                        else player.play();
+                        bumpOverlay();
+                      }}
+                      style={styles.osdPlayBtn}
+                    >
+                      <Ionicons name={isPlaying ? 'pause' : 'play'} size={34} color="#fff" />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => {
+                        zap(1);
+                        bumpOverlay();
+                      }}
+                      style={styles.osdZapBtn}
+                    >
+                      <Ionicons name="play-skip-forward" size={26} color="#fff" />
+                    </Pressable>
+                  </View>
+
+                  {/* Bottom Channel Info & EPG Card */}
+                  <View
+                    style={[
+                      styles.fsBottomCard,
+                      {
+                        marginBottom: Math.max(insets.bottom, 12),
+                        marginLeft: Math.max(insets.left, 16),
+                        marginRight: Math.max(insets.right, 16),
+                      },
+                    ]}
+                  >
+                    <View style={styles.fsChannelHeader}>
+                      <View style={styles.fsNumBadge}>
+                        <Text style={styles.fsNumText}>
+                          {String(currentChannel?.num ?? 1).padStart(3, '0')}
+                        </Text>
+                      </View>
+                      <View style={styles.fsLogoBox}>
+                        {currentChannel?.icon ? (
+                          <Image source={currentChannel.icon} style={styles.fsLogo} contentFit="contain" />
+                        ) : (
+                          <Ionicons name="tv-outline" size={22} color={colors.textMuted} />
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.fsChTitle} numberOfLines={1}>
+                          {currentChannel?.name}
+                        </Text>
+                        <Text style={styles.fsPortalSub} numberOfLines={1}>
+                          {active?.name} · HLS
+                        </Text>
+                      </View>
+                      {currentChannel && (
+                        <Pressable
+                          hitSlop={10}
+                          onPress={() =>
+                            toggleFavorite({
+                              kind: 'live',
+                              id: currentChannel.id,
+                              name: currentChannel.name,
+                              icon: currentChannel.icon,
+                            })
+                          }
+                        >
+                          <Ionicons
+                            name={isFav ? 'star' : 'star-outline'}
+                            size={24}
+                            color={isFav ? colors.accent : '#fff'}
+                          />
+                        </Pressable>
+                      )}
+                    </View>
+
+                    <View style={styles.fsEpgBox}>
+                      {nowEpg ? (
+                        <>
+                          <View style={styles.fsEpgRow}>
+                            <View style={styles.epgTagNow}>
+                              <Text style={styles.epgTagText}>AGORA</Text>
+                            </View>
+                            <Text style={styles.fsEpgTime}>
+                              {formatTime(nowEpg.start)} - {formatTime(nowEpg.end)}
+                            </Text>
+                            <Text style={styles.fsEpgTitle} numberOfLines={1}>
+                              {nowEpg.title}
+                            </Text>
+                          </View>
+                          <View style={styles.epgBarBg}>
+                            <View style={[styles.epgBarFg, { width: `${epgProgress * 100}%` }]} />
+                          </View>
+                          {nextEpg && (
+                            <View style={styles.fsEpgRow}>
+                              <View style={styles.epgTagNext}>
+                                <Text style={styles.epgTagNextText}>A SEGUIR</Text>
+                              </View>
+                              <Text style={styles.fsEpgTime}>
+                                {formatTime(nextEpg.start)} - {formatTime(nextEpg.end)}
+                              </Text>
+                              <Text style={styles.fsEpgNextTitle} numberOfLines={1}>
+                                {nextEpg.title}
+                              </Text>
+                            </View>
+                          )}
+                        </>
+                      ) : (
+                        <Text style={styles.noEpgText}>Sem informação de programação (EPG)</Text>
+                      )}
+                    </View>
+                  </View>
+                </>
+              )}
             </View>
-          )}
-          {/* Right Floating Transparent Live Chat (Read-only on Match / Fullscreen — as requested) */}
+
+            {/* Bottom Black Bar (Letterbox) with Sponsor Pub Banner — ONLY in fullscreen */}
+            {adConfig?.bannerEnabled !== false && !locked && (
+              <View
+                style={[
+                  styles.fsBottomBarLetterbox,
+                  {
+                    paddingBottom: Math.max(insets.bottom, 6),
+                    paddingLeft: Math.max(insets.left, 12),
+                    paddingRight: 12,
+                  },
+                ]}
+              >
+                <View style={styles.fsBottomSponsorBanner}>
+                  <View style={styles.sponsorBadge}>
+                    <Text style={styles.sponsorBadgeText}>PUB</Text>
+                  </View>
+                  {adConfig?.bannerImageUrl ? (
+                    <Image source={adConfig.bannerImageUrl} style={styles.sponsorLogo} contentFit="contain" />
+                  ) : null}
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.sponsorMainText} numberOfLines={1}>
+                      {adConfig?.bannerText || 'DaPortas · Portas, Roupeiros e Soluções por Medida'}
+                    </Text>
+                    <Text style={styles.sponsorSubText} numberOfLines={1}>
+                      {adConfig?.bannerSubtext || 'Visite daportas.pt · Qualidade e Design'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* Right Column: Fixed Live Chat Sidebar (occupying top to bottom, 100% height) */}
           {fsChatVisible && !locked && (
             <View
               style={[
-                styles.fsChatOverlayPanel,
+                styles.fsChatColumnFixed,
                 {
-                  top: insets.top + 60,
-                  bottom: insets.bottom + 16,
-                  right: Math.max(insets.right, 14),
+                  paddingTop: Math.max(insets.top, 6),
+                  paddingBottom: Math.max(insets.bottom, 6),
+                  paddingRight: Math.max(insets.right, 6),
                 },
               ]}
-              pointerEvents="box-none"
             >
               <View style={styles.fsChatHeader}>
                 <View style={styles.fsChatLiveDot} />
@@ -734,50 +796,90 @@ export function LiveTvView({
               </View>
             </View>
           )}
+        </View>
 
-          {/* Bottom Fullscreen Sponsor Banner (estilo Sport TV / DaPortas — à medida) */}
-          {adConfig?.bannerEnabled !== false && !locked && (
-            <View
-              style={[
-                styles.fsBottomSponsorBanner,
-                {
-                  bottom: Math.max(insets.bottom, 12),
-                  left: Math.max(insets.left, 16),
-                  right: fsChatVisible ? Math.max(insets.right, 14) + 290 : Math.max(insets.right, 16),
-                },
-              ]}
-            >
-              <View style={styles.sponsorBadge}>
-                <Text style={styles.sponsorBadgeText}>PUB</Text>
-              </View>
-              {adConfig?.bannerImageUrl ? (
-                <Image source={adConfig.bannerImageUrl} style={styles.sponsorLogo} contentFit="contain" />
-              ) : null}
-              <View style={{ flex: 1 }}>
-                <Text style={styles.sponsorMainText} numberOfLines={1}>
-                  {adConfig?.bannerText || 'DaPortas · Portas, Roupeiros e Soluções por Medida'}
-                </Text>
-                <Text style={styles.sponsorSubText} numberOfLines={1}>
-                  {adConfig?.bannerSubtext || 'Visite daportas.pt · Qualidade e Design'}
-                </Text>
-              </View>
+        {/* Left Channel & Category Drawer in Fullscreen (MYTVOnline+ style) */}
+        {drawerOpen && !locked && (
+          <View
+            style={[
+              styles.fsDrawer,
+              {
+                paddingTop: insets.top + 8,
+                paddingBottom: insets.bottom + 8,
+                paddingLeft: Math.max(insets.left, 8),
+              },
+            ]}
+          >
+            {/* Categories column */}
+            <View style={styles.fsDrawerCats}>
+              <Text style={styles.fsDrawerHeader}>GRUPOS</Text>
+              <FlatList
+                data={categories}
+                keyExtractor={(c) => c.id}
+                renderItem={({ item: c }) => (
+                  <Pressable
+                    onPress={() => setCategoryId(c.id)}
+                    style={[styles.fsDrawerCatRow, c.id === categoryId && styles.fsDrawerCatActive]}
+                  >
+                    <Text
+                      style={[styles.fsDrawerCatText, c.id === categoryId && { color: '#fff' }]}
+                      numberOfLines={1}
+                    >
+                      {c.name}
+                    </Text>
+                    <Text style={styles.fsDrawerCatCount}>{c.count}</Text>
+                  </Pressable>
+                )}
+              />
             </View>
-          )}
-        </>
-      )}
-    </View>
-  );
-
-  if (isFull) {
-    return (
-      <View style={styles.fsContainer}>
-        <StatusBar hidden />
-        {playerBox}
+            {/* Channels column */}
+            <View style={styles.fsDrawerChannels}>
+              <View style={styles.fsDrawerTopRow}>
+                <Text style={styles.fsDrawerHeader}>CANAIS ({filteredChannels.length})</Text>
+                <IconButton name="close" size={20} onPress={() => setDrawerOpen(false)} />
+              </View>
+              <FlatList
+                data={filteredChannels}
+                keyExtractor={(c) => c.id}
+                initialNumToRender={18}
+                renderItem={({ item }) => {
+                  const activeCh = item.id === selectedId;
+                  return (
+                    <Pressable
+                      onPress={() => {
+                        setSelectedId(item.id);
+                        setDrawerOpen(false);
+                      }}
+                      style={[styles.fsDrawerChRow, activeCh && styles.fsDrawerChActive]}
+                    >
+                      <Text style={styles.fsDrawerChNum}>
+                        {String(item.num ?? '').padStart(3, '0')}
+                      </Text>
+                      {item.icon ? (
+                        <Image
+                          source={item.icon}
+                          style={styles.fsDrawerChLogo}
+                          contentFit="contain"
+                          recyclingKey={item.id}
+                        />
+                      ) : (
+                        <Ionicons name="tv-outline" size={16} color={colors.textMuted} />
+                      )}
+                      <Text style={styles.fsDrawerChName} numberOfLines={1}>
+                        {item.name}
+                      </Text>
+                    </Pressable>
+                  );
+                }}
+              />
+            </View>
+          </View>
+        )}
       </View>
     );
   }
 
-  // ---- Info + EPG Strip below the docked player ----
+    // ---- Info + EPG Strip below the docked player ----
   const infoStrip = currentChannel && (
     <View style={styles.infoStrip}>
       <View style={styles.infoStripTop}>
@@ -1019,60 +1121,6 @@ export function LiveTvView({
               />
             }
           />
-          {/* Right Floating Transparent Live Chat (Read-only on Match / Fullscreen — as requested) */}
-          {fsChatVisible && !locked && (
-            <View
-              style={[
-                styles.fsChatOverlayPanel,
-                {
-                  top: insets.top + 60,
-                  bottom: insets.bottom + 16,
-                  right: Math.max(insets.right, 14),
-                },
-              ]}
-              pointerEvents="box-none"
-            >
-              <View style={styles.fsChatHeader}>
-                <View style={styles.fsChatLiveDot} />
-                <Text style={styles.fsChatTitle}>Chat em Direto</Text>
-                <Pressable onPress={() => setFsChatVisible(false)} hitSlop={8} style={{ padding: 4 }}>
-                  <Ionicons name="close" size={18} color="#fff" />
-                </Pressable>
-              </View>
-              <View style={{ flex: 1 }}>
-                <CommunityChatView activeTab={activeTab} compact readOnly />
-              </View>
-            </View>
-          )}
-
-          {/* Bottom Fullscreen Sponsor Banner (estilo Sport TV / DaPortas — à medida) */}
-          {adConfig?.bannerEnabled !== false && !locked && (
-            <View
-              style={[
-                styles.fsBottomSponsorBanner,
-                {
-                  bottom: Math.max(insets.bottom, 12),
-                  left: Math.max(insets.left, 16),
-                  right: fsChatVisible ? Math.max(insets.right, 14) + 290 : Math.max(insets.right, 16),
-                },
-              ]}
-            >
-              <View style={styles.sponsorBadge}>
-                <Text style={styles.sponsorBadgeText}>PUB</Text>
-              </View>
-              {adConfig?.bannerImageUrl ? (
-                <Image source={adConfig.bannerImageUrl} style={styles.sponsorLogo} contentFit="contain" />
-              ) : null}
-              <View style={{ flex: 1 }}>
-                <Text style={styles.sponsorMainText} numberOfLines={1}>
-                  {adConfig?.bannerText || 'DaPortas · Portas, Roupeiros e Soluções por Medida'}
-                </Text>
-                <Text style={styles.sponsorSubText} numberOfLines={1}>
-                  {adConfig?.bannerSubtext || 'Visite daportas.pt · Qualidade e Design'}
-                </Text>
-              </View>
-            </View>
-          )}
         </>
       )}
     </View>
@@ -1476,60 +1524,104 @@ const styles = StyleSheet.create({
   fsDrawerChNum: { color: colors.textMuted, fontSize: 11, width: 26 },
   fsDrawerChLogo: { width: 34, height: 24 },
   fsDrawerChName: { flex: 1, color: '#fff', fontSize: 13, fontWeight: '600' },
-  // Fullscreen Live Chat Overlay Panel (Read-only as in match screenshot)
-  fsChatOverlayPanel: {
-    position: 'absolute',
-    width: 275,
-    maxWidth: '40%',
-    backgroundColor: '#0c0e14d9',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#ffffff1a',
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  fsChatHeader: {
+  // Fullscreen row layout: TV on left, Fixed Chat on right
+  fsMainLayout: {
+    flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    backgroundColor: '#000',
+  },
+  fsTvCol: {
+    flex: 1,
+    height: '100%',
+    backgroundColor: '#000',
+    flexDirection: 'column',
+    position: 'relative',
+  },
+  fsTopBarLetterbox: {
+    width: '100%',
+    backgroundColor: '#080a10',
     borderBottomWidth: 1,
     borderBottomColor: '#ffffff14',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  fsTopBrandingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
-    backgroundColor: '#141824aa',
   },
-  fsChatLiveDot: {
-    width: 8,
-    height: 8,
+  fsTopChannelLogo: {
+    width: 28,
+    height: 18,
+  },
+  fsTopBrandBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 5,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fsTopNumBadge: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: 4,
-    backgroundColor: '#E50914',
   },
-  fsChatTitle: {
-    flex: 1,
+  fsTopNumText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  fsTopChannelName: {
     color: '#fff',
     fontSize: 12,
     fontWeight: '800',
-    letterSpacing: 0.5,
+    maxWidth: 160,
   },
-  // Bottom Fullscreen Sponsor Banner (estilo Sport TV / DaPortas)
+  fsTopEpgBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ffffff12',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  fsTopEpgText: {
+    color: colors.textMuted,
+    fontSize: 10,
+    fontWeight: '600',
+    maxWidth: 200,
+  },
+  fsVideoSurface: {
+    flex: 1,
+    position: 'relative',
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fsBottomBarLetterbox: {
+    width: '100%',
+    backgroundColor: '#080a10',
+    borderTopWidth: 1,
+    borderTopColor: '#ffffff14',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    zIndex: 10,
+  },
   fsBottomSponsorBanner: {
-    position: 'absolute',
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#991B1Bdd', // Vermelho DaPortas / elegante
-    borderRadius: 8,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: '#ffffff2a',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    gap: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.45,
-    shadowRadius: 8,
-    elevation: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    gap: 8,
   },
   sponsorBadge: {
     backgroundColor: '#ffffff26',
@@ -1544,17 +1636,52 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   sponsorLogo: {
-    width: 24,
-    height: 24,
+    width: 20,
+    height: 20,
   },
   sponsorMainText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
   },
   sponsorSubText: {
     color: '#fed7aa',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '500',
+  },
+  // Fixed Full-height Chat Sidebar on the right
+  fsChatColumnFixed: {
+    width: 300,
+    maxWidth: '42%',
+    height: '100%',
+    backgroundColor: '#0c0e14',
+    borderLeftWidth: 1,
+    borderLeftColor: '#ffffff1c',
+    display: 'flex',
+    flexDirection: 'column',
+    zIndex: 20,
+  },
+  fsChatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ffffff14',
+    gap: 8,
+    backgroundColor: '#141824',
+  },
+  fsChatLiveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#E50914',
+  },
+  fsChatTitle: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
 });
