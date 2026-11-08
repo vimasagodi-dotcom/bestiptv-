@@ -20,26 +20,14 @@ export default function Playlists() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScreenHeader
-        title="Portais / Login"
-        back={playlists.length > 0}
-        right={
-          <Pressable
-            onPress={() => router.push('/admin-panel')}
-            style={styles.panelBtn}
-          >
-            <Ionicons name="settings-outline" size={16} color="#fff" />
-            <Text style={styles.panelBtnText}>Painel de Controlo</Text>
-          </Pressable>
-        }
-      />
+      <ScreenHeader title="Portais / Login" back={playlists.length > 0} />
       <FlatList
         data={playlists}
         keyExtractor={(p) => p.id}
         contentContainerStyle={{ padding: 16, gap: 12, flexGrow: 1 }}
         ListEmptyComponent={
           <View style={{ flex: 1, justifyContent: 'center' }}>
-            <EmptyView icon="tv-outline" message={'Bem-vindo ao KikoIPTV!\nEntre com a sua conta KikoIPTV ou adicione uma lista para começar.'} />
+            <EmptyView icon="tv-outline" message={'Bem-vindo ao Cocas!\nInicie sessão com a sua conta ou adicione uma lista para começar.'} />
           </View>
         }
         renderItem={({ item }) => {
@@ -70,14 +58,8 @@ export default function Playlists() {
           );
         }}
       />
-      <View style={{ padding: 16, paddingBottom: insets.bottom + 16, gap: 10 }}>
+      <View style={{ padding: 16, paddingBottom: insets.bottom + 16 }}>
         <Button title="Entrar / Adicionar Portal" icon="log-in-outline" onPress={() => router.push('/playlist-form')} />
-        <Button
-          title="Painel de Controlo (Gerir Utilizadores e Listas)"
-          variant="secondary"
-          icon="settings-outline"
-          onPress={() => router.push('/admin-panel')}
-        />
       </View>
     </View>
   );
@@ -98,16 +80,4 @@ const styles = StyleSheet.create({
   icon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   name: { color: colors.text, fontSize: 16, fontWeight: '700' },
   sub: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
-  panelBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.surfaceAlt,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  panelBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
 });

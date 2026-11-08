@@ -55,7 +55,7 @@ export default function Home() {
             </View>
             <View>
               <Text style={styles.brandTitle}>
-                Kiko<Text style={{ color: colors.primary }}>IPTV</Text>
+                Cocas<Text style={{ color: colors.primary }}>IPTV</Text>
               </Text>
               <Text style={styles.portalSub} numberOfLines={1}>
                 <Text style={{ color: colors.success }}>● </Text>
@@ -68,9 +68,6 @@ export default function Home() {
             <Text style={styles.clockText}>{formatTime(now)}</Text>
             <Pressable onPress={reload} hitSlop={8} style={styles.headerBtn}>
               <Ionicons name="refresh" size={18} color={colors.text} />
-            </Pressable>
-            <Pressable onPress={() => router.push('/admin-panel')} hitSlop={8} style={styles.headerBtn}>
-              <Ionicons name="settings-outline" size={18} color={colors.text} />
             </Pressable>
             <Pressable onPress={() => setTab('portals')} hitSlop={8} style={styles.headerBtn}>
               <Ionicons name="swap-horizontal" size={18} color={colors.text} />
@@ -121,23 +118,6 @@ export default function Home() {
 
         {tab === 'portals' && (
           <ScrollView contentContainerStyle={styles.portalsContainer}>
-            {/* Control Panel Banner */}
-            <Pressable
-              onPress={() => router.push('/admin-panel')}
-              style={styles.controlPanelBanner}
-            >
-              <View style={styles.cpIconBox}>
-                <Ionicons name="settings" size={22} color="#fff" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.cpTitle}>Painel de Controlo KikoIPTV</Text>
-                <Text style={styles.cpSub}>
-                  Inserir listas IPTV e definir Utilizador e Password para login
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={22} color="#fff" />
-            </Pressable>
-
             {/* Active Portal Status Card */}
             <View style={styles.portalActiveCard}>
               <View style={styles.portalCardHeader}>
@@ -318,24 +298,6 @@ const styles = StyleSheet.create({
   tabLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
   tabLabelActive: { color: '#fff', fontWeight: '800' },
   portalsContainer: { padding: 16, gap: 16, paddingBottom: 40 },
-  controlPanelBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    padding: 16,
-  },
-  cpIconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 10,
-    backgroundColor: '#0003',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cpTitle: { color: '#fff', fontSize: 16, fontWeight: '800' },
-  cpSub: { color: '#fffd', fontSize: 12, marginTop: 2 },
   portalActiveCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,

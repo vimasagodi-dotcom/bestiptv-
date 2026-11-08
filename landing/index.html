@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KikoIPTV - Leitor MYTVOnline+ para Android, iOS e Smart TV</title>
-  <meta name="description" content="O leitor de IPTV estilo MYTVOnline+ para Android, iPhone (iOS), Smart TV e TV Box. Suporte a Xtream Codes e M3U.">
+  <title>Cocas - Leitor IPTV para Android, iOS e Smart TV</title>
+  <meta name="description" content="O leitor de IPTV estilo MYTVOnline+ para Android, iPhone (iOS), Smart TV e TV Box.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="KikoIPTV">
+  <meta name="apple-mobile-web-app-title" content="Cocas">
   <meta name="theme-color" content="#0B0C10">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -43,7 +43,6 @@
       padding: 0 24px;
     }
 
-    /* Header */
     header {
       padding: 20px 0;
       border-bottom: 1px solid var(--border);
@@ -79,7 +78,6 @@
     }
     .logo span { color: var(--primary); }
 
-    /* Hero */
     .hero {
       padding: 72px 0 56px;
       text-align: center;
@@ -123,7 +121,6 @@
       color: var(--text-muted);
     }
 
-    /* Actions */
     .download-group {
       display: flex;
       flex-wrap: wrap;
@@ -163,7 +160,6 @@
       transform: translateY(-2px);
     }
 
-    /* App Preview Cards */
     .tiles-preview {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -198,7 +194,6 @@
     .tile-card h3 { font-size: 20px; margin-bottom: 8px; }
     .tile-card p { font-size: 14px; color: var(--text-muted); }
 
-    /* Sections */
     .section-block {
       padding: 56px 0;
       border-top: 1px solid var(--border);
@@ -273,10 +268,9 @@
     <div class="container nav">
       <a href="#" class="logo">
         <div class="logo-badge">▶</div>
-        Kiko<span>IPTV</span>
+        Cocas<span>IPTV</span>
       </a>
       <div style="display:flex;gap:10px;">
-        <a href="/painel" class="btn btn-secondary" style="padding: 10px 16px; font-size: 13px;">⚙️ Painel de Controlo</a>
         <a href="#tv" class="btn btn-secondary" style="padding: 10px 16px; font-size: 13px;">Smart TV</a>
         <a href="#download" class="btn btn-primary" style="padding: 10px 18px; font-size: 13px;">Transferir</a>
       </div>
@@ -307,7 +301,7 @@
         <div class="tile-card live">
           <div class="tile-icon">📺</div>
           <h3>Leitor MYTVOnline+</h3>
-          <p>Vídeo integrado no topo do ecrã enquanto navega nos grupos e canais, ou ecrã inteiro com gaveta lateral e bloqueio tátil.</p>
+          <p>Vídeo integrado no topo do ecrã enquanto navega nos grupos e canais, ou ecrã inteiro limpo com gaveta lateral e bloqueio tátil.</p>
         </div>
         <div class="tile-card movies">
           <div class="tile-icon">🎬</div>
@@ -322,7 +316,6 @@
       </div>
     </section>
 
-    <!-- SMART TV SECTION -->
     <section class="section-block container" id="tv">
       <h2 class="section-title">📺 Como Instalar em Smart TV e TV Box</h2>
       <p class="section-sub">Siga o método indicado para a marca da sua televisão ou box</p>
@@ -337,9 +330,9 @@
           <ol style="padding-left: 18px; color: var(--text); font-size: 14px; display: grid; gap: 8px;">
             <li>Na loja da sua TV, instale a aplicação gratuita <strong>Downloader by AFTVnews</strong>.</li>
             <li>Abra o <strong>Downloader</strong> e escreva este endereço curto:
-              <br><span class="code-pill">kikoiptv.vercel.app/tv</span>
+              <br><span class="code-pill">iptvcocas.vercel.app/tv</span>
             </li>
-            <li>Clique em <strong>Go</strong> — o ficheiro APK da <strong>KikoIPTV</strong> transfere e abre automaticamente o botão <strong>Instalar</strong>!</li>
+            <li>Clique em <strong>Go</strong> — o ficheiro APK da <strong>Cocas</strong> transfere e abre automaticamente o botão <strong>Instalar</strong>!</li>
             <li><em>Alternativa via Pen USB:</em> Transfira o APK no computador, passe para uma Pen USB e instale na TV com um gestor de ficheiros.</li>
           </ol>
         </div>
@@ -351,14 +344,13 @@
             As TVs Samsung e LG utilizam sistema próprio (não instalam ficheiros APK Android diretamente sem uma Box/Fire Stick). Tem 2 opções simples:
           </p>
           <ol style="padding-left: 18px; color: var(--text); font-size: 14px; display: grid; gap: 8px;">
-            <li><strong>Opção 1 (App na Loja LG/Samsung):</strong> Abra a loja de aplicações da TV (LG Content Store ou Samsung Apps), procure por <strong>IPTV Smarters Player</strong> ou <strong>IBO Player</strong> e introduza os dados Xtream da sua linha (Servidor, Utilizador e Password) ou o link M3U.</li>
-            <li><strong>Opção 2 (AirPlay / Cast do Telemóvel):</strong> Abra a <strong>KikoIPTV</strong> no seu iPhone ou Android e transmita o vídeo para a TV, ou ligue uma <strong>Xiaomi Box / Fire Stick</strong> na porta HDMI para ter a KikoIPTV nativa na TV.</li>
+            <li><strong>Opção 1 (App na Loja LG/Samsung):</strong> Abra a loja de aplicações da TV (LG Content Store ou Samsung Apps), procure por <strong>IPTV Smarters Player</strong> ou <strong>IBO Player</strong> e introduza os dados da sua linha.</li>
+            <li><strong>Opção 2 (AirPlay / Cast do Telemóvel):</strong> Abra a <strong>Cocas</strong> no seu iPhone ou Android e transmita o vídeo para a TV, ou ligue uma <strong>Xiaomi Box / Fire Stick</strong> na porta HDMI para ter a Cocas nativa na TV.</li>
           </ol>
         </div>
       </div>
     </section>
 
-    <!-- IOS SECTION -->
     <section class="section-block container" id="ios">
       <h2 class="section-title">📱 Como Usar no iPhone / iPad (iOS)</h2>
       <p class="section-sub">Sem computador — configuração rápida em 3 passos:</p>
@@ -371,13 +363,13 @@
         </div>
         <div class="step-item">
           <div class="step-num">2</div>
-          <h4>Abrir a KikoIPTV</h4>
+          <h4>Abrir a Cocas</h4>
           <p style="font-size:14px;color:var(--text-muted);margin-top:6px;">Toque no botão <strong>Abrir no iPhone (iOS)</strong> no topo desta página e confirme em <strong>Abrir</strong>.</p>
         </div>
         <div class="step-item">
           <div class="step-num">3</div>
           <h4>Criar Atalho no Ecrã Principal</h4>
-          <p style="font-size:14px;color:var(--text-muted);margin-top:6px;">No Safari do iPhone, toque em <strong>Partilhar (⬆️) → Adicionar ao ecrã principal</strong> para ficar com o ícone da <strong>KikoIPTV</strong> sempre à mão!</p>
+          <p style="font-size:14px;color:var(--text-muted);margin-top:6px;">No Safari do iPhone, toque em <strong>Partilhar (⬆️) → Adicionar ao ecrã principal</strong> para ficar com o ícone da <strong>Cocas</strong> sempre à mão!</p>
         </div>
       </div>
     </section>
@@ -385,7 +377,7 @@
 
   <footer>
     <div class="container">
-      <p>© KikoIPTV · Interface MYTVOnline+ para Android, iOS e Smart TV.</p>
+      <p>© Cocas IPTV · Para Android, iOS e Smart TV.</p>
     </div>
   </footer>
 </body>

@@ -185,25 +185,14 @@ export default function PlaylistForm() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScreenHeader
-        title={editing ? 'Editar Portal' : 'Entrar / Adicionar Portal'}
-        right={
-          <Pressable
-            onPress={() => router.push('/admin-panel')}
-            style={styles.panelHeaderBtn}
-          >
-            <Ionicons name="settings-outline" size={16} color="#fff" />
-            <Text style={styles.panelHeaderBtnText}>Painel</Text>
-          </Pressable>
-        }
-      />
+      <ScreenHeader title={editing ? 'Editar Portal' : 'Entrar / Adicionar Portal'} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
           <Segmented
             value={mode}
             onChange={setMode}
             options={[
-              { value: 'panel', label: 'Login KikoIPTV' },
+              { value: 'panel', label: 'Login Cocas' },
               { value: 'xtream', label: 'Xtream Codes' },
               { value: 'm3u', label: 'URL M3U' },
             ]}
@@ -214,15 +203,15 @@ export default function PlaylistForm() {
               <View style={styles.panelInfoRow}>
                 <Ionicons name="person-circle-outline" size={24} color={colors.primary} />
                 <Text style={styles.panelInfoText}>
-                  Entre diretamente com o <Text style={{ color: '#fff', fontWeight: '700' }}>Utilizador</Text> e{' '}
-                  <Text style={{ color: '#fff', fontWeight: '700' }}>Palavra-passe</Text> criados no seu Painel de Controlo.
+                  Introduza o seu <Text style={{ color: '#fff', fontWeight: '700' }}>Utilizador</Text> e{' '}
+                  <Text style={{ color: '#fff', fontWeight: '700' }}>Palavra-passe</Text> para entrar diretamente.
                 </Text>
               </View>
               <Field
                 label="Utilizador"
                 value={username}
                 onChangeText={setUsername}
-                placeholder="O seu utilizador KikoIPTV"
+                placeholder="O seu utilizador"
               />
               <PasswordField
                 label="Palavra-passe"
@@ -312,22 +301,6 @@ export default function PlaylistForm() {
             onPress={save}
             loading={saving}
           />
-
-          <Pressable
-            onPress={() => router.push('/admin-panel')}
-            style={styles.adminCardBtn}
-          >
-            <View style={styles.adminIconWrap}>
-              <Ionicons name="construct-outline" size={20} color="#fff" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.adminCardTitle}>Painel de Controlo (Admin)</Text>
-              <Text style={styles.adminCardSub}>
-                Gerir listas IPTV e definir o Utilizador e Password de acesso
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -383,37 +356,4 @@ const styles = StyleSheet.create({
   section: { color: colors.text, fontSize: 16, fontWeight: '700', marginTop: 8 },
   label: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
   hint: { color: colors.textMuted, fontSize: 12 },
-  panelHeaderBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.surfaceAlt,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  panelHeaderBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  adminCardBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: colors.surface,
-    padding: 14,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginTop: 8,
-  },
-  adminIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: colors.surfaceAlt,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  adminCardTitle: { color: colors.text, fontSize: 14, fontWeight: '700' },
-  adminCardSub: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
 });

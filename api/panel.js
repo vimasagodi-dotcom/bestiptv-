@@ -226,16 +226,16 @@ module.exports = async function handler(req, res) {
         (u) => String(u.username || '').trim().toLowerCase() === usr && String(u.password || '').trim() === pwd
       );
       if (foundIdx < 0) {
-        return res.status(401).json({ ok: false, error: 'Utilizador ou palavra-passe incorretos no Painel KikoIPTV.' });
+        return res.status(401).json({ ok: false, error: 'Utilizador ou palavra-passe incorretos.' });
       }
       const found = db.users[foundIdx];
       if (found.active === false) {
-        return res.status(403).json({ ok: false, error: 'Esta conta encontra-se suspensa no Painel de Controlo.' });
+        return res.status(403).json({ ok: false, error: 'Esta conta encontra-se suspensa.' });
       }
       if (found.appExpDate && Date.now() > Number(found.appExpDate)) {
         return res.status(403).json({
           ok: false,
-          error: 'A validade do seu login KikoIPTV expirou. Contacte o suporte para renovar (1 Ano: 5€ | 2 Anos: 9€ | 3 Anos: 13€ | 4 Anos: 16€ | 5 Anos: 19€).',
+          error: 'A validade do seu acesso Cocas expirou. Contacte o suporte para renovar.',
         });
       }
 
@@ -252,7 +252,7 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({
           ok: true,
           playlist: {
-            name: found.name || `KikoIPTV (${found.username})`,
+            name: found.name || `Cocas (${found.username})`,
             type: 'xtream',
             server,
             username: xtreamUser,
@@ -268,7 +268,7 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({
           ok: true,
           playlist: {
-            name: found.name || `KikoIPTV (${found.username})`,
+            name: found.name || `Cocas (${found.username})`,
             type: 'm3u',
             url: String(found.m3uUrl || '').trim(),
             liveFormat: found.liveFormat || 'm3u8',

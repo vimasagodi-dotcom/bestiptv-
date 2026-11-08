@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "KikoIPTV",
+    "name": "Cocas",
     "slug": "kikoiptv",
-    "scheme": "kikoiptv",
+    "scheme": "cocas",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
