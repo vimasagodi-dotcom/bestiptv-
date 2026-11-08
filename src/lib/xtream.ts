@@ -222,17 +222,20 @@ export class XtreamProvider implements ContentProvider {
   }
 
   async getShortEpg(channel: LiveChannel): Promise<EpgEntry[]> {
-    const data = await this.api('get_short_epg', { stream_id: channel.id, limit: '6' });
+    const data = await this.api('get_short_epg', { stream_id: channel.id, limit: '8' });
     const list = data?.epg_listings;
     if (!Array.isArray(list)) return [];
-    return list
+    const now = Date.now();
+    const mapped: EpgEntry[] = list
       .map((e: any) => ({
         title: decodeBase64(e.title),
         description: decodeBase64(e.description),
         start: Number(e.start_timestamp) * 1000,
         end: Number(e.stop_timestamp) * 1000,
       }))
-      .filter((e: EpgEntry) => e.end > Date.now());
+      .filter((e: EpgEntry) => e.end > now);
+    // Deduplicate consecutive entries with the same programme title
+    return mapped.filter((e, i) => i === 0 || e.title !== mapped[i - 1].title);
   }
 }
 

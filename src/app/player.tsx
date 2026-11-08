@@ -62,8 +62,9 @@ export default function Player() {
 
   const load = useCallback(() => {
     if (!uri) return;
+    const contentType = uri.includes('.m3u8') ? ('hls' as const) : undefined;
     player
-      .replaceAsync({ uri, headers: provider?.headers, metadata: { title } })
+      .replaceAsync({ uri, contentType, headers: provider?.headers, metadata: { title } })
       .then(() => player.play())
       .catch(() => {});
   }, [uri, player, provider, title]);

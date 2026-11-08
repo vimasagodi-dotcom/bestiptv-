@@ -45,6 +45,17 @@ export default function PlaylistForm() {
   const [liveFormat, setLiveFormat] = useState<LiveFormat>(editing?.liveFormat ?? 'm3u8');
   const [saving, setSaving] = useState(false);
 
+  const onChangeServer = (val: string) => {
+    const xt = parseXtreamM3uUrl(val);
+    if (xt) {
+      setServer(xt.server);
+      setUsername(xt.username);
+      setPassword(xt.password);
+    } else {
+      setServer(val);
+    }
+  };
+
   const save = async () => {
     let p: Playlist = {
       id: editing?.id ?? uid(),
@@ -56,11 +67,15 @@ export default function PlaylistForm() {
     };
 
     if (type === 'xtream') {
-      if (!server.trim() || !username.trim() || !password) {
+      const xt = parseXtreamM3uUrl(server);
+      const srv = xt?.server ?? server;
+      const usr = xt?.username ?? username;
+      const pwd = xt?.password ?? password;
+      if (!srv.trim() || !usr.trim() || !pwd) {
         Alert.alert('Dados em falta', 'Preencha o servidor, utilizador e palavra-passe.');
         return;
       }
-      p = { ...p, server: normalizeServer(server), username: username.trim(), password };
+      p = { ...p, server: normalizeServer(srv), username: usr.trim(), password: pwd };
     } else {
       if (!url.trim()) {
         Alert.alert('Dados em falta', 'Indique o URL da lista M3U.');
@@ -105,7 +120,7 @@ export default function PlaylistForm() {
 
           {type === 'xtream' ? (
             <>
-              <Field label="URL do servidor" value={server} onChangeText={setServer} placeholder="http://servidor.com:8080" keyboardType="url" />
+              <Field label="URL do servidor (ou link M3U)" value={server} onChangeText={onChangeServer} placeholder="http://servidor.com:8080" keyboardType="url" />
               <Field label="Utilizador" value={username} onChangeText={setUsername} placeholder="username" />
               <Field label="Palavra-passe" value={password} onChangeText={setPassword} placeholder="password" secureTextEntry />
             </>
