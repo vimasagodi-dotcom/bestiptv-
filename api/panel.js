@@ -128,29 +128,43 @@ async function saveToFirestore(db, encryptedStr) {
         chatUsersCount: { integerValue: String((db.chatUsers || []).length) },
       },
     };
-    const res = await fetch(FIRESTORE_DOC_URL, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
+    const [res] = await Promise.all([
+      fetch(FIRESTORE_DOC_URL, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      }),
+      fetch(FIRESTORE_PUBLIC_DOC_URL, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fields: {
+            chatTopic: { stringValue: String(db.chatTopic || '') },
+            chatUsersJson: { stringValue: JSON.stringify(db.chatUsers || []) },
+            recentMessagesJson: { stringValue: JSON.stringify((db.chatMessages || []).slice(-60)) },
+            usersMetaJson: {
+              stringValue: JSON.stringify(
+                (db.users || []).map((u) => ({
+                  username: u.username,
+                  name: u.name,
+                  xtreamUser: u.xtreamUser,
+                  playlistType: u.playlistType,
+                  hasServer: Boolean(u.server),
+                  hasM3u: Boolean(u.m3uUrl),
+                  active: u.active,
+                }))
+              ),
+            },
+            updatedAt: { integerValue: String(Date.now()) },
+          },
+        }),
+        signal: controller.signal,
+      }).catch(() => null),
+    ]);
     clearTimeout(timer);
 
-    // Also sync public chat state document for easy inspection in Firebase Console
-    fetch(FIRESTORE_PUBLIC_DOC_URL, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fields: {
-          chatTopic: { stringValue: String(db.chatTopic || '') },
-          chatUsersJson: { stringValue: JSON.stringify(db.chatUsers || []) },
-          recentMessagesJson: { stringValue: JSON.stringify((db.chatMessages || []).slice(-60)) },
-          updatedAt: { integerValue: String(Date.now()) },
-        },
-      }),
-    }).catch(() => {});
-
-    return res.ok;
+    return Boolean(res && res.ok);
   } catch {
     return false;
   }
@@ -383,7 +397,7 @@ module.exports = async function handler(req, res) {
             lastSeenAt: Date.now(),
           };
           db.chatUsers.push(cu);
-          saveDb(db, sha).catch(() => {});
+          await saveDb(db, sha).catch(() => {});
         } else {
           if (cu.role === 'guest' && isPaidMember) cu.role = 'member';
           cu.lastSeenAt = Date.now();
@@ -497,12 +511,24 @@ module.exports = async function handler(req, res) {
     if (action === 'client_login') {
       const usr = String(body.username || '').trim().toLowerCase();
       const pwd = String(body.password || '').trim();
+      const pwdLower = pwd.toLowerCase();
       if (!usr || !pwd) {
         return res.status(400).json({ ok: false, error: 'Introduza o utilizador e a palavra-passe.' });
       }
-      const foundIdx = (db.users || []).findIndex(
-        (u) => String(u.username || '').trim().toLowerCase() === usr && String(u.password || '').trim() === pwd
-      );
+      const foundIdx = (db.users || []).findIndex((u) => {
+        const uUsr = String(u.username || '').trim().toLowerCase();
+        const uXtUsr = String(u.xtreamUser || '').trim().toLowerCase();
+        const uName = String(u.name || '').trim().toLowerCase();
+        const uPwd = String(u.password || '').trim();
+        const uXtPwd = String(u.xtreamPass || '').trim();
+
+        const userMatch = uUsr === usr || (uXtUsr && uXtUsr === usr) || (uName && uName === usr);
+        const passMatch =
+          uPwd === pwd ||
+          uPwd.toLowerCase() === pwdLower ||
+          (uXtPwd && (uXtPwd === pwd || uXtPwd.toLowerCase() === pwdLower));
+        return userMatch && passMatch;
+      });
       if (foundIdx < 0) {
         return res.status(401).json({ ok: false, error: 'Utilizador ou palavra-passe incorretos.' });
       }
@@ -519,10 +545,11 @@ module.exports = async function handler(req, res) {
 
       found.lastSeenAt = Date.now();
       if (body.device) found.device = String(body.device);
-      saveDb(db, sha).catch(() => {});
+      await saveDb(db, sha).catch(() => {});
 
       const xtFromM3u = parseXtreamUrl(found.m3uUrl || found.server);
-      if (found.playlistType === 'xtream' || xtFromM3u) {
+      const hasXtreamFields = Boolean(found.server && found.xtreamUser && found.xtreamPass);
+      if (found.playlistType === 'xtream' || xtFromM3u || hasXtreamFields) {
         const server = xtFromM3u ? xtFromM3u.server : normalizeServerUrl(found.server);
         const xtreamUser = xtFromM3u ? xtFromM3u.username : String(found.xtreamUser || '').trim();
         const xtreamPass = xtFromM3u ? xtFromM3u.password : String(found.xtreamPass || '').trim();
@@ -709,6 +736,8 @@ module.exports = async function handler(req, res) {
         server = autoXt.server;
         xtreamUser = autoXt.username;
         xtreamPass = autoXt.password;
+      } else if (server && xtreamUser && xtreamPass) {
+        playlistType = 'xtream';
       }
 
       const isOffer = Boolean(u.isOffer || u.planPrice === 0 || String(u.planPrice) === '0');

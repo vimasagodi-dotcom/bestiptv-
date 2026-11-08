@@ -168,8 +168,14 @@ export default function PlaylistForm() {
             };
       }
 
-      if (p.type === 'xtream') await new XtreamProvider(p).authenticate();
-      else await new M3UProvider(p).validate();
+      if (mode !== 'panel') {
+        if (p.type === 'xtream') await new XtreamProvider(p).authenticate();
+        else await new M3UProvider(p).validate();
+      } else if (p.type === 'xtream' && (!p.server || !p.username || !p.password)) {
+        throw new Error('Este utilizador ainda não tem uma linha IPTV associada no Painel de Controlo.');
+      } else if (p.type === 'm3u' && !p.url) {
+        throw new Error('Este utilizador ainda não tem um link M3U associado no Painel de Controlo.');
+      }
 
       if (editing) await updatePlaylist(p);
       else await addPlaylist(p);
