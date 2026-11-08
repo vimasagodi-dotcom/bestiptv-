@@ -454,6 +454,13 @@
             <label>URL do Logótipo / Imagem do Patrocinador (opcional)</label>
             <input type="text" id="adBannerImageUrl" placeholder="https://exemplo.com/logo-patrocinador.png">
           </div>
+          <div class="field" style="grid-column: 1 / -1;">
+            <label>📦 Link do Ficheiro APK (Download em cocas.online/tv e cocas.online/cocas.apk)</label>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <input type="text" id="adApkUrl" placeholder="https://expo.dev/artifacts/eas/...apk" style="flex:1;">
+              <a href="/tv" target="_blank" class="btn btn-secondary" style="white-space:nowrap;">📥 Testar Download</a>
+            </div>
+          </div>
         </div>
 
         <button class="btn btn-primary" style="margin-top: 16px;" onclick="saveAdConfig()">💾 Guardar Configurações de Publicidade</button>
@@ -697,6 +704,7 @@
         if (data.adConfig.bannerText) document.getElementById('adBannerText').value = data.adConfig.bannerText;
         if (data.adConfig.bannerSubtext) document.getElementById('adBannerSubtext').value = data.adConfig.bannerSubtext;
         if (data.adConfig.bannerImageUrl) document.getElementById('adBannerImageUrl').value = data.adConfig.bannerImageUrl;
+        if (data.adConfig.apkDownloadUrl) document.getElementById('adApkUrl').value = data.adConfig.apkDownloadUrl;
       }
       updateFirebaseBanner(data.firebaseInfo);
       renderUsers();
@@ -714,6 +722,7 @@
         if (data.adConfig.bannerText) document.getElementById('adBannerText').value = data.adConfig.bannerText;
         if (data.adConfig.bannerSubtext) document.getElementById('adBannerSubtext').value = data.adConfig.bannerSubtext;
         if (data.adConfig.bannerImageUrl) document.getElementById('adBannerImageUrl').value = data.adConfig.bannerImageUrl;
+        if (data.adConfig.apkDownloadUrl) document.getElementById('adApkUrl').value = data.adConfig.apkDownloadUrl;
       }
         updateFirebaseBanner(data.firebaseInfo);
         renderUsers();
@@ -787,12 +796,14 @@
       const bannerText = document.getElementById('adBannerText').value.trim();
       const bannerSubtext = document.getElementById('adBannerSubtext').value.trim();
       const bannerImageUrl = document.getElementById('adBannerImageUrl').value.trim();
+      const apkDownloadUrl = document.getElementById('adApkUrl') ? document.getElementById('adApkUrl').value.trim() : '';
 
       const adConfig = {
         bannerEnabled,
         bannerText: bannerText || 'DaPortas · Portas, Roupeiros e Soluções por Medida',
         bannerSubtext: bannerSubtext || 'Visite daportas.pt · Qualidade e Design',
         bannerImageUrl,
+        apkDownloadUrl,
       };
 
       const data = await apiCall({ action: 'admin_save_ad', adConfig });

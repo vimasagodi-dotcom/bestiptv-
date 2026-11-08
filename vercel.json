@@ -2,21 +2,18 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "cleanUrls": true,
   "outputDirectory": "landing",
-  "redirects": [
+  "rewrites": [
     {
       "source": "/tv",
-      "destination": "https://expo.dev/artifacts/eas/0rxc1p3bvUwSVBJ0CLgqj7uC7mnTCGStCn-ad1IbNJ0.apk",
-      "permanent": false
+      "destination": "/api/download"
     },
     {
       "source": "/cocas.apk",
-      "destination": "https://expo.dev/artifacts/eas/0rxc1p3bvUwSVBJ0CLgqj7uC7mnTCGStCn-ad1IbNJ0.apk",
-      "permanent": false
+      "destination": "/api/download"
     },
     {
       "source": "/kikoiptv.apk",
-      "destination": "https://expo.dev/artifacts/eas/0rxc1p3bvUwSVBJ0CLgqj7uC7mnTCGStCn-ad1IbNJ0.apk",
-      "permanent": false
+      "destination": "/api/download"
     }
   ]
 }

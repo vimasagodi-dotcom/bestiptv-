@@ -41,6 +41,8 @@ const DEFAULT_AD_CONFIG = {
   bannerSubtext: 'Visite daportas.pt · Qualidade e Design',
   bannerImageUrl: '',
   bannerLinkUrl: '',
+  // Ficheiro APK activo para download em cocas.online/tv e cocas.online/cocas.apk
+  apkDownloadUrl: 'https://expo.dev/artifacts/eas/0rxc1p3bvUwSVBJ0CLgqj7uC7mnTCGStCn-ad1IbNJ0.apk',
 };
 
 function getKey() {
