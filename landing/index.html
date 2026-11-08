@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BestIPTV - Leitor IPTV para Android e iOS</title>
+  <meta name="description" content="O leitor de IPTV moderno para Android, iOS e TV Box estilo MyTVOnline. Suporte a Xtream Codes e M3U.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0B0F1A;
+      --surface: #141A2A;
+      --surface-alt: #1C2438;
+      --border: #26304A;
+      --primary: #3B82F6;
+      --primary-hover: #2563EB;
+      --accent: #F59E0B;
+      --text: #F1F5F9;
+      --text-muted: #94A3B8;
+      --live: #EF4444;
+      --movies: #8B5CF6;
+      --series: #10B981;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Header */
+    header {
+      padding: 24px 0;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: rgba(11, 15, 26, 0.85);
+      backdrop-filter: blur(12px);
+      z-index: 100;
+    }
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      font-size: 24px;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .logo-badge {
+      width: 36px;
+      height: 36px;
+      background: var(--primary);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+    }
+    .logo span { color: var(--primary); }
+
+    /* Hero */
+    .hero {
+      padding: 80px 0 60px;
+      text-align: center;
+      position: relative;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-size: clamp(36px, 6vw, 64px);
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 20px;
+      letter-spacing: -0.02em;
+    }
+    .hero h1 span {
+      background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 50%, #A855F7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      max-width: 640px;
+      margin: 0 auto 36px;
+      font-size: 18px;
+      color: var(--text-muted);
+    }
+
+    /* Actions */
+    .download-group {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 48px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 28px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.5);
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-2px);
+    }
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover {
+      background: var(--surface-alt);
+      border-color: var(--text-muted);
+      transform: translateY(-2px);
+    }
+
+    /* App Preview Cards */
+    .tiles-preview {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin: 40px 0 80px;
+    }
+    .tile-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      text-align: left;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s;
+    }
+    .tile-card:hover {
+      transform: translateY(-4px);
+    }
+    .tile-card.live { border-top: 4px solid var(--live); }
+    .tile-card.movies { border-top: 4px solid var(--movies); }
+    .tile-card.series { border-top: 4px solid var(--series); }
+    .tile-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 24px;
+    }
+    .tile-card.live .tile-icon { background: rgba(239, 68, 68, 0.15); color: var(--live); }
+    .tile-card.movies .tile-icon { background: rgba(139, 92, 246, 0.15); color: var(--movies); }
+    .tile-card.series .tile-icon { background: rgba(16, 185, 129, 0.15); color: var(--series); }
+    .tile-card h3 { font-size: 20px; margin-bottom: 8px; }
+    .tile-card p { font-size: 14px; color: var(--text-muted); }
+
+    /* Features Grid */
+    .features {
+      padding: 60px 0;
+      border-top: 1px solid var(--border);
+    }
+    .section-title {
+      text-align: center;
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+    .section-sub {
+      text-align: center;
+      color: var(--text-muted);
+      margin-bottom: 48px;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+    }
+    .feature-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+    }
+    .feature-box h4 {
+      font-size: 18px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .feature-box p {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    /* How to use */
+    .steps {
+      padding: 60px 0;
+      border-top: 1px solid var(--border);
+    }
+    .step-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      margin-top: 36px;
+    }
+    .step-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+    }
+    .step-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    /* Footer */
+    footer {
+      padding: 40px 0;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container nav">
+      <a href="#" class="logo">
+        <div class="logo-badge">▶</div>
+        Best<span>IPTV</span>
+      </a>
+      <a href="#download" class="btn btn-primary" style="padding: 10px 20px; font-size: 14px;">Baixar</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero container">
+      <div class="badge">✨ Inspirada na experiência MyTVOnline</div>
+      <h1>O leitor definitivo de IPTV para <span>Android e iOS</span></h1>
+      <p>Assista a TV em Direto, Filmes e Séries da sua lista IPTV com navegação ultrarrápida, EPG em tempo real e leitor de alta definição.</p>
+
+      <div class="download-group" id="download">
+        <a href="https://github.com/vimasagodi/bestiptv/releases" target="_blank" class="btn btn-primary">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.551 0 .9993.4482.9993.9993s-.4483.9997-.9993.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993s-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1523-.5676.416.416 0 00-.5676.1523l-2.0223 3.503C15.5902 8.411 13.8559 8.1 12 8.1s-3.5902.311-5.1366.8499L4.8411 5.4469a.416.416 0 00-.5676-.1523.416.416 0 00-.1523.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.78h24c-.3432-4.1211-2.6889-7.5933-6.1185-9.4586"/></svg>
+          Baixar APK (Android)
+        </a>
+        <a href="#ios" class="btn btn-secondary">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.75 1.04-1.8 0.93-2.85-.9.04-1.99.6-2.61 1.34-.55.63-1.03 1.68-.9 2.71 1 .08 2.03-.51 2.58-1.2"/></svg>
+          Instalação no iOS
+        </a>
+      </div>
+
+      <div class="tiles-preview">
+        <div class="tile-card live">
+          <div class="tile-icon">📺</div>
+          <h3>TV em Direto</h3>
+          <p>Canais categorizados, favoritos com acesso rápido e visualização do que está a dar agora e a seguir (EPG).</p>
+        </div>
+        <div class="tile-card movies">
+          <div class="tile-icon">🎬</div>
+          <h3>Filmes (VOD)</h3>
+          <p>Catálogo completo com capas em alta resolução, sinopse, realizador, elenco e avaliação IMDB.</p>
+        </div>
+        <div class="tile-card series">
+          <div class="tile-icon">📚</div>
+          <h3>Séries</h3>
+          <p>Organização inteligente por temporadas e episódios com informação detalhada de cada capítulo.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="features container">
+      <h2 class="section-title">Construído para performance</h2>
+      <p class="section-sub">Tudo o que precisa para desfrutar da sua lista IPTV sem complicações</p>
+
+      <div class="grid-3">
+        <div class="feature-box">
+          <h4>⚡ Suporte Xtream Codes & M3U</h4>
+          <p>Compatível com servidores Xtream Codes (utilizador, palavra-passe e servidor) ou listas M3U/M3U8 diretas.</p>
+        </div>
+        <div class="feature-box">
+          <h4>📱 Otimizado para Telemóvel e Tablet</h4>
+          <p>Interface responsiva que se adapta automaticamente a ecrãs verticais e horizontais, incluindo navegação lateral para tablets.</p>
+        </div>
+        <div class="feature-box">
+          <h4>▶ Leitor Nativo com PiP</h4>
+          <p>Suporte a Picture-in-Picture no Android e iOS, controlos de zapping rápido (anterior/seguinte) e lista lateral de canais.</p>
+        </div>
+        <div class="feature-box">
+          <h4>⭐ Sistema de Favoritos</h4>
+          <p>Guarde os seus canais, filmes e séries favoritos localmente para aceder com um só toque.</p>
+        </div>
+        <div class="feature-box">
+          <h4>🔍 Pesquisa Instantânea</h4>
+          <p>Filtre milhares de canais ou conteúdos em milissegundos sem travamentos.</p>
+        </div>
+        <div class="feature-box">
+          <h4>🔒 100% Seguro e Privado</h4>
+          <p>As suas credenciais e listas ficam guardadas exclusivamente no seu dispositivo, sem servidores intermediários.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="steps container" id="ios">
+      <h2 class="section-title">Como começar</h2>
+      <p class="section-sub">Três passos simples para ter a BestIPTV a funcionar</p>
+
+      <div class="step-list">
+        <div class="step-item">
+          <div class="step-num">1</div>
+          <h4>Baixar a App</h4>
+          <p>Instale o APK no seu dispositivo Android / TV Box, ou faça a compilação iOS via Expo / EAS.</p>
+        </div>
+        <div class="step-item">
+          <div class="step-num">2</div>
+          <h4>Adicionar Linha</h4>
+          <p>Introduza os dados da sua linha (servidor Xtream ou URL da lista M3U) no ecrã de playlists.</p>
+        </div>
+        <div class="step-item">
+          <div class="step-num">3</div>
+          <h4>Aproveitar</h4>
+          <p>Navegue pelos seus canais, filmes e séries com a mesma agilidade de uma box de TV.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>© BestIPTV. Aplicação desenvolvida como leitor de mídia. Não disponibiliza nem hospeda qualquer conteúdo de streaming.</p>
+    </div>
+  </footer>
+</body>
+</html>
