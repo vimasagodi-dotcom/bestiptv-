@@ -370,14 +370,31 @@ module.exports = async function handler(req, res) {
     }
 
     // ---- COMMUNITY CHAT ACTIONS (xat.com style) ----
+    // Each nickname is bound to the account (ownerKey) that created it, so another
+    // login on the same phone is treated as a NEW community member.
+    const NICK_TAKEN_ERR = 'Este nickname já pertence a outro membro da comunidade. Escolha outro.';
+    const claimNick = (cu, ownerKey) => {
+      if (!cu) return true;
+      if (!ownerKey) return !cu.ownerKey;
+      if (!cu.ownerKey) {
+        cu.ownerKey = ownerKey;
+        return true;
+      }
+      return cu.ownerKey === ownerKey;
+    };
+
     if (action === 'chat_state') {
       const room = String(body.room || 'geral').toLowerCase();
       const nick = String(body.nick || '').trim();
       const panelUsername = String(body.panelUsername || '').trim();
+      const ownerKey = String(body.ownerKey || '').trim();
 
       let myProfile = null;
       if (nick) {
         let cu = db.chatUsers.find((u) => u.nick.toLowerCase() === nick.toLowerCase());
+        if (cu && !claimNick(cu, ownerKey)) {
+          return res.status(200).json({ ok: false, code: 'nick_taken', error: NICK_TAKEN_ERR });
+        }
         const isPaidMember = Boolean(
           panelUsername &&
             db.users.some(
@@ -390,6 +407,7 @@ module.exports = async function handler(req, res) {
         if (!cu) {
           cu = {
             nick,
+            ownerKey: ownerKey || null,
             role: isPaidMember ? 'member' : 'guest',
             banned: false,
             muted: false,
@@ -426,11 +444,15 @@ module.exports = async function handler(req, res) {
       const text = String(body.text || '').trim();
       const room = String(body.room || 'geral').toLowerCase();
       const panelUsername = String(body.panelUsername || '').trim();
+      const ownerKey = String(body.ownerKey || '').trim();
       if (!nick || !text) {
         return res.status(400).json({ ok: false, error: 'Mensagem vazia.' });
       }
 
       let cu = db.chatUsers.find((u) => u.nick.toLowerCase() === nick.toLowerCase());
+      if (cu && !claimNick(cu, ownerKey)) {
+        return res.status(403).json({ ok: false, code: 'nick_taken', error: NICK_TAKEN_ERR });
+      }
       const isPaidMember = Boolean(
         panelUsername &&
           db.users.some(
@@ -444,6 +466,7 @@ module.exports = async function handler(req, res) {
       if (!cu) {
         cu = {
           nick,
+          ownerKey: ownerKey || null,
           role: isPaidMember ? 'member' : 'guest',
           banned: false,
           muted: false,
@@ -490,7 +513,12 @@ module.exports = async function handler(req, res) {
       const msgId = String(body.msgId || '');
 
       const actor = db.chatUsers.find((u) => u.nick.toLowerCase() === actorNick.toLowerCase());
-      if (!actor || !['owner', 'admin', 'mod'].includes(actor.role)) {
+      const actorOwnerKey = String(body.ownerKey || '').trim();
+      if (
+        !actor ||
+        !['owner', 'admin', 'mod'].includes(actor.role) ||
+        (actor.ownerKey && actor.ownerKey !== actorOwnerKey)
+      ) {
         return res.status(403).json({ ok: false, error: 'Sem permissões de moderação no chat.' });
       }
 

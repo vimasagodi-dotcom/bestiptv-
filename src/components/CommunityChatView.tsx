@@ -100,18 +100,33 @@ export function CommunityChatView({ activeTab = true, compact = false }: Communi
 
   const listRef = useRef<any>(null);
 
+  // Each account (Cocas login or own line) has its OWN chat identity.
+  // Switching account never reuses the previous account's nickname/role.
+  const ownerKey = active?.panelUsername
+    ? `panel:${active.panelUsername.trim().toLowerCase()}`
+    : active?.username
+    ? `line:${String(active.server || '').trim().toLowerCase()}|${active.username.trim().toLowerCase()}`
+    : active?.url
+    ? `m3u:${active.url.trim().toLowerCase()}`
+    : active?.id
+    ? `pl:${active.id}`
+    : 'anon';
+  const nickStorageKey = `${NICK_STORAGE_KEY}:${ownerKey}`;
+
   useEffect(() => {
-    AsyncStorage.getItem(NICK_STORAGE_KEY)
+    setSavedNick(null);
+    setMyProfile(null);
+    setMessages([]);
+    setNickInput('');
+    AsyncStorage.getItem(nickStorageKey)
       .then((val) => {
         if (val) {
           setSavedNick(val);
           setNickInput(val);
-        } else if (active?.panelUsername) {
-          setNickInput(active.panelUsername);
         }
       })
       .catch(() => {});
-  }, [active?.panelUsername]);
+  }, [nickStorageKey]);
 
   const fetchChatState = useCallback(
     async (silent = false) => {
@@ -122,6 +137,7 @@ export function CommunityChatView({ activeTab = true, compact = false }: Communi
           action: 'chat_state',
           room,
           nick: savedNick,
+          ownerKey,
           panelUsername: active?.panelUsername || '',
         });
         if (data?.ok) {
@@ -129,6 +145,11 @@ export function CommunityChatView({ activeTab = true, compact = false }: Communi
           if (data.myProfile) setMyProfile(data.myProfile);
           if (Array.isArray(data.chatUsers)) setChatUsers(data.chatUsers);
           if (Array.isArray(data.messages)) setMessages(data.messages);
+        } else if (data?.code === 'nick_taken') {
+          AsyncStorage.removeItem(nickStorageKey).catch(() => {});
+          setSavedNick(null);
+          setMyProfile(null);
+          Alert.alert('Nickname ocupado', data.error || 'Este nickname já pertence a outro membro. Escolha outro.');
         }
       } catch {
         // ignore network hiccup
@@ -136,7 +157,7 @@ export function CommunityChatView({ activeTab = true, compact = false }: Communi
         if (!silent) setLoading(false);
       }
     },
-    [savedNick, room, active?.panelUsername],
+    [savedNick, room, ownerKey, nickStorageKey, active?.panelUsername],
   );
 
   useEffect(() => {
@@ -155,7 +176,22 @@ export function CommunityChatView({ activeTab = true, compact = false }: Communi
       return;
     }
     try {
-      await AsyncStorage.setItem(NICK_STORAGE_KEY, clean);
+      const data = await requestChatApi({
+        action: 'chat_state',
+        room,
+        nick: clean,
+        ownerKey,
+        panelUsername: active?.panelUsername || '',
+      });
+      if (data?.code === 'nick_taken') {
+        Alert.alert('Nickname ocupado', data.error || 'Este nickname já pertence a outro membro. Escolha outro.');
+        return;
+      }
+    } catch {
+      // offline: allow and verify later
+    }
+    try {
+      await AsyncStorage.setItem(nickStorageKey, clean);
     } catch {
       // ignore
     }
@@ -172,6 +208,7 @@ export function CommunityChatView({ activeTab = true, compact = false }: Communi
         action: 'chat_send',
         room,
         nick: savedNick,
+        ownerKey,
         text: msgText,
         panelUsername: active?.panelUsername || '',
       });
@@ -202,6 +239,7 @@ export function CommunityChatView({ activeTab = true, compact = false }: Communi
                 await requestChatApi({
                   action: 'chat_mod_action',
                   actorNick: savedNick,
+                  ownerKey,
                   targetNick,
                   modOp: 'delete_msg',
                   msgId,
@@ -217,6 +255,7 @@ export function CommunityChatView({ activeTab = true, compact = false }: Communi
           await requestChatApi({
             action: 'chat_mod_action',
             actorNick: savedNick,
+                  ownerKey,
             targetNick,
             modOp: 'mute',
           });
@@ -232,6 +271,7 @@ export function CommunityChatView({ activeTab = true, compact = false }: Communi
                 await requestChatApi({
                   action: 'chat_mod_action',
                   actorNick: savedNick,
+                  ownerKey,
                   targetNick,
                   modOp: 'ban',
                 });
@@ -321,7 +361,13 @@ export function CommunityChatView({ activeTab = true, compact = false }: Communi
             <Ionicons name="people" size={compact ? 13 : 16} color="#fff" />
             <Text style={[styles.usersToggleText, compact && { fontSize: 11 }]}>{chatUsers.length}</Text>
           </Pressable>
-          <Pressable onPress={() => setSavedNick(null)} style={[styles.nickBadgeBtn, compact && { paddingHorizontal: 8, paddingVertical: 4 }]}>
+          <Pressable
+            onPress={() => {
+              AsyncStorage.removeItem(nickStorageKey).catch(() => {});
+              setSavedNick(null);
+              setMyProfile(null);
+            }}
+            style={[styles.nickBadgeBtn, compact && { paddingHorizontal: 8, paddingVertical: 4 }]}>
             <Text style={[styles.nickBadgeText, compact && { fontSize: 11 }]}>
               {myRoleMeta.badge} {savedNick}
             </Text>
