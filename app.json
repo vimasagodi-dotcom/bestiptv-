@@ -17,6 +17,7 @@
           "NSAllowsArbitraryLoads": true
         },
         "UIBackgroundModes": [
+          "audio",
           "audio"
         ]
       }
@@ -65,6 +66,12 @@
         "projectId": "6d4ae678-008b-43cb-9dca-fb772b8cc735"
       }
     },
-    "owner": "vimasagodis-team"
+    "owner": "vimasagodis-team",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/6d4ae678-008b-43cb-9dca-fb772b8cc735"
+    }
   }
 }
