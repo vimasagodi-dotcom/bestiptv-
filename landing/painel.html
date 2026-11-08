@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Painel de Controlo - KikoIPTV</title>
+  <title>Painel de Controlo Admin - KikoIPTV</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -16,6 +16,7 @@
       --primary: #E50914;
       --primary-hover: #C40812;
       --success: #10B981;
+      --warning: #F59E0B;
       --danger: #EF4444;
       --text: #F8FAFC;
       --text-muted: #94A3B8;
@@ -34,6 +35,9 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
     }
     .logo {
       display: flex;
@@ -54,7 +58,7 @@
       justify-content: center;
     }
     .logo span { color: var(--primary); }
-    .container { max-width: 1040px; margin: 0 auto; padding: 28px 20px 60px; }
+    .container { max-width: 1120px; margin: 0 auto; padding: 24px 20px 60px; }
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -64,6 +68,20 @@
     }
     h1, h2, h3 { font-weight: 800; }
     .sub { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+    }
+    .stat-label { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+    .stat-val { font-size: 26px; font-weight: 800; margin-top: 4px; }
     .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
     .field { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
     label { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
@@ -77,15 +95,54 @@
       font-family: inherit;
     }
     input:focus, select:focus { outline: none; border-color: var(--primary); }
+    .plan-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .plan-card {
+      background: var(--bg);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+    .plan-card.active {
+      border-color: var(--primary);
+      background: rgba(229, 9, 20, 0.12);
+    }
+    .plan-years { font-size: 15px; font-weight: 800; color: #fff; }
+    .plan-price { font-size: 20px; font-weight: 800; color: var(--warning); margin-top: 2px; }
+    .plan-summary {
+      margin-top: 10px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--text);
+    }
+    .line-detected-box {
+      margin-top: 12px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      font-size: 13px;
+      display: none;
+    }
     .btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      padding: 12px 20px;
+      padding: 11px 18px;
       border-radius: 10px;
       font-weight: 700;
-      font-size: 14px;
+      font-size: 13px;
       cursor: pointer;
       border: none;
       text-decoration: none;
@@ -95,27 +152,60 @@
     .btn-primary:hover { background: var(--primary-hover); }
     .btn-secondary { background: var(--surface-alt); color: var(--text); border: 1px solid var(--border); }
     .btn-danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
-    .user-row {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      padding: 16px;
+    .user-card {
+      padding: 18px;
       border-radius: 12px;
       background: var(--bg);
       border: 1px solid var(--border);
       margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
+    .user-card.online {
+      border-color: var(--success);
+      box-shadow: 0 0 18px rgba(16, 185, 129, 0.12);
+    }
+    .user-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .user-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
     .pill {
-      display: inline-block;
-      padding: 3px 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
       border-radius: 99px;
       font-size: 11px;
       font-weight: 800;
     }
-    .pill-ok { background: rgba(16, 185, 129, 0.15); color: var(--success); }
-    .pill-off { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+    .pill-online { background: rgba(16, 185, 129, 0.2); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.4); }
+    .pill-offline { background: rgba(148, 163, 184, 0.12); color: var(--text-muted); }
+    .pill-plan { background: rgba(245, 158, 11, 0.16); color: #FBBF24; }
+    .pill-susp { background: rgba(239, 68, 68, 0.18); color: #F87171; }
+    .watching-banner {
+      background: rgba(16, 185, 129, 0.12);
+      border-left: 3px solid var(--success);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #A7F3D0;
+      font-weight: 600;
+    }
+    .user-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .meta-item span { display: block; font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; }
+    .meta-item strong { color: var(--text); font-size: 13px; }
     .alert {
       padding: 12px 16px;
       border-radius: 10px;
@@ -126,7 +216,7 @@
     }
     .alert-err { background: rgba(239, 68, 68, 0.15); border: 1px solid var(--danger); color: #FCA5A5; }
     .alert-ok { background: rgba(16, 185, 129, 0.15); border: 1px solid var(--success); color: #6EE7B7; }
-    .tabs { display: flex; gap: 8px; margin-top: 12px; }
+    .tabs { display: flex; gap: 8px; margin-top: 8px; }
     .tab-btn {
       flex: 1;
       padding: 10px;
@@ -144,7 +234,7 @@
   <header>
     <a href="/" class="logo">
       <div class="logo-badge">▶</div>
-      <div>Kiko<span>IPTV</span> · Painel de Controlo</div>
+      <div>Kiko<span>IPTV</span> · Painel Admin</div>
     </a>
     <div style="display:flex;gap:10px;">
       <a href="/" class="btn btn-secondary">← Voltar ao Site</a>
@@ -156,78 +246,130 @@
 
     <!-- LOGIN ADMIN -->
     <div id="loginCard" class="card" style="max-width: 460px; margin: 40px auto;">
-      <h2>🔒 Acesso ao Painel de Controlo</h2>
-      <p class="sub">Gerencie as listas IPTV e defina o Utilizador e Password para login na app KikoIPTV.</p>
+      <h2>🔒 Painel de Controlo KikoIPTV</h2>
+      <p class="sub">Gerencie utilizadores, veja quem está online e que canal está a ver, reconheça a validade da linha e defina os planos de 1 a 5 anos.</p>
       <div class="field" style="margin-top: 20px;">
         <label>Password de Administrador</label>
-        <input type="password" id="adminPassInput" placeholder="Introduza a password (padrão inicial: admin)" onkeydown="if(event.key==='Enter') loginAdmin()">
+        <input type="password" id="adminPassInput" placeholder="Password (padrão inicial: admin)" onkeydown="if(event.key==='Enter') loginAdmin()">
       </div>
       <button class="btn btn-primary" style="width: 100%; margin-top: 18px;" onclick="loginAdmin()">Entrar no Painel</button>
     </div>
 
     <!-- DASHBOARD ADMIN -->
     <div id="dashboard" style="display: none;">
+      <!-- STATS -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total de Utilizadores</div>
+          <div class="stat-val" id="statTotal">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">🟢 Online Agora</div>
+          <div class="stat-val" id="statOnline" style="color: var(--success);">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Valor Total dos Planos</div>
+          <div class="stat-val" id="statRevenue" style="color: var(--warning);">0 €</div>
+        </div>
+      </div>
+
+      <!-- FORMULÁRIO DE CRIAÇÃO / EDIÇÃO -->
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
           <div>
-            <h2 id="formTitle">➕ Criar / Editar Acesso KikoIPTV</h2>
-            <p class="sub">O cliente só precisará de escrever o <strong>Utilizador</strong> e a <strong>Password</strong> abaixo na opção "Login KikoIPTV" da aplicação.</p>
+            <h2 id="formTitle">➕ Inserir / Editar Utilizador e Linha</h2>
+            <p class="sub">Defina o Utilizador, Password, Plano de Validade (1 a 5 anos) e a linha IPTV.</p>
           </div>
-          <button class="btn btn-secondary" onclick="resetForm()">Limpar Formulário</button>
+          <button class="btn btn-secondary" onclick="resetForm()">Limpar / Novo</button>
         </div>
 
         <input type="hidden" id="editId">
+        <input type="hidden" id="detectedLineExp" value="">
 
         <div class="grid-2" style="margin-top: 10px;">
           <div class="field">
             <label>Utilizador (Login na App)</label>
-            <input type="text" id="uUsername" placeholder="Ex: renato ou cliente1">
+            <input type="text" id="uUsername" placeholder="Ex: renato">
           </div>
           <div class="field">
             <label>Password (Login na App)</label>
             <input type="text" id="uPassword" placeholder="Ex: 123456">
           </div>
           <div class="field">
-            <label>Nome da Lista (aparece no topo da App)</label>
-            <input type="text" id="uName" placeholder="Ex: KikoIPTV Premium">
+            <label>Nome / Identificação do Cliente</label>
+            <input type="text" id="uName" placeholder="Ex: Renato Sala">
           </div>
           <div class="field">
-            <label>Estado da Conta</label>
+            <label>Estado do Acesso</label>
             <select id="uActive">
-              <option value="true">Ativa (Pode entrar)</option>
-              <option value="false">Suspensa / Desativada</option>
+              <option value="true">Ativo (Permitir Login)</option>
+              <option value="false">Suspenso / Bloqueado</option>
             </select>
           </div>
         </div>
 
+        <!-- PLANOS DE VALIDADE (1 A 5 ANOS) -->
         <div class="field" style="margin-top: 20px;">
-          <label>Tipo de Fonte IPTV associada a este Utilizador</label>
+          <label>Plano de Validade do Login KikoIPTV (1 a 5 Anos)</label>
+          <div class="plan-grid">
+            <div class="plan-card active" id="plan-1" onclick="selectPlan(1)">
+              <div class="plan-years">1 Ano</div>
+              <div class="plan-price">5 €</div>
+            </div>
+            <div class="plan-card" id="plan-2" onclick="selectPlan(2)">
+              <div class="plan-years">2 Anos</div>
+              <div class="plan-price">9 €</div>
+            </div>
+            <div class="plan-card" id="plan-3" onclick="selectPlan(3)">
+              <div class="plan-years">3 Anos</div>
+              <div class="plan-price">13 €</div>
+            </div>
+            <div class="plan-card" id="plan-4" onclick="selectPlan(4)">
+              <div class="plan-years">4 Anos</div>
+              <div class="plan-price">16 €</div>
+            </div>
+            <div class="plan-card" id="plan-5" onclick="selectPlan(5)">
+              <div class="plan-years">5 Anos</div>
+              <div class="plan-price">19 €</div>
+            </div>
+          </div>
+          <div class="plan-summary" id="planSummaryText"></div>
+        </div>
+
+        <!-- LINHA IPTV -->
+        <div class="field" style="margin-top: 20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+            <label>Linha IPTV do Utilizador (Reconhece automaticamente a data em que termina a linha)</label>
+            <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="inspectCurrentLine()">
+              🔍 Verificar Data de Fim da Linha Agora
+            </button>
+          </div>
           <div class="tabs">
-            <button type="button" id="tabM3u" class="tab-btn active" onclick="setSourceType('m3u')">Colar Link M3U Completo (Automático)</button>
-            <button type="button" id="tabXtream" class="tab-btn" onclick="setSourceType('xtream')">Dados Xtream Codes (Servidor / User / Pass)</button>
+            <button type="button" id="tabM3u" class="tab-btn active" onclick="setSourceType('m3u')">Colar Link M3U (Automático)</button>
+            <button type="button" id="tabXtream" class="tab-btn" onclick="setSourceType('xtream')">Servidor + User + Pass (Xtream)</button>
           </div>
         </div>
 
         <div id="boxM3u" style="margin-top: 8px;">
           <div class="field">
-            <label>URL da Linha M3U / get.php (extrai servidor, user e pass automaticamente)</label>
-            <input type="text" id="uM3uUrl" placeholder="http://servidor:8080/get.php?username=...&password=...&type=m3u_plus" oninput="autoDetectM3u(this.value)">
+            <label>URL da Linha M3U (Ex: http://servidor:8080/get.php?username=...&password=...)</label>
+            <input type="text" id="uM3uUrl" placeholder="Cole aqui o link M3U completo da linha..." oninput="onM3uInput(this.value)">
           </div>
         </div>
 
         <div id="boxXtream" style="display: none; margin-top: 8px;">
           <div class="grid-2">
             <div class="field">
-              <label>URL do Servidor Xtream</label>
+              <label>Servidor Xtream</label>
               <input type="text" id="uServer" placeholder="http://wh.gktxp.com:8080">
             </div>
             <div class="field">
-              <label>Utilizador da Linha (Xtream)</label>
+              <label>Utilizador da Linha</label>
               <input type="text" id="uXtreamUser" placeholder="username da linha">
             </div>
             <div class="field">
-              <label>Password da Linha (Xtream)</label>
-              <input type="text" id="uXtreamPass" placeholder="password da linha">
+              <label>Password da Linha</label>
+              <input type="text" id="uXtreamPass" placeholder="password da linha" onchange="inspectCurrentLine()">
             </div>
             <div class="field">
               <label>Formato Direto</label>
@@ -239,19 +381,21 @@
           </div>
         </div>
 
-        <button class="btn btn-primary" style="margin-top: 20px; width: 100%;" onclick="saveUser()" id="saveBtn">
-          💾 Guardar Utilizador e Lista no Painel
+        <div id="lineDetectedBox" class="line-detected-box"></div>
+
+        <button class="btn btn-primary" style="margin-top: 20px; width: 100%; padding: 14px;" onclick="saveUser()" id="saveBtn">
+          💾 Guardar Utilizador, Plano e Linha
         </button>
       </div>
 
       <!-- LISTA DE UTILIZADORES -->
       <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
           <div>
-            <h3>👥 Utilizadores e Listas Configuradas</h3>
-            <p class="sub">Clique em "Editar" para alterar a lista ou password de qualquer utilizador.</p>
+            <h3>👥 Lista de Utilizadores (Estado Online, Canal Atual e Validade)</h3>
+            <p class="sub">Atualiza automaticamente a cada 20 segundos. Veja quem está online, que canal está a ver e edite qualquer linha.</p>
           </div>
-          <button class="btn btn-secondary" onclick="loadUsers()">↻ Atualizar</button>
+          <button class="btn btn-secondary" onclick="loadUsers()">↻ Atualizar Agora</button>
         </div>
         <div id="usersList" style="margin-top: 14px;"></div>
       </div>
@@ -268,16 +412,55 @@
   </div>
 
   <script>
+    const PLAN_PRICES = { 1: 5, 2: 9, 3: 13, 4: 16, 5: 19 };
     let adminPassword = sessionStorage.getItem('kiko_admin_pass') || '';
     let sourceType = 'm3u';
+    let selectedPlanYears = 1;
     let currentUsers = [];
+    let inspectTimer = null;
+
+    function fmtDate(ms) {
+      if (!ms) return 'Sem expiração / N/D';
+      const d = new Date(Number(ms));
+      if (isNaN(d.getTime())) return 'N/D';
+      return String(d.getDate()).padStart(2, '0') + '/' +
+             String(d.getMonth() + 1).padStart(2, '0') + '/' +
+             d.getFullYear();
+    }
+
+    function fmtRelative(ms) {
+      if (!ms) return 'Nunca entrou';
+      const diffSec = Math.max(0, Math.floor((Date.now() - Number(ms)) / 1000));
+      if (diffSec < 60) return 'há ' + diffSec + ' seg';
+      const diffMin = Math.floor(diffSec / 60);
+      if (diffMin < 60) return 'há ' + diffMin + ' min';
+      const diffHr = Math.floor(diffMin / 60);
+      if (diffHr < 24) return 'há ' + diffHr + ' h';
+      return fmtDate(ms);
+    }
+
+    function selectPlan(years) {
+      selectedPlanYears = Number(years) || 1;
+      [1, 2, 3, 4, 5].forEach(y => {
+        const el = document.getElementById('plan-' + y);
+        if (el) el.className = 'plan-card' + (y === selectedPlanYears ? ' active' : '');
+      });
+      const price = PLAN_PRICES[selectedPlanYears] || 5;
+      const exp = new Date();
+      exp.setFullYear(exp.getFullYear() + selectedPlanYears);
+      document.getElementById('planSummaryText').innerHTML =
+        `✅ Este login será válido por <strong>${selectedPlanYears} ${selectedPlanYears === 1 ? 'Ano' : 'Anos'}</strong> ` +
+        `(Custo: <strong style="color:var(--warning);">${price} €</strong>) · Expira em: <strong>${fmtDate(exp.getTime())}</strong>`;
+    }
+
+    selectPlan(1);
 
     function showAlert(msg, ok = false) {
       const el = document.getElementById('alertBox');
       el.textContent = msg;
       el.className = 'alert ' + (ok ? 'alert-ok' : 'alert-err');
       el.style.display = 'block';
-      setTimeout(() => { el.style.display = 'none'; }, 5000);
+      setTimeout(() => { el.style.display = 'none'; }, 5500);
     }
 
     function setSourceType(t) {
@@ -288,18 +471,64 @@
       document.getElementById('boxXtream').style.display = t === 'xtream' ? 'block' : 'none';
     }
 
-    function autoDetectM3u(val) {
-      const m = val.trim().match(/^(https?:\/\/[^/\s]+)\/get\.php\?(.*)$/i);
-      if (!m) return;
-      const params = {};
-      m[2].split('&').forEach(p => {
-        const [k, v = ''] = p.split('=');
-        if (k) params[decodeURIComponent(k)] = decodeURIComponent(v);
-      });
-      if (params.username && params.password) {
-        document.getElementById('uServer').value = m[1];
-        document.getElementById('uXtreamUser').value = params.username;
-        document.getElementById('uXtreamPass').value = params.password;
+    function onM3uInput(val) {
+      let u = val.trim();
+      if (!/^https?:\/\//i.test(u) && /\/get\.php\?/i.test(u)) u = 'http://' + u;
+      const m = u.match(/^(https?:\/\/[^/\s]+)\/get\.php\?(.*)$/i);
+      if (m) {
+        const params = {};
+        m[2].split('&').forEach(p => {
+          const [k, v = ''] = p.split('=');
+          if (k) params[decodeURIComponent(k)] = decodeURIComponent(v);
+        });
+        if (params.username && params.password) {
+          document.getElementById('uServer').value = m[1];
+          document.getElementById('uXtreamUser').value = params.username;
+          document.getElementById('uXtreamPass').value = params.password;
+          if (inspectTimer) clearTimeout(inspectTimer);
+          inspectTimer = setTimeout(() => inspectCurrentLine(), 500);
+        }
+      }
+    }
+
+    async function inspectCurrentLine() {
+      const box = document.getElementById('lineDetectedBox');
+      const m3uUrl = document.getElementById('uM3uUrl').value.trim();
+      const server = document.getElementById('uServer').value.trim();
+      const xtreamUser = document.getElementById('uXtreamUser').value.trim();
+      const xtreamPass = document.getElementById('uXtreamPass').value.trim();
+
+      if (!m3uUrl && (!server || !xtreamUser || !xtreamPass)) {
+        box.style.display = 'block';
+        box.innerHTML = '⚠️ Cole primeiro o link M3U ou preencha o Servidor, Utilizador e Password da linha.';
+        return;
+      }
+
+      box.style.display = 'block';
+      box.innerHTML = '⏳ A consultar o servidor IPTV para reconhecer a data de fim da linha...';
+
+      try {
+        const res = await fetch('/api/panel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'inspect_line', m3uUrl, server, xtreamUser, xtreamPass }),
+        });
+        const data = await res.json();
+        if (!data.ok || !data.lineInfo) {
+          box.innerHTML = `⚠️ ${data.error || 'Não foi possível ler a data da linha.'}`;
+          return;
+        }
+        const info = data.lineInfo;
+        document.getElementById('detectedLineExp').value = info.expDate || '';
+        document.getElementById('uServer').value = info.server || server;
+        document.getElementById('uXtreamUser').value = info.username || xtreamUser;
+        document.getElementById('uXtreamPass').value = info.password || xtreamPass;
+        box.innerHTML =
+          `✅ <strong>Linha Reconhecida com Sucesso!</strong> · ` +
+          `📅 <strong>Termina em: ${info.expDate ? fmtDate(info.expDate) : 'Ilimitada'}</strong> · ` +
+          `Estado: <strong>${info.status}</strong> · Ligações: <strong>${info.activeCons}/${info.maxCons}</strong>`;
+      } catch (e) {
+        box.innerHTML = '⚠️ Erro ao contactar o servidor da linha.';
       }
     }
 
@@ -328,6 +557,7 @@
     }
 
     async function loadUsers() {
+      if (!adminPassword) return;
       const data = await apiCall({ action: 'admin_list' });
       if (data.ok) {
         currentUsers = data.users || [];
@@ -336,33 +566,82 @@
     }
 
     function renderUsers() {
+      document.getElementById('statTotal').textContent = String(currentUsers.length);
+      const onlineCount = currentUsers.filter(u => u.isOnline).length;
+      document.getElementById('statOnline').textContent = String(onlineCount);
+      const totalRev = currentUsers.reduce((acc, u) => acc + Number(u.planPrice || PLAN_PRICES[u.planYears || 1] || 5), 0);
+      document.getElementById('statRevenue').textContent = totalRev + ' €';
+
       const box = document.getElementById('usersList');
       if (!currentUsers.length) {
         box.innerHTML = '<p style="color:var(--text-muted);padding:16px 0;">Ainda não existem utilizadores criados. Preencha o formulário acima para criar o primeiro acesso!</p>';
         return;
       }
-      box.innerHTML = currentUsers.map(u => `
-        <div class="user-row">
-          <div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <strong style="font-size:17px;">👤 ${u.username}</strong>
-              <span style="color:var(--text-muted);font-size:13px;">(Password: <code>${u.password}</code>)</span>
-              <span class="pill ${u.active !== false ? 'pill-ok' : 'pill-off'}">${u.active !== false ? 'ATIVO' : 'SUSPENSO'}</span>
+
+      box.innerHTML = currentUsers.map(u => {
+        const years = u.planYears || 1;
+        const price = u.planPrice || PLAN_PRICES[years] || 5;
+        const appExpired = u.appExpDate && Date.now() > Number(u.appExpDate);
+        const lineExpired = u.lineExpDate && Date.now() > Number(u.lineExpDate);
+
+        return `
+          <div class="user-card ${u.isOnline ? 'online' : ''}">
+            <div class="user-top">
+              <div class="user-badges">
+                <strong style="font-size:18px;">👤 ${u.username}</strong>
+                <span style="color:var(--text-muted);font-size:13px;">(Pass: <code>${u.password}</code>)</span>
+                ${u.isOnline
+                  ? `<span class="pill pill-online">🟢 ONLINE AGORA</span>`
+                  : `<span class="pill pill-offline">⚪ OFFLINE (${fmtRelative(u.lastSeenAt)})</span>`
+                }
+                <span class="pill pill-plan">💳 Plano ${years} ${years === 1 ? 'Ano' : 'Anos'} (${price} €)</span>
+                ${u.active === false ? `<span class="pill pill-susp">SUSPENSO</span>` : ''}
+              </div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-secondary" onclick='editUser(${JSON.stringify(u.id)})'>✏️ Editar Linha / Utilizador</button>
+                <button class="btn btn-danger" onclick='deleteUser(${JSON.stringify(u.id)}, ${JSON.stringify(u.username)})'>🗑️ Apagar</button>
+              </div>
             </div>
-            <div style="font-size:13px;color:var(--text-muted);margin-top:4px;">
-              Lista: <strong>${u.name || u.username}</strong> · ${u.playlistType === 'xtream' ? `Xtream (${u.server} · user: ${u.xtreamUser})` : `M3U Direto`}
+
+            ${u.isOnline || u.currentChannel ? `
+              <div class="watching-banner">
+                📺 <strong>A ver agora:</strong> ${u.currentChannel || 'Canal em Direto'}
+                ${u.device ? ` <span style="opacity:0.8;font-weight:400;">(${u.device})</span>` : ''}
+              </div>
+            ` : ''}
+
+            <div class="user-meta-grid">
+              <div class="meta-item">
+                <span>📅 Fim da Linha IPTV (Fornecedor)</span>
+                <strong style="color:${lineExpired ? 'var(--danger)' : '#34D399'};">
+                  ${u.lineExpDate ? fmtDate(u.lineExpDate) : 'A aguardar leitura / Ilimitada'}
+                </strong>
+              </div>
+              <div class="meta-item">
+                <span>⏳ Validade do Login App (${years} ${years === 1 ? 'Ano' : 'Anos'} · ${price}€)</span>
+                <strong style="color:${appExpired ? 'var(--danger)' : 'var(--warning)'};">
+                  ${u.appExpDate ? fmtDate(u.appExpDate) : 'Ilimitado'}
+                </strong>
+              </div>
+              <div class="meta-item">
+                <span>🔗 Linha / Servidor Associado</span>
+                <strong style="word-break:break-all;">
+                  ${u.playlistType === 'xtream' ? `${u.server} (user: ${u.xtreamUser})` : (u.m3uUrl || 'M3U')}
+                </strong>
+              </div>
+              <div class="meta-item">
+                <span>📡 Ligações na Linha</span>
+                <strong>${u.lineActiveCons ?? 0} / ${u.lineMaxCons ?? 1} (${u.lineStatus || 'Active'})</strong>
+              </div>
             </div>
           </div>
-          <div style="display:flex;gap:8px;">
-            <button class="btn btn-secondary" onclick='editUser(${JSON.stringify(u.id)})'>✏️ Editar</button>
-            <button class="btn btn-danger" onclick='deleteUser(${JSON.stringify(u.id)}, ${JSON.stringify(u.username)})'>🗑️ Apagar</button>
-          </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
     function resetForm() {
       document.getElementById('editId').value = '';
+      document.getElementById('detectedLineExp').value = '';
       document.getElementById('uUsername').value = '';
       document.getElementById('uPassword').value = '';
       document.getElementById('uName').value = '';
@@ -371,38 +650,51 @@
       document.getElementById('uServer').value = '';
       document.getElementById('uXtreamUser').value = '';
       document.getElementById('uXtreamPass').value = '';
-      document.getElementById('formTitle').textContent = '➕ Criar / Editar Acesso KikoIPTV';
+      document.getElementById('lineDetectedBox').style.display = 'none';
+      selectPlan(1);
+      document.getElementById('formTitle').textContent = '➕ Inserir / Editar Utilizador e Linha';
     }
 
     function editUser(id) {
       const u = currentUsers.find(x => x.id === id);
       if (!u) return;
       document.getElementById('editId').value = u.id;
+      document.getElementById('detectedLineExp').value = u.lineExpDate || '';
       document.getElementById('uUsername').value = u.username || '';
       document.getElementById('uPassword').value = u.password || '';
       document.getElementById('uName').value = u.name || '';
       document.getElementById('uActive').value = u.active !== false ? 'true' : 'false';
-      document.getElementById('uM3uUrl').value = u.m3uUrl || '';
+      document.getElementById('uM3uUrl').value = u.m3uUrl || (u.server && u.xtreamUser ? `${u.server}/get.php?username=${u.xtreamUser}&password=${u.xtreamPass}&type=m3u_plus&output=ts` : '');
       document.getElementById('uServer').value = u.server || '';
       document.getElementById('uXtreamUser').value = u.xtreamUser || '';
       document.getElementById('uXtreamPass').value = u.xtreamPass || '';
       document.getElementById('uFormat').value = u.liveFormat || 'm3u8';
+      selectPlan(u.planYears || 1);
       setSourceType(u.playlistType === 'xtream' && !u.m3uUrl ? 'xtream' : 'm3u');
-      document.getElementById('formTitle').textContent = '✏️ A Editar Utilizador: ' + u.username;
+      document.getElementById('formTitle').textContent = '✏️ A Editar Utilizador e Linha: ' + u.username;
+      if (u.lineExpDate) {
+        const box = document.getElementById('lineDetectedBox');
+        box.style.display = 'block';
+        box.innerHTML = `📅 <strong>Data de Fim da Linha Atual:</strong> ${fmtDate(u.lineExpDate)}`;
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     async function saveUser() {
       const btn = document.getElementById('saveBtn');
       btn.disabled = true;
-      btn.textContent = 'A guardar...';
+      btn.textContent = 'A verificar linha e a guardar...';
       try {
+        const detExp = document.getElementById('detectedLineExp').value;
         const user = {
           id: document.getElementById('editId').value || undefined,
           username: document.getElementById('uUsername').value.trim(),
           password: document.getElementById('uPassword').value.trim(),
           name: document.getElementById('uName').value.trim(),
           active: document.getElementById('uActive').value === 'true',
+          planYears: selectedPlanYears,
+          renewFromNow: true,
+          lineExpDate: detExp ? Number(detExp) : undefined,
           playlistType: sourceType,
           m3uUrl: document.getElementById('uM3uUrl').value.trim(),
           server: document.getElementById('uServer').value.trim(),
@@ -414,14 +706,13 @@
         if (!data.ok) {
           showAlert(data.error || 'Erro ao guardar utilizador.');
         } else {
-          currentUsers = data.users || [];
-          renderUsers();
+          await loadUsers();
           resetForm();
-          showAlert('Utilizador guardado com sucesso! Já pode fazer login na App KikoIPTV.', true);
+          showAlert('Utilizador, Plano e Linha guardados com sucesso!', true);
         }
       } finally {
         btn.disabled = false;
-        btn.textContent = '💾 Guardar Utilizador e Lista no Painel';
+        btn.textContent = '💾 Guardar Utilizador, Plano e Linha';
       }
     }
 
@@ -429,8 +720,7 @@
       if (!confirm('Tem a certeza que deseja apagar o utilizador "' + username + '"?')) return;
       const data = await apiCall({ action: 'admin_delete_user', id });
       if (data.ok) {
-        currentUsers = data.users || [];
-        renderUsers();
+        await loadUsers();
         showAlert('Utilizador removido.', true);
       } else {
         showAlert(data.error || 'Erro ao apagar.');
@@ -455,7 +745,13 @@
       document.getElementById('adminPassInput').value = adminPassword;
       loginAdmin();
     }
+
+    // Auto-refresh online status every 20s
+    setInterval(() => {
+      if (adminPassword && document.getElementById('dashboard').style.display !== 'none') {
+        loadUsers();
+      }
+    }, 20000);
   </script>
 </body>
 </html>
-

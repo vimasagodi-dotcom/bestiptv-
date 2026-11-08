@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useApp } from '../context/AppContext';
 import { useAsync } from '../hooks/useAsync';
+import { sendPlayerHeartbeat } from '../lib/panel';
 import type { EpgEntry, LiveChannel } from '../lib/types';
 import { formatTime } from '../lib/utils';
 import { colors, radius } from '../theme';
@@ -241,6 +242,21 @@ export function LiveTvView({
     }, 8000);
     return () => clearTimeout(t);
   }, [status, activeTab, currentChannel, retryCount, loadChannel]);
+
+  // ---- Report online status & currently watched channel to Admin Panel ----
+  useEffect(() => {
+    if (!active || !activeTab || !currentChannel) {
+      if (active) sendPlayerHeartbeat({ playlist: active, playing: false });
+      return;
+    }
+    sendPlayerHeartbeat({ playlist: active, channelName: currentChannel.name, playing: true });
+    const interval = setInterval(() => {
+      sendPlayerHeartbeat({ playlist: active, channelName: currentChannel.name, playing: true });
+    }, 45000);
+    return () => {
+      clearInterval(interval);
+    };
+  }, [active, activeTab, currentChannel]);
 
   // ---- EPG for current channel ----
   const [epg, setEpg] = useState<EpgEntry[]>([]);

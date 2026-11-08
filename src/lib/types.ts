@@ -14,6 +14,10 @@ export interface Playlist {
   userAgent?: string;
   liveFormat?: LiveFormat;
   createdAt: number;
+  panelUsername?: string;
+  appExpDate?: number | null;
+  planYears?: number;
+  planPrice?: number;
 }
 
 export interface Category {

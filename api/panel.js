@@ -4,6 +4,14 @@ const REPO = 'vimasagodi-dotcom/bestiptv-';
 const BRANCH = 'panel-data';
 const FILE_PATH = 'panel-db.enc';
 
+const PLANS = {
+  1: { years: 1, price: 5, label: '1 Ano — 5 €' },
+  2: { years: 2, price: 9, label: '2 Anos — 9 €' },
+  3: { years: 3, price: 13, label: '3 Anos — 13 €' },
+  4: { years: 4, price: 16, label: '4 Anos — 16 €' },
+  5: { years: 5, price: 19, label: '5 Anos — 19 €' },
+};
+
 function getKey() {
   const secret = process.env.PANEL_SECRET_KEY || 'default-kiko-secret-key-32-chars!!';
   return crypto.createHash('sha256').update(String(secret)).digest();
@@ -80,7 +88,6 @@ async function saveDb(db, sha) {
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    // Retry once on SHA conflict
     const fresh = await loadDb();
     body.sha = fresh.sha || undefined;
     const retryRes = await fetch(url, {
@@ -97,7 +104,7 @@ async function saveDb(db, sha) {
 function parseXtreamUrl(rawUrl) {
   if (!rawUrl) return null;
   let u = String(rawUrl).trim();
-  if (!/^https?:\/\//i.test(u) && u.includes('/get.php?')) {
+  if (!/^https?:\/\//i.test(u) && /\/get\.php\?/i.test(u)) {
     u = 'http://' + u;
   }
   const m = u.match(/^(https?:\/\/[^/\s]+)\/get\.php\?(.*)$/i);
@@ -109,7 +116,7 @@ function parseXtreamUrl(rawUrl) {
   }
   if (!params.username || !params.password) return null;
   return {
-    server: m[1],
+    server: m[1].trim(),
     username: params.username.trim(),
     password: params.password.trim(),
   };
@@ -119,8 +126,52 @@ function normalizeServerUrl(srv) {
   let s = String(srv || '').trim().replace(/\s+/g, '');
   if (!s) return '';
   if (!/^https?:\/\//i.test(s)) s = 'http://' + s;
-  s = s.replace(/\/(c|player_api\.php|get\.php.*|panel_api\.php)?\/?$/i, '');
+  s = s.replace(/\/(c|player_api\.php|get\.php|panel_api\.php|xmltv\.php)(\?.*)?\/?$/i, '');
   return s.replace(/\/+$/, '');
+}
+
+async function fetchXtreamLineInfo(server, username, password, timeoutMs = 4500) {
+  const base = normalizeServerUrl(server);
+  const usr = String(username || '').trim();
+  const pwd = String(password || '').trim();
+  if (!base || !usr || !pwd) return null;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const apiUrl = `${base}/player_api.php?username=${encodeURIComponent(usr)}&password=${encodeURIComponent(pwd)}`;
+    const res = await fetch(apiUrl, {
+      headers: { 'User-Agent': 'IPTVSmartersPlayer', Accept: '*/*' },
+      signal: controller.signal,
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const u = data?.user_info;
+    if (!u || Number(u.auth) === 0) {
+      return { valid: false, error: 'Credenciais Xtream inválidas na linha.' };
+    }
+    const expSec = u.exp_date ? Number(u.exp_date) : null;
+    return {
+      valid: true,
+      status: String(u.status || 'Active'),
+      expDate: expSec && !Number.isNaN(expSec) ? expSec * 1000 : null,
+      activeCons: Number(u.active_cons ?? 0),
+      maxCons: Number(u.max_connections ?? 1),
+      server: base,
+      username: usr,
+      password: pwd,
+    };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function addYearsMs(baseMs, years) {
+  const d = new Date(baseMs);
+  d.setFullYear(d.getFullYear() + Number(years));
+  return d.getTime();
 }
 
 module.exports = async function handler(req, res) {
@@ -136,26 +187,63 @@ module.exports = async function handler(req, res) {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
     const action = body.action || req.query?.action;
 
+    // Action: inspect_line (checks line expiration date directly from M3U link or Xtream credentials)
+    if (action === 'inspect_line') {
+      const autoXt = parseXtreamUrl(body.m3uUrl) || parseXtreamUrl(body.server);
+      const srv = autoXt ? autoXt.server : body.server;
+      const usr = autoXt ? autoXt.username : body.xtreamUser;
+      const pwd = autoXt ? autoXt.password : body.xtreamPass;
+
+      if (!srv || !usr || !pwd) {
+        return res.status(200).json({
+          ok: false,
+          error: 'Forneça um link M3U (com get.php?username=...) ou Servidor + Utilizador + Password Xtream.',
+        });
+      }
+      const info = await fetchXtreamLineInfo(srv, usr, pwd, 6000);
+      if (!info) {
+        return res.status(200).json({
+          ok: false,
+          error: 'Não foi possível contactar o servidor da linha para ler a data.',
+        });
+      }
+      if (!info.valid) {
+        return res.status(200).json({ ok: false, error: info.error });
+      }
+      return res.status(200).json({ ok: true, lineInfo: info });
+    }
+
     const { db, sha } = await loadDb();
 
-    // 1. Client login from KikoIPTV App (Username + Password defined in Control Panel)
+    // 1. Client login from KikoIPTV App
     if (action === 'client_login') {
       const usr = String(body.username || '').trim().toLowerCase();
       const pwd = String(body.password || '').trim();
       if (!usr || !pwd) {
         return res.status(400).json({ ok: false, error: 'Introduza o utilizador e a palavra-passe.' });
       }
-      const found = (db.users || []).find(
+      const foundIdx = (db.users || []).findIndex(
         (u) => String(u.username || '').trim().toLowerCase() === usr && String(u.password || '').trim() === pwd
       );
-      if (!found) {
+      if (foundIdx < 0) {
         return res.status(401).json({ ok: false, error: 'Utilizador ou palavra-passe incorretos no Painel KikoIPTV.' });
       }
+      const found = db.users[foundIdx];
       if (found.active === false) {
-        return res.status(403).json({ ok: false, error: 'Esta conta encontra-se desativada no Painel de Controlo.' });
+        return res.status(403).json({ ok: false, error: 'Esta conta encontra-se suspensa no Painel de Controlo.' });
+      }
+      if (found.appExpDate && Date.now() > Number(found.appExpDate)) {
+        return res.status(403).json({
+          ok: false,
+          error: 'A validade do seu login KikoIPTV expirou. Contacte o suporte para renovar (1 Ano: 5€ | 2 Anos: 9€ | 3 Anos: 13€ | 4 Anos: 16€ | 5 Anos: 19€).',
+        });
       }
 
-      // Build playlist config for the app
+      // Mark user as online on login
+      found.lastSeenAt = Date.now();
+      if (body.device) found.device = String(body.device);
+      saveDb(db, sha).catch(() => {});
+
       const xtFromM3u = parseXtreamUrl(found.m3uUrl || found.server);
       if (found.playlistType === 'xtream' || xtFromM3u) {
         const server = xtFromM3u ? xtFromM3u.server : normalizeServerUrl(found.server);
@@ -170,6 +258,10 @@ module.exports = async function handler(req, res) {
             username: xtreamUser,
             password: xtreamPass,
             liveFormat: found.liveFormat || 'm3u8',
+            panelUsername: found.username,
+            appExpDate: found.appExpDate || null,
+            planYears: found.planYears || 1,
+            planPrice: found.planPrice || 5,
           },
         });
       } else {
@@ -180,9 +272,47 @@ module.exports = async function handler(req, res) {
             type: 'm3u',
             url: String(found.m3uUrl || '').trim(),
             liveFormat: found.liveFormat || 'm3u8',
+            panelUsername: found.username,
+            appExpDate: found.appExpDate || null,
+            planYears: found.planYears || 1,
+            planPrice: found.planPrice || 5,
           },
         });
       }
+    }
+
+    // 2. Real-time Heartbeat from KikoIPTV Player (reports online status + current channel being watched)
+    if (action === 'heartbeat') {
+      const panelUsr = String(body.panelUsername || '').trim().toLowerCase();
+      const xtUsr = String(body.xtreamUser || '').trim().toLowerCase();
+      const channelName = body.playing === false ? null : String(body.channelName || '').trim() || null;
+      const device = String(body.device || '').trim() || undefined;
+
+      if (!panelUsr && !xtUsr) {
+        return res.status(200).json({ ok: true });
+      }
+
+      const idx = (db.users || []).findIndex((u) => {
+        if (panelUsr && String(u.username || '').trim().toLowerCase() === panelUsr) return true;
+        if (xtUsr && String(u.xtreamUser || '').trim().toLowerCase() === xtUsr) return true;
+        return false;
+      });
+
+      if (idx >= 0) {
+        const u = db.users[idx];
+        const prevChannel = u.currentChannel || null;
+        const now = Date.now();
+        const elapsed = now - (u.lastSeenAt || 0);
+        u.lastSeenAt = now;
+        u.currentChannel = channelName;
+        if (device) u.device = device;
+
+        // Persist when channel changes or every >40 seconds to keep storage fast
+        if (prevChannel !== channelName || elapsed > 40000) {
+          await saveDb(db, sha);
+        }
+      }
+      return res.status(200).json({ ok: true });
     }
 
     // Verify Admin Password for all admin actions
@@ -194,10 +324,53 @@ module.exports = async function handler(req, res) {
       });
     }
 
+    // 3. Admin List Users (with live Xtream line expiration + online status enrichment)
     if (action === 'admin_list') {
-      return res.status(200).json({ ok: true, users: db.users || [] });
+      const users = db.users || [];
+      let changed = false;
+
+      // Refresh live Xtream line status in parallel (up to 8 users at once, 2.5s timeout)
+      await Promise.all(
+        users.slice(0, 12).map(async (u) => {
+          const autoXt = parseXtreamUrl(u.m3uUrl || u.server);
+          const srv = autoXt ? autoXt.server : u.server;
+          const xUsr = autoXt ? autoXt.username : u.xtreamUser;
+          const xPwd = autoXt ? autoXt.password : u.xtreamPass;
+          if (srv && xUsr && xPwd) {
+            const info = await fetchXtreamLineInfo(srv, xUsr, xPwd, 2500);
+            if (info && info.valid) {
+              if (info.expDate !== u.lineExpDate) {
+                u.lineExpDate = info.expDate;
+                changed = true;
+              }
+              u.lineStatus = info.status;
+              u.lineActiveCons = info.activeCons;
+              u.lineMaxCons = info.maxCons;
+            }
+          }
+        })
+      );
+
+      if (changed) {
+        saveDb(db, sha).catch(() => {});
+      }
+
+      const now = Date.now();
+      const enriched = users.map((u) => {
+        const recentlySeen = u.lastSeenAt && now - u.lastSeenAt < 110000; // within 110s
+        const lineActive = Number(u.lineActiveCons || 0) > 0;
+        const isOnline = Boolean((recentlySeen && u.currentChannel) || lineActive);
+        return {
+          ...u,
+          isOnline,
+          currentChannel: recentlySeen ? u.currentChannel : lineActive ? (u.currentChannel || 'Canal em Direto (Ativo na Linha)') : null,
+        };
+      });
+
+      return res.status(200).json({ ok: true, users: enriched, plans: PLANS });
     }
 
+    // 4. Admin Save / Edit User & Line
     if (action === 'admin_save_user') {
       const u = body.user || {};
       const username = String(u.username || '').trim();
@@ -206,10 +379,10 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ ok: false, error: 'Defina o Utilizador e a Password de login do cliente.' });
       }
 
-      // Check duplicate username
       const existingIdx = (db.users || []).findIndex(
-        (item) => item.id === u.id || item.username.toLowerCase() === username.toLowerCase()
+        (item) => (u.id && item.id === u.id) || item.username.toLowerCase() === username.toLowerCase()
       );
+      const existing = existingIdx >= 0 ? db.users[existingIdx] : null;
 
       let playlistType = u.playlistType === 'm3u' ? 'm3u' : 'xtream';
       let server = normalizeServerUrl(u.server || '');
@@ -217,7 +390,6 @@ module.exports = async function handler(req, res) {
       let xtreamPass = String(u.xtreamPass || '').trim();
       let m3uUrl = String(u.m3uUrl || '').trim();
 
-      // Auto-extract Xtream credentials if the admin pasted a get.php?username=... M3U link
       const autoXt = parseXtreamUrl(m3uUrl) || parseXtreamUrl(u.server);
       if (autoXt) {
         playlistType = 'xtream';
@@ -226,8 +398,31 @@ module.exports = async function handler(req, res) {
         xtreamPass = autoXt.password;
       }
 
+      // Subscription Plan (1 to 5 years: 1y=5€, 2y=9€, 3y=13€, 4y=16€, 5y=19€)
+      const planYears = [1, 2, 3, 4, 5].includes(Number(u.planYears)) ? Number(u.planYears) : (existing?.planYears || 1);
+      const planInfo = PLANS[planYears] || PLANS[1];
+      const createdAt = existing?.createdAt || Date.now();
+      const baseDate = u.renewFromNow ? Date.now() : createdAt;
+      const appExpDate = u.appExpDate ? Number(u.appExpDate) : addYearsMs(baseDate, planInfo.years);
+
+      // Automatically detect IPTV line expiration date from the Xtream server
+      let lineExpDate = u.lineExpDate ?? existing?.lineExpDate ?? null;
+      let lineStatus = existing?.lineStatus ?? 'Active';
+      let lineActiveCons = existing?.lineActiveCons ?? 0;
+      let lineMaxCons = existing?.lineMaxCons ?? 1;
+
+      if (server && xtreamUser && xtreamPass) {
+        const info = await fetchXtreamLineInfo(server, xtreamUser, xtreamPass, 4500);
+        if (info && info.valid) {
+          lineExpDate = info.expDate;
+          lineStatus = info.status;
+          lineActiveCons = info.activeCons;
+          lineMaxCons = info.maxCons;
+        }
+      }
+
       const record = {
-        id: existingIdx >= 0 ? db.users[existingIdx].id : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+        id: existing ? existing.id : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
         username,
         password,
         name: String(u.name || username).trim(),
@@ -238,6 +433,17 @@ module.exports = async function handler(req, res) {
         xtreamPass,
         m3uUrl,
         liveFormat: u.liveFormat === 'ts' ? 'ts' : 'm3u8',
+        planYears: planInfo.years,
+        planPrice: planInfo.price,
+        createdAt,
+        appExpDate,
+        lineExpDate,
+        lineStatus,
+        lineActiveCons,
+        lineMaxCons,
+        lastSeenAt: existing?.lastSeenAt || null,
+        currentChannel: existing?.currentChannel || null,
+        device: existing?.device || null,
         notes: String(u.notes || '').trim(),
         updatedAt: Date.now(),
       };
@@ -249,7 +455,7 @@ module.exports = async function handler(req, res) {
       }
 
       await saveDb(db, sha);
-      return res.status(200).json({ ok: true, users: db.users });
+      return res.status(200).json({ ok: true, users: db.users, savedUser: record });
     }
 
     if (action === 'admin_delete_user') {
@@ -274,4 +480,3 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ ok: false, error: err.message || 'Erro interno do servidor.' });
   }
 };
-

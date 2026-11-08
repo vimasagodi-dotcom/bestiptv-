@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { filterByCategory } from '../components/ContentBrowser';
 import { useApp } from '../context/AppContext';
 import { useAsync } from '../hooks/useAsync';
+import { sendPlayerHeartbeat } from '../lib/panel';
 import type { EpgEntry, LiveChannel } from '../lib/types';
 import { formatTime } from '../lib/utils';
 import { colors } from '../theme';
@@ -20,7 +21,7 @@ type Params = { kind: 'live' | 'vod'; id?: string; categoryId?: string; url?: st
 
 export default function Player() {
   const params = useLocalSearchParams<Params>();
-  const { provider, favorites } = useApp();
+  const { provider, active, favorites } = useApp();
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -124,6 +125,18 @@ export default function Player() {
       }
     }
   }, [status, uri, player, load]);
+
+  useEffect(() => {
+    if (!active || !title) return;
+    sendPlayerHeartbeat({ playlist: active, channelName: title, playing: true });
+    const interval = setInterval(() => {
+      sendPlayerHeartbeat({ playlist: active, channelName: title, playing: true });
+    }, 45000);
+    return () => {
+      clearInterval(interval);
+      sendPlayerHeartbeat({ playlist: active, playing: false });
+    };
+  }, [active, title]);
 
   // ---- Overlay ----
   const [overlay, setOverlay] = useState(true);
