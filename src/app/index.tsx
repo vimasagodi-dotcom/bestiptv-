@@ -1,40 +1,36 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { IconButton, Loading } from '../components/ui';
+import { ContentBrowser } from '../components/ContentBrowser';
+import { LiveTvView } from '../components/LiveTvView';
+import { EmptyView, Loading } from '../components/ui';
 import { useApp } from '../context/AppContext';
 import { useAsync } from '../hooks/useAsync';
 import { formatDate, formatTime } from '../lib/utils';
 import { colors, radius } from '../theme';
 
-function Clock() {
+type TabKey = 'live' | 'vod' | 'series' | 'portals';
+
+const TABS: { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap; iconActive: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'live', label: 'TV em Direto', icon: 'tv-outline', iconActive: 'tv' },
+  { key: 'vod', label: 'Filmes (VOD)', icon: 'film-outline', iconActive: 'film' },
+  { key: 'series', label: 'Séries', icon: 'albums-outline', iconActive: 'albums' },
+  { key: 'portals', label: 'Portais', icon: 'server-outline', iconActive: 'server' },
+];
+
+export default function Home() {
+  const { ready, active, playlists, selectPlaylist, removePlaylist, provider, reload } = useApp();
+  const insets = useSafeAreaInsets();
+  const [tab, setTab] = useState<TabKey>('live');
   const [now, setNow] = useState(Date.now());
+
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 15000);
     return () => clearInterval(t);
   }, []);
-  return (
-    <View style={{ alignItems: 'flex-end' }}>
-      <Text style={styles.clock}>{formatTime(now)}</Text>
-      <Text style={styles.date}>{formatDate(now)}</Text>
-    </View>
-  );
-}
-
-const TILES = [
-  { key: 'live', title: 'TV em Direto', icon: 'tv' as const, color: colors.live, href: '/live' as const },
-  { key: 'movies', title: 'Filmes', icon: 'film' as const, color: colors.movies, href: '/movies' as const },
-  { key: 'series', title: 'Séries', icon: 'albums' as const, color: colors.series, href: '/series' as const },
-];
-
-export default function Home() {
-  const { ready, active, provider, reload } = useApp();
-  const insets = useSafeAreaInsets();
-  const { width, height } = useWindowDimensions();
-  const landscape = width > height;
 
   const account = useAsync(async () => (provider ? provider.getAccountInfo() : null), [provider]);
 
@@ -44,101 +40,316 @@ export default function Home() {
   const exp = account.data?.expDate;
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: colors.bg }}
-      contentContainerStyle={{
-        paddingTop: insets.top + 12,
-        paddingBottom: insets.bottom + 24,
-        paddingHorizontal: Math.max(16, insets.left, insets.right),
-        gap: 20,
-        flexGrow: 1,
-      }}
-    >
+    <View style={[styles.root, { paddingTop: insets.top }]}>
+      {/* MYTVOnline+ Top Header */}
       <View style={styles.topBar}>
-        <View style={styles.brand}>
-          <View style={styles.logo}>
-            <Ionicons name="play" size={20} color="#fff" />
+        <View style={styles.brandRow}>
+          <View style={styles.logoBadge}>
+            <Ionicons name="play" size={16} color="#fff" />
           </View>
-          <Text style={styles.brandText}>
-            Kiko<Text style={{ color: colors.primary }}>IPTV</Text>
-          </Text>
+          <View>
+            <Text style={styles.brandTitle}>
+              Kiko<Text style={{ color: colors.primary }}>IPTV</Text>
+            </Text>
+            <Text style={styles.portalSub} numberOfLines={1}>
+              <Text style={{ color: colors.success }}>● </Text>
+              {active.name}
+            </Text>
+          </View>
         </View>
-        <Clock />
-      </View>
 
-      <View style={[styles.tiles, { flexDirection: landscape ? 'row' : 'column' }]}>
-        {TILES.map((t) => (
-          <Pressable
-            key={t.key}
-            onPress={() => router.push(t.href)}
-            style={({ pressed }) => [
-              styles.tile,
-              { backgroundColor: t.color, opacity: pressed ? 0.85 : 1 },
-              landscape ? { flex: 1, aspectRatio: 1.1 } : { height: 120 },
-            ]}
-          >
-            <Ionicons name={t.icon} size={landscape ? 56 : 44} color="#fff" />
-            <Text style={styles.tileText}>{t.title}</Text>
+        <View style={styles.topActions}>
+          <Text style={styles.clockText}>{formatTime(now)}</Text>
+          <Pressable onPress={reload} hitSlop={8} style={styles.headerBtn}>
+            <Ionicons name="refresh" size={18} color={colors.text} />
           </Pressable>
-        ))}
+          <Pressable onPress={() => setTab('portals')} hitSlop={8} style={styles.headerBtn}>
+            <Ionicons name="swap-horizontal" size={18} color={colors.text} />
+          </Pressable>
+        </View>
       </View>
 
-      <View style={styles.info}>
-        <View style={{ flex: 1, gap: 4 }}>
-          <Text style={styles.infoLabel}>Playlist ativa</Text>
-          <Text style={styles.infoTitle} numberOfLines={1}>
-            {active.name}
-          </Text>
-          <Text style={styles.infoSub}>
-            {active.type === 'xtream' ? 'Xtream Codes' : 'Lista M3U'}
-            {account.data?.status ? ` · ${account.data.status}` : ''}
-            {exp ? ` · Expira em ${formatDate(exp)}` : account.data && active.type === 'xtream' ? ' · Sem expiração' : ''}
-          </Text>
+      {/* Main Content Area */}
+      <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, display: tab === 'live' ? 'flex' : 'none' }}>
+          <LiveTvView activeTab={tab === 'live'} />
         </View>
-        <View style={{ flexDirection: 'row', gap: 14 }}>
-          <IconButton name="refresh" onPress={reload} />
-          <IconButton name="create-outline" onPress={() => router.push({ pathname: '/playlist-form', params: { id: active.id } })} />
-          <IconButton name="list" onPress={() => router.push('/playlists')} />
-        </View>
+
+        {tab === 'vod' && (
+          <View style={{ flex: 1, paddingTop: 8 }}>
+            {provider ? (
+              <ContentBrowser
+                kind="movie"
+                layout="grid"
+                deps={[provider]}
+                loadCategories={() => provider.getMovieCategories()}
+                loadItems={() => provider.getMovies()}
+                onOpen={(item) => router.push({ pathname: '/movie/[id]', params: { id: item.id } })}
+              />
+            ) : (
+              <EmptyView message="Sem portal ativo" />
+            )}
+          </View>
+        )}
+
+        {tab === 'series' && (
+          <View style={{ flex: 1, paddingTop: 8 }}>
+            {provider ? (
+              <ContentBrowser
+                kind="series"
+                layout="grid"
+                deps={[provider]}
+                loadCategories={() => provider.getSeriesCategories()}
+                loadItems={() => provider.getSeries()}
+                onOpen={(item) => router.push({ pathname: '/series/[id]', params: { id: item.id } })}
+              />
+            ) : (
+              <EmptyView message="Sem portal ativo" />
+            )}
+          </View>
+        )}
+
+        {tab === 'portals' && (
+          <ScrollView contentContainerStyle={styles.portalsContainer}>
+            {/* Active Portal Status Card */}
+            <View style={styles.portalActiveCard}>
+              <View style={styles.portalCardHeader}>
+                <View style={styles.statusDot} />
+                <Text style={styles.portalActiveLabel}>PORTAL LIGADO</Text>
+              </View>
+              <Text style={styles.portalActiveTitle}>{active.name}</Text>
+              <Text style={styles.portalActiveMeta}>
+                {active.type === 'xtream' ? `Servidor Xtream · ${active.server}` : 'Lista M3U Direta'}
+              </Text>
+
+              <View style={styles.portalStatsRow}>
+                <View style={styles.statBox}>
+                  <Text style={styles.statLabel}>Estado</Text>
+                  <Text style={[styles.statVal, { color: colors.success }]}>
+                    {account.data?.status ?? 'Ativo'}
+                  </Text>
+                </View>
+                <View style={styles.statBox}>
+                  <Text style={styles.statLabel}>Expiração</Text>
+                  <Text style={styles.statVal}>
+                    {exp ? formatDate(exp) : 'Ilimitado'}
+                  </Text>
+                </View>
+                <View style={styles.statBox}>
+                  <Text style={styles.statLabel}>Ligações</Text>
+                  <Text style={styles.statVal}>
+                    {account.data?.activeConnections ?? '0'} / {account.data?.maxConnections ?? '1'}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Os Meus Portais / Listas</Text>
+              <Pressable
+                onPress={() => router.push('/playlist-form')}
+                style={styles.addPortalBtn}
+              >
+                <Ionicons name="add" size={18} color="#fff" />
+                <Text style={styles.addPortalText}>Adicionar Portal</Text>
+              </Pressable>
+            </View>
+
+            {playlists.map((p) => {
+              const isCurrent = p.id === active.id;
+              return (
+                <Pressable
+                  key={p.id}
+                  onPress={async () => {
+                    await selectPlaylist(p.id);
+                    setTab('live');
+                  }}
+                  style={[styles.portalRow, isCurrent && styles.portalRowActive]}
+                >
+                  <View style={[styles.portalIcon, isCurrent && { backgroundColor: colors.primary }]}>
+                    <Ionicons name={p.type === 'xtream' ? 'globe-outline' : 'list'} size={20} color="#fff" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.portalRowName} numberOfLines={1}>{p.name}</Text>
+                    <Text style={styles.portalRowSub} numberOfLines={1}>
+                      {p.type === 'xtream' ? `${p.username} @ ${p.server}` : p.url}
+                    </Text>
+                  </View>
+                  <Pressable
+                    hitSlop={8}
+                    onPress={() => router.push({ pathname: '/playlist-form', params: { id: p.id } })}
+                    style={styles.iconAction}
+                  >
+                    <Ionicons name="create-outline" size={20} color={colors.textMuted} />
+                  </Pressable>
+                  <Pressable
+                    hitSlop={8}
+                    onPress={() =>
+                      Alert.alert('Remover portal', `Eliminar "${p.name}"?`, [
+                        { text: 'Cancelar', style: 'cancel' },
+                        { text: 'Eliminar', style: 'destructive', onPress: () => removePlaylist(p.id) },
+                      ])
+                    }
+                    style={styles.iconAction}
+                  >
+                    <Ionicons name="trash-outline" size={20} color={colors.danger} />
+                  </Pressable>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
       </View>
-    </ScrollView>
+
+      {/* MYTVOnline+ Bottom Tab Bar */}
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+        {TABS.map((t) => {
+          const isSelected = tab === t.key;
+          return (
+            <Pressable
+              key={t.key}
+              onPress={() => setTab(t.key)}
+              style={styles.tabItem}
+            >
+              {isSelected && <View style={styles.tabIndicator} />}
+              <Ionicons
+                name={isSelected ? t.iconActive : t.icon}
+                size={21}
+                color={isSelected ? colors.primary : colors.textMuted}
+              />
+              <Text style={[styles.tabLabel, isSelected && styles.tabLabelActive]}>
+                {t.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  logo: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+  root: { flex: 1, backgroundColor: colors.bg },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
+  logoBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  brandText: { color: colors.text, fontSize: 26, fontWeight: '800' },
-  clock: { color: colors.text, fontSize: 22, fontWeight: '700' },
-  date: { color: colors.textMuted, fontSize: 12 },
-  tiles: { gap: 14 },
-  tile: {
-    borderRadius: radius.lg,
+  brandTitle: { color: colors.text, fontSize: 18, fontWeight: '800', letterSpacing: -0.3 },
+  portalSub: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
+  topActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  clockText: { color: colors.text, fontSize: 14, fontWeight: '700', marginRight: 4 },
+  headerBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
   },
-  tileText: { color: '#fff', fontSize: 20, fontWeight: '800' },
-  info: {
+  bottomBar: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: 6,
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+    paddingVertical: 4,
+    position: 'relative',
+  },
+  tabIndicator: {
+    position: 'absolute',
+    top: -7,
+    width: 32,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.primary,
+  },
+  tabLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
+  tabLabelActive: { color: '#fff', fontWeight: '800' },
+  portalsContainer: { padding: 16, gap: 16, paddingBottom: 40 },
+  portalActiveCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 6,
+  },
+  portalCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success },
+  portalActiveLabel: { color: colors.success, fontSize: 11, fontWeight: '800', letterSpacing: 0.8 },
+  portalActiveTitle: { color: colors.text, fontSize: 22, fontWeight: '800' },
+  portalActiveMeta: { color: colors.textMuted, fontSize: 13 },
+  portalStatsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  statBox: { flex: 1, gap: 2 },
+  statLabel: { color: colors.textMuted, fontSize: 11, textTransform: 'uppercase' },
+  statVal: { color: colors.text, fontSize: 14, fontWeight: '700' },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+  sectionTitle: { color: colors.text, fontSize: 16, fontWeight: '800' },
+  addPortalBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radius.sm,
+  },
+  addPortalText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  portalRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: 16,
+    borderRadius: radius.md,
+    padding: 14,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  infoLabel: { color: colors.textMuted, fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 },
-  infoTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
-  infoSub: { color: colors.textMuted, fontSize: 13 },
+  portalRowActive: { borderColor: colors.primary, backgroundColor: colors.surfaceAlt },
+  portalIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  portalRowName: { color: colors.text, fontSize: 15, fontWeight: '700' },
+  portalRowSub: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  iconAction: { padding: 6 },
 });
-

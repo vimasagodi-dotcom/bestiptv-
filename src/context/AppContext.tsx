@@ -8,6 +8,7 @@ import { XtreamProvider } from '../lib/xtream';
 const KEY_PLAYLISTS = 'kikoiptv:playlists';
 const KEY_ACTIVE = 'kikoiptv:active';
 const favKey = (id: string) => `kikoiptv:fav:${id}`;
+const recentKey = (id: string) => `kikoiptv:recent:${id}`;
 
 export function createProvider(p: Playlist): ContentProvider {
   return p.type === 'xtream' ? new XtreamProvider(p) : new M3UProvider(p);
@@ -19,6 +20,7 @@ interface AppState {
   active: Playlist | null;
   provider: ContentProvider | null;
   favorites: FavoriteItem[];
+  recentLiveIds: string[];
   addPlaylist(p: Playlist): Promise<void>;
   updatePlaylist(p: Playlist): Promise<void>;
   removePlaylist(id: string): Promise<void>;
@@ -26,6 +28,7 @@ interface AppState {
   reload(): void;
   isFavorite(kind: FavoriteKind, id: string): boolean;
   toggleFavorite(item: FavoriteItem): void;
+  addRecentLive(id: string): void;
 }
 
 const Ctx = createContext<AppState | null>(null);
@@ -35,6 +38,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
+  const [recentLiveIds, setRecentLiveIds] = useState<string[]>([]);
   const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
@@ -56,9 +60,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!activeId) {
       setFavorites([]);
+      setRecentLiveIds([]);
       return;
     }
     AsyncStorage.getItem(favKey(activeId)).then((raw) => setFavorites(raw ? JSON.parse(raw) : []));
+    AsyncStorage.getItem(recentKey(activeId)).then((raw) => setRecentLiveIds(raw ? JSON.parse(raw) : []));
   }, [activeId]);
 
   const persist = useCallback(async (list: Playlist[]) => {
@@ -92,6 +98,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const list = playlists.filter((p) => p.id !== id);
       await persist(list);
       await AsyncStorage.removeItem(favKey(id));
+      await AsyncStorage.removeItem(recentKey(id));
       if (activeId === id) {
         const next = list[0]?.id ?? null;
         setActiveId(next);
@@ -128,12 +135,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [activeId],
   );
 
+  const addRecentLive = useCallback(
+    (id: string) => {
+      if (!activeId) return;
+      setRecentLiveIds((prev) => {
+        const next = [id, ...prev.filter((x) => x !== id)].slice(0, 30);
+        AsyncStorage.setItem(recentKey(activeId), JSON.stringify(next));
+        return next;
+      });
+    },
+    [activeId],
+  );
+
   const value: AppState = {
     ready,
     playlists,
     active,
     provider,
     favorites,
+    recentLiveIds,
     addPlaylist,
     updatePlaylist,
     removePlaylist,
@@ -141,6 +161,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     reload: () => setReloadToken((t) => t + 1),
     isFavorite,
     toggleFavorite,
+    addRecentLive,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -151,4 +172,3 @@ export function useApp() {
   if (!ctx) throw new Error('useApp must be used inside AppProvider');
   return ctx;
 }
-

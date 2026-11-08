@@ -23,7 +23,6 @@ export default function Player() {
   const { provider, favorites } = useApp();
   const insets = useSafeAreaInsets();
 
-  // Lock to landscape while the player is open
   useEffect(() => {
     ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
     return () => {
@@ -31,13 +30,11 @@ export default function Player() {
     };
   }, []);
 
-  // ---- Live channel list ----
   const isLive = params.kind === 'live';
   const { data: allChannels } = useAsync(
     async () => (isLive && provider ? provider.getLiveChannels() : []),
     [provider, isLive],
   );
-  // Freeze the channel list for the session so un-favoriting doesn't shuffle it
   const favSnapshot = useRef(favorites).current;
   const channels = useMemo(
     () => (allChannels ? filterByCategory(allChannels, params.categoryId ?? '__all', favSnapshot, 'live') : []),
@@ -52,7 +49,7 @@ export default function Player() {
   const uri = isLive ? channel?.url : params.url;
   const title = isLive ? (channel?.name ?? '') : (params.title ?? '');
 
-  // ---- Player ----
+  // ---- Player with connection-safe release & auto-retry ----
   const player = useVideoPlayer(null, (p) => {
     p.staysActiveInBackground = false;
     p.showNowPlayingNotification = true;
@@ -60,16 +57,73 @@ export default function Player() {
   const { status, error } = useEvent(player, 'statusChange', { status: player.status, error: undefined });
   const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
 
-  const load = useCallback(() => {
-    if (!uri) return;
-    const contentType = uri.includes('.m3u8') ? ('hls' as const) : undefined;
-    player
-      .replaceAsync({ uri, contentType, headers: provider?.headers, metadata: { title } })
-      .then(() => player.play())
-      .catch(() => {});
-  }, [uri, player, provider, title]);
+  const loadSeqRef = useRef(0);
+  const retryCountRef = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
-  useEffect(load, [load]);
+  const load = useCallback(
+    (isRetry = false) => {
+      if (!uri) return;
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      if (!isRetry) {
+        retryCountRef.current = 0;
+        setRetrying(false);
+      }
+      const seq = ++loadSeqRef.current;
+
+      try {
+        player.pause();
+        player.replace(null);
+      } catch {
+        // ignore
+      }
+
+      retryTimerRef.current = setTimeout(() => {
+        if (seq !== loadSeqRef.current) return;
+        const contentType = uri.includes('.m3u8') ? ('hls' as const) : undefined;
+        player
+          .replaceAsync({ uri, contentType, headers: provider?.headers, metadata: { title } })
+          .then(() => {
+            if (seq === loadSeqRef.current) player.play();
+          })
+          .catch(() => {});
+      }, 150);
+    },
+    [uri, player, provider, title],
+  );
+
+  useEffect(() => {
+    load(false);
+    return () => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      try {
+        player.pause();
+        player.replace(null);
+      } catch {
+        // ignore
+      }
+    };
+  }, [load, player]);
+
+  useEffect(() => {
+    if (status === 'readyToPlay') {
+      setRetrying(false);
+      retryCountRef.current = 0;
+      if (!player.playing) player.play();
+    } else if (status === 'error' && uri) {
+      if (retryCountRef.current < 3) {
+        retryCountRef.current += 1;
+        setRetrying(true);
+        const seq = loadSeqRef.current;
+        retryTimerRef.current = setTimeout(() => {
+          if (seq === loadSeqRef.current) load(true);
+        }, 900);
+      } else {
+        setRetrying(false);
+      }
+    }
+  }, [status, uri, player, load]);
 
   // ---- Overlay ----
   const [overlay, setOverlay] = useState(true);
@@ -113,6 +167,9 @@ export default function Player() {
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
   const pad = { paddingLeft: Math.max(insets.left, 16), paddingRight: Math.max(insets.right, 16) };
 
+  const showSpinner = status === 'loading' || retrying || (status === 'idle' && !!uri);
+  const showError = status === 'error' && !retrying;
+
   return (
     <View style={styles.container}>
       <StatusBar hidden />
@@ -124,18 +181,20 @@ export default function Player() {
         allowsPictureInPicture
       />
 
-      {/* Status */}
-      {(status === 'loading' || (status === 'idle' && !!uri)) && (
+      {showSpinner && (
         <View style={styles.center} pointerEvents="none">
-          <ActivityIndicator size="large" color="#fff" />
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>
+            {retrying ? `A reconectar (${retryCountRef.current}/3)...` : 'A carregar...'}
+          </Text>
         </View>
       )}
-      {status === 'error' && (
+      {showError && (
         <View style={styles.center}>
           <Ionicons name="warning-outline" size={42} color={colors.danger} />
           <Text style={styles.errorText}>Não foi possível reproduzir este conteúdo.</Text>
           {error?.message ? <Text style={styles.errorDetail}>{error.message}</Text> : null}
-          <Pressable onPress={load} style={styles.retry}>
+          <Pressable onPress={() => load(false)} style={styles.retry}>
             <Text style={{ color: '#fff', fontWeight: '700' }}>Tentar novamente</Text>
           </Pressable>
         </View>
@@ -143,7 +202,6 @@ export default function Player() {
 
       {isLive ? (
         <>
-          {/* Tap catcher */}
           <Pressable style={StyleSheet.absoluteFill} onPress={() => (overlay ? setOverlay(false) : bumpOverlay())} />
 
           {overlay && (
@@ -296,11 +354,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     right: 0,
     width: 300,
-    backgroundColor: '#0B0F1Aee',
+    backgroundColor: '#0B0C10ee',
   },
   sideRow: { height: 52, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12 },
   sideLogo: { width: 40, height: 28 },
   sideText: { flex: 1, color: '#fff', fontSize: 14 },
   vodBack: { position: 'absolute' },
 });
-
