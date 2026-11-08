@@ -55,6 +55,23 @@ export function LiveTvView({
   const [retrying, setRetrying] = useState(false);
   const [subView, setSubView] = useState<'channels' | 'chat'>('channels');
 
+  // Fullscreen Live Chat Overlay (Read-only on TV/Live match) & Sponsor Banner
+  const [fsChatVisible, setFsChatVisible] = useState(false);
+  const [adConfig, setAdConfig] = useState<any>(null);
+
+  useEffect(() => {
+    fetch('https://www.cocas.online/api/panel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get_ad_config' }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.ok && d.adConfig) setAdConfig(d.adConfig);
+      })
+      .catch(() => {});
+  }, []);
+
   // Channel-switch Ad state for free users (users without a paid Cocas Community login)
   const isPaidMember = Boolean(active?.panelUsername);
   const [adVisible, setAdVisible] = useState(false);
@@ -468,6 +485,13 @@ export function LiveTvView({
                   <Ionicons name="list" size={18} color="#fff" />
                   <Text style={styles.osdPillText}>Canais</Text>
                 </Pressable>
+                <Pressable
+                  onPress={() => setFsChatVisible((v) => !v)}
+                  style={[styles.osdPillBtn, fsChatVisible && { backgroundColor: '#E50914' }]}
+                >
+                  <Ionicons name="chatbubbles" size={17} color="#fff" />
+                  <Text style={styles.osdPillText}>Chat</Text>
+                </Pressable>
                 <View style={{ flex: 1 }} />
                 <Pressable
                   onPress={() => setFit((f) => (f === 'contain' ? 'cover' : 'contain'))}
@@ -682,6 +706,60 @@ export function LiveTvView({
                     );
                   }}
                 />
+              </View>
+            </View>
+          )}
+          {/* Right Floating Transparent Live Chat (Read-only on Match / Fullscreen — as requested) */}
+          {fsChatVisible && !locked && (
+            <View
+              style={[
+                styles.fsChatOverlayPanel,
+                {
+                  top: insets.top + 60,
+                  bottom: insets.bottom + 16,
+                  right: Math.max(insets.right, 14),
+                },
+              ]}
+              pointerEvents="box-none"
+            >
+              <View style={styles.fsChatHeader}>
+                <View style={styles.fsChatLiveDot} />
+                <Text style={styles.fsChatTitle}>Chat em Direto</Text>
+                <Pressable onPress={() => setFsChatVisible(false)} hitSlop={8} style={{ padding: 4 }}>
+                  <Ionicons name="close" size={18} color="#fff" />
+                </Pressable>
+              </View>
+              <View style={{ flex: 1 }}>
+                <CommunityChatView activeTab={activeTab} compact readOnly />
+              </View>
+            </View>
+          )}
+
+          {/* Bottom Fullscreen Sponsor Banner (estilo Sport TV / DaPortas — à medida) */}
+          {adConfig?.bannerEnabled !== false && !locked && (
+            <View
+              style={[
+                styles.fsBottomSponsorBanner,
+                {
+                  bottom: Math.max(insets.bottom, 12),
+                  left: Math.max(insets.left, 16),
+                  right: fsChatVisible ? Math.max(insets.right, 14) + 290 : Math.max(insets.right, 16),
+                },
+              ]}
+            >
+              <View style={styles.sponsorBadge}>
+                <Text style={styles.sponsorBadgeText}>PUB</Text>
+              </View>
+              {adConfig?.bannerImageUrl ? (
+                <Image source={adConfig.bannerImageUrl} style={styles.sponsorLogo} contentFit="contain" />
+              ) : null}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sponsorMainText} numberOfLines={1}>
+                  {adConfig?.bannerText || 'DaPortas · Portas, Roupeiros e Soluções por Medida'}
+                </Text>
+                <Text style={styles.sponsorSubText} numberOfLines={1}>
+                  {adConfig?.bannerSubtext || 'Visite daportas.pt · Qualidade e Design'}
+                </Text>
               </View>
             </View>
           )}
@@ -941,6 +1019,60 @@ export function LiveTvView({
               />
             }
           />
+          {/* Right Floating Transparent Live Chat (Read-only on Match / Fullscreen — as requested) */}
+          {fsChatVisible && !locked && (
+            <View
+              style={[
+                styles.fsChatOverlayPanel,
+                {
+                  top: insets.top + 60,
+                  bottom: insets.bottom + 16,
+                  right: Math.max(insets.right, 14),
+                },
+              ]}
+              pointerEvents="box-none"
+            >
+              <View style={styles.fsChatHeader}>
+                <View style={styles.fsChatLiveDot} />
+                <Text style={styles.fsChatTitle}>Chat em Direto</Text>
+                <Pressable onPress={() => setFsChatVisible(false)} hitSlop={8} style={{ padding: 4 }}>
+                  <Ionicons name="close" size={18} color="#fff" />
+                </Pressable>
+              </View>
+              <View style={{ flex: 1 }}>
+                <CommunityChatView activeTab={activeTab} compact readOnly />
+              </View>
+            </View>
+          )}
+
+          {/* Bottom Fullscreen Sponsor Banner (estilo Sport TV / DaPortas — à medida) */}
+          {adConfig?.bannerEnabled !== false && !locked && (
+            <View
+              style={[
+                styles.fsBottomSponsorBanner,
+                {
+                  bottom: Math.max(insets.bottom, 12),
+                  left: Math.max(insets.left, 16),
+                  right: fsChatVisible ? Math.max(insets.right, 14) + 290 : Math.max(insets.right, 16),
+                },
+              ]}
+            >
+              <View style={styles.sponsorBadge}>
+                <Text style={styles.sponsorBadgeText}>PUB</Text>
+              </View>
+              {adConfig?.bannerImageUrl ? (
+                <Image source={adConfig.bannerImageUrl} style={styles.sponsorLogo} contentFit="contain" />
+              ) : null}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sponsorMainText} numberOfLines={1}>
+                  {adConfig?.bannerText || 'DaPortas · Portas, Roupeiros e Soluções por Medida'}
+                </Text>
+                <Text style={styles.sponsorSubText} numberOfLines={1}>
+                  {adConfig?.bannerSubtext || 'Visite daportas.pt · Qualidade e Design'}
+                </Text>
+              </View>
+            </View>
+          )}
         </>
       )}
     </View>
@@ -1344,4 +1476,85 @@ const styles = StyleSheet.create({
   fsDrawerChNum: { color: colors.textMuted, fontSize: 11, width: 26 },
   fsDrawerChLogo: { width: 34, height: 24 },
   fsDrawerChName: { flex: 1, color: '#fff', fontSize: 13, fontWeight: '600' },
+  // Fullscreen Live Chat Overlay Panel (Read-only as in match screenshot)
+  fsChatOverlayPanel: {
+    position: 'absolute',
+    width: 275,
+    maxWidth: '40%',
+    backgroundColor: '#0c0e14d9',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#ffffff1a',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  fsChatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ffffff14',
+    gap: 8,
+    backgroundColor: '#141824aa',
+  },
+  fsChatLiveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#E50914',
+  },
+  fsChatTitle: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  // Bottom Fullscreen Sponsor Banner (estilo Sport TV / DaPortas)
+  fsBottomSponsorBanner: {
+    position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#991B1Bdd', // Vermelho DaPortas / elegante
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ffffff2a',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    gap: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.45,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  sponsorBadge: {
+    backgroundColor: '#ffffff26',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  sponsorBadgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  sponsorLogo: {
+    width: 24,
+    height: 24,
+  },
+  sponsorMainText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  sponsorSubText: {
+    color: '#fed7aa',
+    fontSize: 10,
+    fontWeight: '500',
+  },
 });

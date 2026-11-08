@@ -81,9 +81,10 @@ const ROOMS = [
 export interface CommunityChatViewProps {
   activeTab?: boolean;
   compact?: boolean;
+  readOnly?: boolean;
 }
 
-export function CommunityChatView({ activeTab = true, compact = false }: CommunityChatViewProps) {
+export function CommunityChatView({ activeTab = true, compact = false, readOnly = false }: CommunityChatViewProps) {
   const { active } = useApp();
   const [savedNick, setSavedNick] = useState<string | null>(null);
   const [nickInput, setNickInput] = useState('');
@@ -130,13 +131,13 @@ export function CommunityChatView({ activeTab = true, compact = false }: Communi
 
   const fetchChatState = useCallback(
     async (silent = false) => {
-      if (!savedNick) return;
+      if (!savedNick && !readOnly) return;
       if (!silent) setLoading(true);
       try {
         const data = await requestChatApi({
           action: 'chat_state',
           room,
-          nick: savedNick,
+          nick: savedNick || 'Espectador',
           ownerKey,
           panelUsername: active?.panelUsername || '',
         });
@@ -145,7 +146,7 @@ export function CommunityChatView({ activeTab = true, compact = false }: Communi
           if (data.myProfile) setMyProfile(data.myProfile);
           if (Array.isArray(data.chatUsers)) setChatUsers(data.chatUsers);
           if (Array.isArray(data.messages)) setMessages(data.messages);
-        } else if (data?.code === 'nick_taken') {
+        } else if (data?.code === 'nick_taken' && !readOnly) {
           AsyncStorage.removeItem(nickStorageKey).catch(() => {});
           setSavedNick(null);
           setMyProfile(null);
@@ -157,17 +158,17 @@ export function CommunityChatView({ activeTab = true, compact = false }: Communi
         if (!silent) setLoading(false);
       }
     },
-    [savedNick, room, ownerKey, nickStorageKey, active?.panelUsername],
+    [savedNick, readOnly, room, ownerKey, nickStorageKey, active?.panelUsername],
   );
 
   useEffect(() => {
-    if (!activeTab || !savedNick) return;
+    if (!activeTab || (!savedNick && !readOnly)) return;
     fetchChatState(false);
     const t = setInterval(() => {
       fetchChatState(true);
-    }, 5000);
+    }, 4000);
     return () => clearInterval(t);
-  }, [activeTab, savedNick, room, fetchChatState]);
+  }, [activeTab, savedNick, readOnly, room, fetchChatState]);
 
   const handleSaveNick = async () => {
     const clean = nickInput.trim().replace(/\s+/g, '_').slice(0, 20);
@@ -283,8 +284,8 @@ export function CommunityChatView({ activeTab = true, compact = false }: Communi
     ]);
   };
 
-  // Screen 1: Create Nickname before entering xat-style chat
-  if (!savedNick) {
+  // Screen 1: Create Nickname before entering xat-style chat (bypassed if readOnly mode)
+  if (!savedNick && !readOnly) {
     return (
       <View style={[styles.nickSetupWrap, compact && { padding: 12 }]}>
         <View style={[styles.nickCard, compact && { padding: 16 }]}>
@@ -400,7 +401,7 @@ export function CommunityChatView({ activeTab = true, compact = false }: Communi
               onContentSizeChange={() => listRef.current?.scrollToEnd?.({ animated: true })}
               renderItem={({ item }) => {
                 const rMeta = ROLE_META[item.role] || ROLE_META.guest;
-                const isMe = item.nick.toLowerCase() === savedNick.toLowerCase();
+                const isMe = Boolean(savedNick && item.nick.toLowerCase() === savedNick.toLowerCase());
                 return (
                   <Pressable
                     onLongPress={() => canModerate && handleModAction(item.nick, item.id)}
@@ -454,21 +455,23 @@ export function CommunityChatView({ activeTab = true, compact = false }: Communi
         )}
       </View>
 
-      {/* Message Input Bar */}
-      <View style={[styles.inputBar, compact && { paddingHorizontal: 8, paddingVertical: 6 }]}>
-        <TextInput
-          value={text}
-          onChangeText={setText}
-          placeholder={`Escrever em #${room}...`}
-          placeholderTextColor={colors.textMuted}
-          style={[styles.chatInput, compact && { height: 38, fontSize: 13, paddingHorizontal: 10 }]}
-          onSubmitEditing={handleSend}
-          returnKeyType="send"
-        />
-        <Pressable onPress={handleSend} style={[styles.sendBtn, compact && { width: 38, height: 38, borderRadius: 19 }]}>
-          <Ionicons name="send" size={compact ? 15 : 18} color="#fff" />
-        </Pressable>
-      </View>
+      {/* Message Input Bar (hidden in read-only overlay) */}
+      {!readOnly && (
+        <View style={[styles.inputBar, compact && { paddingHorizontal: 8, paddingVertical: 6 }]}>
+          <TextInput
+            value={text}
+            onChangeText={setText}
+            placeholder={`Escrever em #${room}...`}
+            placeholderTextColor={colors.textMuted}
+            style={[styles.chatInput, compact && { height: 38, fontSize: 13, paddingHorizontal: 10 }]}
+            onSubmitEditing={handleSend}
+            returnKeyType="send"
+          />
+          <Pressable onPress={handleSend} style={[styles.sendBtn, compact && { width: 38, height: 38, borderRadius: 19 }]}>
+            <Ionicons name="send" size={compact ? 15 : 18} color="#fff" />
+          </Pressable>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }

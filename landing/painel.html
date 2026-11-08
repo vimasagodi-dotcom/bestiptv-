@@ -427,6 +427,38 @@
         <div id="usersList" style="margin-top: 14px;"></div>
       </div>
 
+      <!-- GESTÃO DE PUBLICIDADE E BANNER EM ECRÃ INTEIRO (ESTILO SPORT TV) -->
+      <div class="card">
+        <div>
+          <h3>📢 Publicidade à Medida (Banner em Ecrã Inteiro e Transição de Canal)</h3>
+          <p class="sub">Configure o banner inferior patrocinado que aparece na transmissão em ecrã inteiro (estilo DaPortas / Sport TV).</p>
+        </div>
+
+        <div class="grid-2" style="margin-top: 14px;">
+          <div class="field">
+            <label>Estado do Banner Inferior</label>
+            <select id="adBannerEnabled">
+              <option value="true">🟢 Ativo (Mostrar banner no rodapé em ecrã inteiro)</option>
+              <option value="false">⚪ Desativado</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Texto Principal / Patrocinador</label>
+            <input type="text" id="adBannerText" placeholder="Ex: DaPortas · Portas, Roupeiros e Soluções por Medida">
+          </div>
+          <div class="field">
+            <label>Subtítulo / Contacto / Slogan</label>
+            <input type="text" id="adBannerSubtext" placeholder="Ex: Visite daportas.pt · Qualidade e Design">
+          </div>
+          <div class="field">
+            <label>URL do Logótipo / Imagem do Patrocinador (opcional)</label>
+            <input type="text" id="adBannerImageUrl" placeholder="https://exemplo.com/logo-patrocinador.png">
+          </div>
+        </div>
+
+        <button class="btn btn-primary" style="margin-top: 16px;" onclick="saveAdConfig()">💾 Guardar Configurações de Publicidade</button>
+      </div>
+
       <!-- GESTÃO DO CHAT DA COMUNIDADE (ESTILO XAT.COM) -->
       <div class="card">
         <div>
@@ -660,6 +692,12 @@
       document.getElementById('dashboard').style.display = 'block';
       currentUsers = data.users || [];
       if (data.chatTopic) document.getElementById('chatTopicInput').value = data.chatTopic;
+      if (data.adConfig) {
+        document.getElementById('adBannerEnabled').value = data.adConfig.bannerEnabled !== false ? 'true' : 'false';
+        if (data.adConfig.bannerText) document.getElementById('adBannerText').value = data.adConfig.bannerText;
+        if (data.adConfig.bannerSubtext) document.getElementById('adBannerSubtext').value = data.adConfig.bannerSubtext;
+        if (data.adConfig.bannerImageUrl) document.getElementById('adBannerImageUrl').value = data.adConfig.bannerImageUrl;
+      }
       updateFirebaseBanner(data.firebaseInfo);
       renderUsers();
       renderChatUsers(data.chatUsers || []);
@@ -671,6 +709,12 @@
       if (data.ok) {
         currentUsers = data.users || [];
         if (data.chatTopic) document.getElementById('chatTopicInput').value = data.chatTopic;
+      if (data.adConfig) {
+        document.getElementById('adBannerEnabled').value = data.adConfig.bannerEnabled !== false ? 'true' : 'false';
+        if (data.adConfig.bannerText) document.getElementById('adBannerText').value = data.adConfig.bannerText;
+        if (data.adConfig.bannerSubtext) document.getElementById('adBannerSubtext').value = data.adConfig.bannerSubtext;
+        if (data.adConfig.bannerImageUrl) document.getElementById('adBannerImageUrl').value = data.adConfig.bannerImageUrl;
+      }
         updateFirebaseBanner(data.firebaseInfo);
         renderUsers();
         renderChatUsers(data.chatUsers || []);
@@ -736,6 +780,27 @@
       const chatTopic = document.getElementById('chatTopicInput').value.trim();
       const data = await apiCall({ action: 'admin_save_ad', chatTopic });
       if (data.ok) showAlert('Tópico do chat atualizado!', true);
+    }
+
+    async function saveAdConfig() {
+      const bannerEnabled = document.getElementById('adBannerEnabled').value === 'true';
+      const bannerText = document.getElementById('adBannerText').value.trim();
+      const bannerSubtext = document.getElementById('adBannerSubtext').value.trim();
+      const bannerImageUrl = document.getElementById('adBannerImageUrl').value.trim();
+
+      const adConfig = {
+        bannerEnabled,
+        bannerText: bannerText || 'DaPortas · Portas, Roupeiros e Soluções por Medida',
+        bannerSubtext: bannerSubtext || 'Visite daportas.pt · Qualidade e Design',
+        bannerImageUrl,
+      };
+
+      const data = await apiCall({ action: 'admin_save_ad', adConfig });
+      if (data.ok) {
+        showAlert('Configurações de Publicidade guardadas com sucesso!', true);
+      } else {
+        showAlert(data.error || 'Erro ao guardar publicidade.');
+      }
     }
 
     function renderUsers() {

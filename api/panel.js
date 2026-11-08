@@ -35,6 +35,12 @@ const DEFAULT_AD_CONFIG = {
   subtitle: 'Remova toda a publicidade ao mudar de canal e tenha acesso VIP ao Chat da Comunidade.',
   plansText: '1 Ano: 5€ · 2 Anos: 9€ · 3 Anos: 13€ · 4 Anos: 16€ · 5 Anos: 19€',
   imageUrl: '',
+  // Banner publicidade à medida em ecrã inteiro (estilo Sport TV / DaPortas)
+  bannerEnabled: true,
+  bannerText: 'DaPortas · Portas, Roupeiros e Soluções por Medida',
+  bannerSubtext: 'Visite daportas.pt · Qualidade e Design',
+  bannerImageUrl: '',
+  bannerLinkUrl: '',
 };
 
 function getKey() {

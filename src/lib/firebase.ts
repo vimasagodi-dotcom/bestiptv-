@@ -11,3 +11,4 @@ export const firebaseConfig = {
 
 export const FIREBASE_FIRESTORE_BASE_URL =
   `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents`;
+
