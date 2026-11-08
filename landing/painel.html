@@ -400,6 +400,42 @@
         <div id="usersList" style="margin-top: 14px;"></div>
       </div>
 
+      <!-- GESTÃO DO CHAT DA COMUNIDADE (ESTILO XAT.COM) -->
+      <div class="card">
+        <div>
+          <h3>💬 Gestão do Chat da Comunidade (Poderes Estilo xat.com)</h3>
+          <p class="sub">Dê poderes de <strong>👑 Dono</strong>, <strong>🛡️ Admin</strong>, <strong>⚔️ Moderador</strong> ou <strong>⭐ Membro VIP</strong> a qualquer nickname do chat, ou altere o tópico fixo da sala.</p>
+        </div>
+
+        <div class="field" style="margin-top: 14px;">
+          <label>Tópico / Aviso Fixo no Topo do Chat</label>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <input type="text" id="chatTopicInput" placeholder="Ex: 🔥 Bem-vindo à Comunidade Cocas!" style="flex:1;min-width:220px;">
+            <button class="btn btn-secondary" onclick="saveChatTopic()">Guardar Tópico</button>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top: 12px;">
+          <div class="field">
+            <label>Nickname do Utilizador no Chat</label>
+            <input type="text" id="chatNickTarget" placeholder="Ex: Victor_PT">
+          </div>
+          <div class="field">
+            <label>Cargo / Poder na Sala (Estilo xat.com)</label>
+            <select id="chatRoleSelect">
+              <option value="owner">👑 Dono (Owner)</option>
+              <option value="admin">🛡️ Administrador (Admin)</option>
+              <option value="mod">⚔️ Moderador (Mod)</option>
+              <option value="member">⭐ Membro VIP (Member)</option>
+              <option value="guest">👤 Visitante (Guest)</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="margin-top: 12px;" onclick="setChatUserRole()">⚡ Atribuir Cargo ao Nickname</button>
+
+        <div id="chatUsersList" style="margin-top: 16px;"></div>
+      </div>
+
       <!-- ALTERAR SENHA ADMIN -->
       <div class="card">
         <h3>🔑 Alterar Password de Administrador do Painel</h3>
@@ -553,7 +589,9 @@
       document.getElementById('loginCard').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
       currentUsers = data.users || [];
+      if (data.chatTopic) document.getElementById('chatTopicInput').value = data.chatTopic;
       renderUsers();
+      renderChatUsers(data.chatUsers || []);
     }
 
     async function loadUsers() {
@@ -561,8 +599,71 @@
       const data = await apiCall({ action: 'admin_list' });
       if (data.ok) {
         currentUsers = data.users || [];
+        if (data.chatTopic) document.getElementById('chatTopicInput').value = data.chatTopic;
         renderUsers();
+        renderChatUsers(data.chatUsers || []);
       }
+    }
+
+    function renderChatUsers(list) {
+      const box = document.getElementById('chatUsersList');
+      if (!box) return;
+      if (!list.length) {
+        box.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">Ainda nenhum utilizador entrou no chat.</p>';
+        return;
+      }
+      const badges = { owner: '👑 Dono', admin: '🛡️ Admin', mod: '⚔️ Mod', member: '⭐ Membro', guest: '👤 Visitante' };
+      box.innerHTML = list.map(cu => `
+        <div class="user-card" style="padding:12px;margin-top:8px;">
+          <div class="user-top">
+            <div class="user-badges">
+              <strong>${cu.nick}</strong>
+              <span class="pill pill-plan">${badges[cu.role] || cu.role}</span>
+              ${cu.muted ? '<span class="pill pill-susp">🔇 MUTE</span>' : ''}
+              ${cu.banned ? '<span class="pill pill-susp">🚫 BANIDO</span>' : ''}
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button class="btn btn-secondary" style="padding:6px 10px;font-size:12px;" onclick='quickChatRole(${JSON.stringify(cu.nick)}, "admin")'>🛡️ Dar Admin</button>
+              <button class="btn btn-secondary" style="padding:6px 10px;font-size:12px;" onclick='quickChatRole(${JSON.stringify(cu.nick)}, "mod")'>⚔️ Dar Mod</button>
+              <button class="btn btn-secondary" style="padding:6px 10px;font-size:12px;" onclick='quickChatMute(${JSON.stringify(cu.nick)}, ${!cu.muted})'>${cu.muted ? '🔊 Desilenciar' : '🔇 Mute'}</button>
+              <button class="btn btn-danger" style="padding:6px 10px;font-size:12px;" onclick='quickChatBan(${JSON.stringify(cu.nick)}, ${!cu.banned})'>${cu.banned ? 'Desbanir' : '🚫 Banir'}</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function setChatUserRole() {
+      const nick = document.getElementById('chatNickTarget').value.trim();
+      const role = document.getElementById('chatRoleSelect').value;
+      if (!nick) return showAlert('Escreva o nickname do utilizador do chat.');
+      const data = await apiCall({ action: 'admin_update_chat_user', nick, role });
+      if (data.ok) {
+        renderChatUsers(data.chatUsers || []);
+        document.getElementById('chatNickTarget').value = '';
+        showAlert('Cargo atribuído no chat com sucesso!', true);
+      }
+    }
+
+    async function quickChatRole(nick, role) {
+      const data = await apiCall({ action: 'admin_update_chat_user', nick, role });
+      if (data.ok) renderChatUsers(data.chatUsers || []);
+    }
+
+    async function quickChatMute(nick, muted) {
+      const data = await apiCall({ action: 'admin_update_chat_user', nick, muted });
+      if (data.ok) renderChatUsers(data.chatUsers || []);
+    }
+
+    async function quickChatBan(nick, banned) {
+      const data = await apiCall({ action: 'admin_update_chat_user', nick, banned });
+      if (data.ok) renderChatUsers(data.chatUsers || []);
+    }
+
+    async function saveChatTopic() {
+      const chatTopic = document.getElementById('chatTopicInput').value.trim();
+      const data = await apiCall({ action: 'admin_save_ad', chatTopic });
+      if (data.ok) showAlert('Tópico do chat atualizado!', true);
     }
 
     function renderUsers() {

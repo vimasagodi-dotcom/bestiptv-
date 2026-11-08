@@ -53,6 +53,23 @@ export function LiveTvView({
   const [retryCount, setRetryCount] = useState(0);
   const [retrying, setRetrying] = useState(false);
 
+  // Channel-switch Ad state for free users (users without a paid Cocas Community login)
+  const isPaidMember = Boolean(active?.panelUsername);
+  const [adVisible, setAdVisible] = useState(false);
+  const [adCountdown, setAdCountdown] = useState(0);
+
+  const triggerChannelSwitchAd = useCallback(() => {
+    if (isPaidMember) return;
+    setAdVisible(true);
+    setAdCountdown(5);
+  }, [isPaidMember]);
+
+  useEffect(() => {
+    if (!adVisible || adCountdown <= 0) return;
+    const t = setTimeout(() => setAdCountdown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [adVisible, adCountdown]);
+
   const { data, error, loading, retry } = useAsync(
     async () => {
       if (!provider) return { cats: [], items: [] as LiveChannel[] };
@@ -299,9 +316,10 @@ export function LiveTvView({
       if (!list.length) return;
       const curIdx = list.findIndex((c) => c.id === selectedId);
       const nextIdx = curIdx >= 0 ? (curIdx + delta + list.length) % list.length : 0;
+      triggerChannelSwitchAd();
       setSelectedId(list[nextIdx].id);
     },
-    [filteredChannels, data, selectedId],
+    [filteredChannels, data, selectedId, triggerChannelSwitchAd],
   );
 
   const onSelectChannel = (ch: LiveChannel) => {
@@ -309,6 +327,7 @@ export function LiveTvView({
       // Tapping the already playing channel toggles fullscreen (MYTVOnline+ behavior)
       enterFullscreen();
     } else {
+      triggerChannelSwitchAd();
       setSelectedId(ch.id);
     }
   };
@@ -352,6 +371,31 @@ export function LiveTvView({
             <Ionicons name="refresh" size={16} color="#fff" />
             <Text style={styles.retryBtnText}>Reconectar</Text>
           </Pressable>
+        </View>
+      )}
+
+      {/* Channel-switch Ad Overlay for Free Users (non-Community members) */}
+      {adVisible && !isPaidMember && (
+        <View style={styles.adOverlay}>
+          <View style={styles.adCard}>
+            <View style={styles.adBadgeRow}>
+              <Text style={styles.adTag}>PUBLICIDADE · COMUNIDADE COCAS</Text>
+              {adCountdown > 0 ? (
+                <Text style={styles.adTimerText}>Fechar em {adCountdown}s</Text>
+              ) : (
+                <Pressable onPress={() => setAdVisible(false)} style={styles.adCloseBtn}>
+                  <Text style={styles.adCloseBtnText}>Fechar ✕</Text>
+                </Pressable>
+              )}
+            </View>
+            <Text style={styles.adTitle}>Torne-se Membro VIP da Comunidade Cocas</Text>
+            <Text style={styles.adDesc}>
+              Remova toda a publicidade ao mudar de canal e receba estatuto VIP no Chat da Comunidade:
+            </Text>
+            <Text style={styles.adPlans}>
+              1 Ano: 5€ · 2 Anos: 9€ · 3 Anos: 13€ · 4 Anos: 16€ · 5 Anos: 19€
+            </Text>
+          </View>
         </View>
       )}
 
@@ -910,6 +954,41 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: '#0008',
   },
+  adOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: '#0B0C10EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    zIndex: 40,
+  },
+  adCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    gap: 8,
+  },
+  adBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  adTag: { color: colors.accent, fontSize: 10, fontWeight: '800', letterSpacing: 0.6 },
+  adTimerText: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
+  adCloseBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.sm,
+  },
+  adCloseBtnText: { color: '#fff', fontSize: 11, fontWeight: '800' },
+  adTitle: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  adDesc: { color: colors.textMuted, fontSize: 12, lineHeight: 17 },
+  adPlans: { color: colors.accent, fontSize: 12, fontWeight: '800' },
   retryingText: { color: '#fff', fontSize: 12, fontWeight: '600' },
   errorTitle: { color: '#fff', fontSize: 14, fontWeight: '700', textAlign: 'center' },
   errorSub: { color: colors.textMuted, fontSize: 11, textAlign: 'center' },

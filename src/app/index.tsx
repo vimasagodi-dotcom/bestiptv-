@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CommunityChatView } from '../components/CommunityChatView';
 import { ContentBrowser } from '../components/ContentBrowser';
 import { LiveTvView } from '../components/LiveTvView';
 import { EmptyView, Loading } from '../components/ui';
@@ -13,12 +14,13 @@ import { useAsync } from '../hooks/useAsync';
 import { formatDate, formatTime } from '../lib/utils';
 import { colors, radius } from '../theme';
 
-type TabKey = 'live' | 'vod' | 'series' | 'portals';
+type TabKey = 'live' | 'vod' | 'series' | 'chat' | 'portals';
 
 const TABS: { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap; iconActive: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'live', label: 'TV em Direto', icon: 'tv-outline', iconActive: 'tv' },
   { key: 'vod', label: 'Filmes (VOD)', icon: 'film-outline', iconActive: 'film' },
   { key: 'series', label: 'Séries', icon: 'albums-outline', iconActive: 'albums' },
+  { key: 'chat', label: 'Chat', icon: 'chatbubbles-outline', iconActive: 'chatbubbles' },
   { key: 'portals', label: 'Portais', icon: 'server-outline', iconActive: 'server' },
 ];
 
@@ -116,6 +118,12 @@ export default function Home() {
           </View>
         )}
 
+        {tab === 'chat' && (
+          <View style={{ flex: 1 }}>
+            <CommunityChatView activeTab={tab === 'chat'} />
+          </View>
+        )}
+
         {tab === 'portals' && (
           <ScrollView contentContainerStyle={styles.portalsContainer}>
             {/* Active Portal Status Card */}
@@ -126,7 +134,11 @@ export default function Home() {
               </View>
               <Text style={styles.portalActiveTitle}>{active.name}</Text>
               <Text style={styles.portalActiveMeta}>
-                {active.type === 'xtream' ? `Servidor Xtream · ${active.server}` : 'Lista M3U Direta'}
+                {active.panelUsername
+                  ? `⭐ Membro Comunidade Cocas (${active.panelUsername}) · Sem Publicidade`
+                  : active.type === 'xtream'
+                  ? `Linha Própria Xtream · ${active.server}`
+                  : 'Linha Própria M3U'}
               </Text>
 
               <View style={styles.portalStatsRow}>
@@ -179,7 +191,11 @@ export default function Home() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.portalRowName} numberOfLines={1}>{p.name}</Text>
                     <Text style={styles.portalRowSub} numberOfLines={1}>
-                      {p.type === 'xtream' ? `${p.username} @ ${p.server}` : p.url}
+                      {p.panelUsername
+                        ? `Membro Cocas (${p.panelUsername})`
+                        : p.type === 'xtream'
+                        ? `${p.username} @ ${p.server}`
+                        : p.url}
                     </Text>
                   </View>
                   <Pressable
@@ -204,6 +220,14 @@ export default function Home() {
                 </Pressable>
               );
             })}
+
+            {/* Legal Disclaimer Card */}
+            <View style={styles.legalNoticeBox}>
+              <Ionicons name="shield-checkmark-outline" size={18} color={colors.textMuted} />
+              <Text style={styles.legalNoticeText}>
+                Aviso Legal: A Cocas é exclusivamente uma comunidade e leitor multimédia. Não vendemos, não fornecemos nem transmitimos canais de televisão ou conteúdos audiovisuais.
+              </Text>
+            </View>
           </ScrollView>
         )}
       </View>
@@ -222,10 +246,10 @@ export default function Home() {
                 {isSelected && <View style={styles.tabIndicator} />}
                 <Ionicons
                   name={isSelected ? t.iconActive : t.icon}
-                  size={21}
+                  size={20}
                   color={isSelected ? colors.primary : colors.textMuted}
                 />
-                <Text style={[styles.tabLabel, isSelected && styles.tabLabelActive]}>
+                <Text style={[styles.tabLabel, isSelected && styles.tabLabelActive]} numberOfLines={1}>
                   {t.label}
                 </Text>
               </Pressable>
@@ -290,12 +314,12 @@ const styles = StyleSheet.create({
   tabIndicator: {
     position: 'absolute',
     top: -7,
-    width: 32,
+    width: 28,
     height: 3,
     borderRadius: 2,
     backgroundColor: colors.primary,
   },
-  tabLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
+  tabLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '600' },
   tabLabelActive: { color: '#fff', fontWeight: '800' },
   portalsContainer: { padding: 16, gap: 16, paddingBottom: 40 },
   portalActiveCard: {
@@ -361,4 +385,16 @@ const styles = StyleSheet.create({
   portalRowName: { color: colors.text, fontSize: 15, fontWeight: '700' },
   portalRowSub: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
   iconAction: { padding: 6 },
+  legalNoticeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.surface,
+    padding: 12,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginTop: 8,
+  },
+  legalNoticeText: { flex: 1, color: colors.textMuted, fontSize: 11, lineHeight: 16 },
 });

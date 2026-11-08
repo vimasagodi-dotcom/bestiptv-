@@ -12,6 +12,15 @@ const PLANS = {
   5: { years: 5, price: 19, label: '5 Anos — 19 €' },
 };
 
+const DEFAULT_AD_CONFIG = {
+  enabled: true,
+  durationSec: 5,
+  title: 'Torne-se Membro VIP da Comunidade Cocas!',
+  subtitle: 'Remova toda a publicidade ao mudar de canal e tenha acesso VIP ao Chat da Comunidade.',
+  plansText: '1 Ano: 5€ · 2 Anos: 9€ · 3 Anos: 13€ · 4 Anos: 16€ · 5 Anos: 19€',
+  imageUrl: '',
+};
+
 function getKey() {
   const secret = process.env.PANEL_SECRET_KEY || 'default-kiko-secret-key-32-chars!!';
   return crypto.createHash('sha256').update(String(secret)).digest();
@@ -46,9 +55,28 @@ function ghHeaders() {
   return {
     Authorization: `Bearer ${process.env.GITHUB_PAT}`,
     Accept: 'application/vnd.github+json',
-    'User-Agent': 'KikoIPTV-ControlPanel',
+    'User-Agent': 'Cocas-ControlPanel',
     'Content-Type': 'application/json',
   };
+}
+
+function ensureDbShape(db) {
+  db.adminPassword = db.adminPassword || 'admin';
+  db.users = Array.isArray(db.users) ? db.users : [];
+  db.chatUsers = Array.isArray(db.chatUsers) ? db.chatUsers : [];
+  db.chatMessages = Array.isArray(db.chatMessages) ? db.chatMessages : [
+    {
+      id: 'welcome-1',
+      room: 'geral',
+      nick: 'CocasBot',
+      role: 'owner',
+      text: 'Bem-vindo ao Chat Oficial da Comunidade Cocas! Escolha o seu nickname e participe.',
+      ts: Date.now(),
+    },
+  ];
+  db.chatTopic = db.chatTopic || '🔥 Bem-vindo à Comunidade Cocas! Respeite os membros e moderadores.';
+  db.adConfig = { ...DEFAULT_AD_CONFIG, ...(db.adConfig || {}) };
+  return db;
 }
 
 async function loadDb() {
@@ -56,7 +84,7 @@ async function loadDb() {
   const res = await fetch(url, { headers: ghHeaders(), cache: 'no-store' });
   if (res.status === 404) {
     return {
-      db: { adminPassword: 'admin', users: [] },
+      db: ensureDbShape({}),
       sha: null,
     };
   }
@@ -66,9 +94,9 @@ async function loadDb() {
   const meta = await res.json();
   const raw = Buffer.from(meta.content || '', 'base64').toString('utf8');
   try {
-    return { db: decrypt(raw), sha: meta.sha };
+    return { db: ensureDbShape(decrypt(raw)), sha: meta.sha };
   } catch {
-    return { db: { adminPassword: 'admin', users: [] }, sha: meta.sha };
+    return { db: ensureDbShape({}), sha: meta.sha };
   }
 }
 
@@ -187,7 +215,6 @@ module.exports = async function handler(req, res) {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
     const action = body.action || req.query?.action;
 
-    // Action: inspect_line (checks line expiration date directly from M3U link or Xtream credentials)
     if (action === 'inspect_line') {
       const autoXt = parseXtreamUrl(body.m3uUrl) || parseXtreamUrl(body.server);
       const srv = autoXt ? autoXt.server : body.server;
@@ -215,7 +242,150 @@ module.exports = async function handler(req, res) {
 
     const { db, sha } = await loadDb();
 
-    // 1. Client login from KikoIPTV App
+    // Public Ad Config fetch for the app
+    if (action === 'get_ad_config') {
+      return res.status(200).json({ ok: true, adConfig: db.adConfig });
+    }
+
+    // ---- COMMUNITY CHAT ACTIONS (xat.com style) ----
+    if (action === 'chat_state') {
+      const room = String(body.room || 'geral').toLowerCase();
+      const nick = String(body.nick || '').trim();
+      const panelUsername = String(body.panelUsername || '').trim();
+
+      let myProfile = null;
+      if (nick) {
+        let cu = db.chatUsers.find((u) => u.nick.toLowerCase() === nick.toLowerCase());
+        const isPaidMember = Boolean(
+          panelUsername &&
+            db.users.some(
+              (u) =>
+                u.username.toLowerCase() === panelUsername.toLowerCase() &&
+                u.active !== false &&
+                (!u.appExpDate || Date.now() <= Number(u.appExpDate))
+            )
+        );
+        if (!cu) {
+          cu = {
+            nick,
+            role: isPaidMember ? 'member' : 'guest',
+            banned: false,
+            muted: false,
+            room,
+            lastSeenAt: Date.now(),
+          };
+          db.chatUsers.push(cu);
+          saveDb(db, sha).catch(() => {});
+        } else {
+          if (cu.role === 'guest' && isPaidMember) cu.role = 'member';
+          cu.lastSeenAt = Date.now();
+          cu.room = room;
+        }
+        myProfile = cu;
+      }
+
+      const roleOrder = { owner: 0, admin: 1, mod: 2, member: 3, guest: 4 };
+      const sortedUsers = [...db.chatUsers]
+        .filter((u) => !u.banned)
+        .sort((a, b) => (roleOrder[a.role] ?? 4) - (roleOrder[b.role] ?? 4));
+
+      const messages = db.chatMessages.filter((m) => (m.room || 'geral') === room).slice(-60);
+      return res.status(200).json({
+        ok: true,
+        topic: db.chatTopic,
+        myProfile,
+        chatUsers: sortedUsers,
+        messages,
+      });
+    }
+
+    if (action === 'chat_send') {
+      const nick = String(body.nick || '').trim();
+      const text = String(body.text || '').trim();
+      const room = String(body.room || 'geral').toLowerCase();
+      const panelUsername = String(body.panelUsername || '').trim();
+      if (!nick || !text) {
+        return res.status(400).json({ ok: false, error: 'Mensagem vazia.' });
+      }
+
+      let cu = db.chatUsers.find((u) => u.nick.toLowerCase() === nick.toLowerCase());
+      const isPaidMember = Boolean(
+        panelUsername &&
+          db.users.some(
+            (u) =>
+              u.username.toLowerCase() === panelUsername.toLowerCase() &&
+              u.active !== false &&
+              (!u.appExpDate || Date.now() <= Number(u.appExpDate))
+          )
+      );
+
+      if (!cu) {
+        cu = {
+          nick,
+          role: isPaidMember ? 'member' : 'guest',
+          banned: false,
+          muted: false,
+          room,
+          lastSeenAt: Date.now(),
+        };
+        db.chatUsers.push(cu);
+      } else {
+        cu.lastSeenAt = Date.now();
+        cu.room = room;
+        if (cu.role === 'guest' && isPaidMember) cu.role = 'member';
+      }
+
+      if (cu.banned) {
+        return res.status(403).json({ ok: false, error: 'O seu nickname foi banido do chat pelo administrador.' });
+      }
+      if (cu.muted) {
+        return res.status(403).json({ ok: false, error: 'Está temporariamente silenciado (mute) no chat.' });
+      }
+
+      const msg = {
+        id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+        room,
+        nick: cu.nick,
+        role: cu.role,
+        text: text.slice(0, 400),
+        ts: Date.now(),
+      };
+      db.chatMessages.push(msg);
+      if (db.chatMessages.length > 150) {
+        db.chatMessages = db.chatMessages.slice(-150);
+      }
+      await saveDb(db, sha);
+
+      const messages = db.chatMessages.filter((m) => (m.room || 'geral') === room).slice(-60);
+      return res.status(200).json({ ok: true, messages, myProfile: cu });
+    }
+
+    // In-chat moderation by Chat Owners/Admins/Mods
+    if (action === 'chat_mod_action') {
+      const actorNick = String(body.actorNick || '').trim();
+      const targetNick = String(body.targetNick || '').trim();
+      const modOp = String(body.modOp || ''); // 'mute' | 'unmute' | 'ban' | 'delete_msg'
+      const msgId = String(body.msgId || '');
+
+      const actor = db.chatUsers.find((u) => u.nick.toLowerCase() === actorNick.toLowerCase());
+      if (!actor || !['owner', 'admin', 'mod'].includes(actor.role)) {
+        return res.status(403).json({ ok: false, error: 'Sem permissões de moderação no chat.' });
+      }
+
+      if (modOp === 'delete_msg' && msgId) {
+        db.chatMessages = db.chatMessages.filter((m) => m.id !== msgId);
+      } else if (targetNick) {
+        const target = db.chatUsers.find((u) => u.nick.toLowerCase() === targetNick.toLowerCase());
+        if (target && target.role !== 'owner') {
+          if (modOp === 'mute') target.muted = !target.muted;
+          if (modOp === 'ban' && ['owner', 'admin'].includes(actor.role)) target.banned = !target.banned;
+        }
+      }
+      await saveDb(db, sha);
+      return res.status(200).json({ ok: true });
+    }
+
+    // 1. Client login from Cocas App
     if (action === 'client_login') {
       const usr = String(body.username || '').trim().toLowerCase();
       const pwd = String(body.password || '').trim();
@@ -239,7 +409,6 @@ module.exports = async function handler(req, res) {
         });
       }
 
-      // Mark user as online on login
       found.lastSeenAt = Date.now();
       if (body.device) found.device = String(body.device);
       saveDb(db, sha).catch(() => {});
@@ -281,7 +450,7 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // 2. Real-time Heartbeat from KikoIPTV Player (reports online status + current channel being watched)
+    // 2. Real-time Heartbeat from Cocas Player
     if (action === 'heartbeat') {
       const panelUsr = String(body.panelUsername || '').trim().toLowerCase();
       const xtUsr = String(body.xtreamUser || '').trim().toLowerCase();
@@ -307,7 +476,6 @@ module.exports = async function handler(req, res) {
         u.currentChannel = channelName;
         if (device) u.device = device;
 
-        // Persist when channel changes or every >40 seconds to keep storage fast
         if (prevChannel !== channelName || elapsed > 40000) {
           await saveDb(db, sha);
         }
@@ -324,12 +492,11 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // 3. Admin List Users (with live Xtream line expiration + online status enrichment)
+    // 3. Admin List Users + Chat Users + Ad Config
     if (action === 'admin_list') {
       const users = db.users || [];
       let changed = false;
 
-      // Refresh live Xtream line status in parallel (up to 8 users at once, 2.5s timeout)
       await Promise.all(
         users.slice(0, 12).map(async (u) => {
           const autoXt = parseXtreamUrl(u.m3uUrl || u.server);
@@ -357,7 +524,7 @@ module.exports = async function handler(req, res) {
 
       const now = Date.now();
       const enriched = users.map((u) => {
-        const recentlySeen = u.lastSeenAt && now - u.lastSeenAt < 110000; // within 110s
+        const recentlySeen = u.lastSeenAt && now - u.lastSeenAt < 110000;
         const lineActive = Number(u.lineActiveCons || 0) > 0;
         const isOnline = Boolean((recentlySeen && u.currentChannel) || lineActive);
         return {
@@ -367,7 +534,39 @@ module.exports = async function handler(req, res) {
         };
       });
 
-      return res.status(200).json({ ok: true, users: enriched, plans: PLANS });
+      return res.status(200).json({
+        ok: true,
+        users: enriched,
+        plans: PLANS,
+        chatUsers: db.chatUsers,
+        chatTopic: db.chatTopic,
+        adConfig: db.adConfig,
+      });
+    }
+
+    // Admin Update Chat User Role / Ban / Mute (xat.com style admin powers)
+    if (action === 'admin_update_chat_user') {
+      const nick = String(body.nick || '').trim();
+      if (!nick) return res.status(400).json({ ok: false, error: 'Indique o nickname.' });
+      let cu = db.chatUsers.find((u) => u.nick.toLowerCase() === nick.toLowerCase());
+      if (!cu) {
+        cu = { nick, role: 'guest', banned: false, muted: false, room: 'geral', lastSeenAt: Date.now() };
+        db.chatUsers.push(cu);
+      }
+      if (body.role) cu.role = body.role;
+      if (typeof body.banned === 'boolean') cu.banned = body.banned;
+      if (typeof body.muted === 'boolean') cu.muted = body.muted;
+      if (body.chatTopic !== undefined) db.chatTopic = String(body.chatTopic);
+      await saveDb(db, sha);
+      return res.status(200).json({ ok: true, chatUsers: db.chatUsers, chatTopic: db.chatTopic });
+    }
+
+    // Admin Save Ad Config
+    if (action === 'admin_save_ad') {
+      db.adConfig = { ...db.adConfig, ...(body.adConfig || {}) };
+      if (body.chatTopic !== undefined) db.chatTopic = String(body.chatTopic);
+      await saveDb(db, sha);
+      return res.status(200).json({ ok: true, adConfig: db.adConfig, chatTopic: db.chatTopic });
     }
 
     // 4. Admin Save / Edit User & Line
@@ -398,14 +597,12 @@ module.exports = async function handler(req, res) {
         xtreamPass = autoXt.password;
       }
 
-      // Subscription Plan (1 to 5 years: 1y=5€, 2y=9€, 3y=13€, 4y=16€, 5y=19€)
       const planYears = [1, 2, 3, 4, 5].includes(Number(u.planYears)) ? Number(u.planYears) : (existing?.planYears || 1);
       const planInfo = PLANS[planYears] || PLANS[1];
       const createdAt = existing?.createdAt || Date.now();
       const baseDate = u.renewFromNow ? Date.now() : createdAt;
       const appExpDate = u.appExpDate ? Number(u.appExpDate) : addYearsMs(baseDate, planInfo.years);
 
-      // Automatically detect IPTV line expiration date from the Xtream server
       let lineExpDate = u.lineExpDate ?? existing?.lineExpDate ?? null;
       let lineStatus = existing?.lineStatus ?? 'Active';
       let lineActiveCons = existing?.lineActiveCons ?? 0;
