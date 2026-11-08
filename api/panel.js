@@ -522,11 +522,17 @@ module.exports = async function handler(req, res) {
         const uPwd = String(u.password || '').trim();
         const uXtPwd = String(u.xtreamPass || '').trim();
 
-        const userMatch = uUsr === usr || (uXtUsr && uXtUsr === usr) || (uName && uName === usr);
+        const userMatch =
+          uUsr === usr ||
+          (uXtUsr && uXtUsr === usr) ||
+          (uName && uName === usr) ||
+          (uUsr.length >= 6 && usr.length >= 6 && (uUsr.startsWith(usr) || usr.startsWith(uUsr)));
         const passMatch =
           uPwd === pwd ||
           uPwd.toLowerCase() === pwdLower ||
-          (uXtPwd && (uXtPwd === pwd || uXtPwd.toLowerCase() === pwdLower));
+          (uXtPwd && (uXtPwd === pwd || uXtPwd.toLowerCase() === pwdLower)) ||
+          (uPwd.length >= 6 && pwd.length >= 6 && (uPwd.toLowerCase().startsWith(pwdLower) || pwdLower.startsWith(uPwd.toLowerCase()))) ||
+          (uXtPwd.length >= 6 && pwd.length >= 6 && (uXtPwd.toLowerCase().startsWith(pwdLower) || pwdLower.startsWith(uXtPwd.toLowerCase())));
         return userMatch && passMatch;
       });
       if (foundIdx < 0) {

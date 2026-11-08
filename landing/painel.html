@@ -573,6 +573,12 @@
           document.getElementById('uServer').value = m[1];
           document.getElementById('uXtreamUser').value = params.username;
           document.getElementById('uXtreamPass').value = params.password;
+          if (!document.getElementById('uUsername').value.trim()) {
+            document.getElementById('uUsername').value = params.username;
+          }
+          if (!document.getElementById('uPassword').value.trim()) {
+            document.getElementById('uPassword').value = params.password;
+          }
           if (inspectTimer) clearTimeout(inspectTimer);
           inspectTimer = setTimeout(() => inspectCurrentLine(), 500);
         }
