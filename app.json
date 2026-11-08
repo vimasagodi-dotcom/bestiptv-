@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "BestIPTV",
-    "slug": "bestiptv",
-    "scheme": "bestiptv",
+    "name": "KikoIPTV",
+    "slug": "kikoiptv",
+    "scheme": "kikoiptv",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
@@ -10,7 +10,7 @@
     "backgroundColor": "#0B0F1A",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.bestiptv.app",
+      "bundleIdentifier": "com.kikoiptv.app",
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
@@ -21,7 +21,7 @@
       }
     },
     "android": {
-      "package": "com.bestiptv.app",
+      "package": "com.kikoiptv.app",
       "adaptiveIcon": {
         "backgroundColor": "#0B0F1A",
         "foregroundImage": "./assets/android-icon-foreground.png",

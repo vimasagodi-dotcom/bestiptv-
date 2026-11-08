@@ -27,7 +27,7 @@ export default function Playlists() {
         contentContainerStyle={{ padding: 16, gap: 12, flexGrow: 1 }}
         ListEmptyComponent={
           <View style={{ flex: 1, justifyContent: 'center' }}>
-            <EmptyView icon="tv-outline" message={'Bem-vindo ao BestIPTV!\nAdicione a sua primeira playlist para começar.'} />
+            <EmptyView icon="tv-outline" message={'Bem-vindo ao KikoIPTV!\nAdicione a sua primeira playlist para começar.'} />
           </View>
         }
         renderItem={({ item }) => {

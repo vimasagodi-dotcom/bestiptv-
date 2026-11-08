@@ -60,7 +60,7 @@ export default function Home() {
             <Ionicons name="play" size={20} color="#fff" />
           </View>
           <Text style={styles.brandText}>
-            Best<Text style={{ color: colors.primary }}>IPTV</Text>
+            Kiko<Text style={{ color: colors.primary }}>IPTV</Text>
           </Text>
         </View>
         <Clock />

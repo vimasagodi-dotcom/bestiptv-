@@ -5,9 +5,9 @@ import { M3UProvider } from '../lib/m3u';
 import type { ContentProvider, FavoriteItem, FavoriteKind, Playlist } from '../lib/types';
 import { XtreamProvider } from '../lib/xtream';
 
-const KEY_PLAYLISTS = 'bestiptv:playlists';
-const KEY_ACTIVE = 'bestiptv:active';
-const favKey = (id: string) => `bestiptv:fav:${id}`;
+const KEY_PLAYLISTS = 'kikoiptv:playlists';
+const KEY_ACTIVE = 'kikoiptv:active';
+const favKey = (id: string) => `kikoiptv:fav:${id}`;
 
 export function createProvider(p: Playlist): ContentProvider {
   return p.type === 'xtream' ? new XtreamProvider(p) : new M3UProvider(p);

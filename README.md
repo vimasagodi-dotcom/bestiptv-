@@ -1,4 +1,4 @@
-# BestIPTV
+# KikoIPTV
 
 Leitor de listas IPTV para **iOS e Android** (estilo MyTVOnline), feito com Expo / React Native.
 
