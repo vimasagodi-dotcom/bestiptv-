@@ -3,7 +3,30 @@ import { Platform } from 'react-native';
 import type { Playlist } from './types';
 import { normalizeServer, uid } from './utils';
 
-const PANEL_API_URL = 'https://iptvcocas.vercel.app/api/panel';
+const PANEL_API_URLS = [
+  'https://iptvcocas.vercel.app/api/panel',
+  'https://www.cocas.online/api/panel',
+];
+
+export async function callPanelApi(payload: Record<string, any>): Promise<any> {
+  let lastErr: any = null;
+  for (const url of PANEL_API_URLS) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok || res.status === 400 || res.status === 401 || res.status === 403) {
+        return await res.json();
+      }
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  if (lastErr) throw lastErr;
+  throw new Error('Não foi possível ligar ao servidor Cocas.');
+}
 
 /**
  * Sends a lightweight heartbeat so the server knows if the user is online and which channel they are watching.
@@ -20,17 +43,13 @@ export async function sendPlayerHeartbeat(opts: {
   if (!panelUsername && !xtreamUser) return;
 
   try {
-    await fetch(PANEL_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'heartbeat',
-        panelUsername,
-        xtreamUser,
-        channelName: opts.playing ? opts.channelName : null,
-        playing: opts.playing,
-        device: Platform.OS === 'ios' ? 'iPhone/iOS' : Platform.OS === 'android' ? 'Android/TV' : 'Web',
-      }),
+    await callPanelApi({
+      action: 'heartbeat',
+      panelUsername,
+      xtreamUser,
+      channelName: opts.playing ? opts.channelName : null,
+      playing: opts.playing,
+      device: Platform.OS === 'ios' ? 'iPhone/iOS' : Platform.OS === 'android' ? 'Android/TV' : 'Web',
     });
   } catch {
     // Non-blocking
@@ -47,17 +66,12 @@ export async function loginWithPanelAccount(username: string, password: string):
     throw new Error('Preencha o utilizador e a palavra-passe.');
   }
 
-  const res = await fetch(PANEL_API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'client_login',
-      username: usr,
-      password: pwd,
-      device: Platform.OS === 'ios' ? 'iPhone/iOS' : Platform.OS === 'android' ? 'Android/TV' : 'Web',
-    }),
+  const data = await callPanelApi({
+    action: 'client_login',
+    username: usr,
+    password: pwd,
+    device: Platform.OS === 'ios' ? 'iPhone/iOS' : Platform.OS === 'android' ? 'Android/TV' : 'Web',
   });
-  const data = await res.json();
   if (data?.ok && data.playlist) {
     const p = data.playlist;
     return {
