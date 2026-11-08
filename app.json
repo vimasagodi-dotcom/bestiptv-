@@ -12,6 +12,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.kikoiptv.app",
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
         },
