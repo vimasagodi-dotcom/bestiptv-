@@ -114,6 +114,16 @@
       border-color: var(--primary);
       background: rgba(229, 9, 20, 0.12);
     }
+    .plan-card.offer-active {
+      border-color: var(--success);
+      background: rgba(16, 185, 129, 0.16);
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.18);
+    }
+    .pill-offer {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34D399;
+      border: 1px solid rgba(16, 185, 129, 0.45);
+    }
     .plan-years { font-size: 15px; font-weight: 800; color: #fff; }
     .plan-price { font-size: 20px; font-weight: 800; color: var(--warning); margin-top: 2px; }
     .plan-summary {
@@ -308,29 +318,33 @@
           </div>
         </div>
 
-        <!-- PLANOS DE VALIDADE (1 A 5 ANOS) -->
+        <!-- PLANOS DE VALIDADE (1 A 5 ANOS + OPÇÃO OFERTA) -->
         <div class="field" style="margin-top: 20px;">
-          <label>Plano de Validade do Login Cocas (1 a 5 Anos)</label>
+          <label>Plano de Validade do Login Cocas (1 a 5 Anos ou Oferta Grátis)</label>
           <div class="plan-grid">
             <div class="plan-card active" id="plan-1" onclick="selectPlan(1)">
               <div class="plan-years">1 Ano</div>
-              <div class="plan-price">5 €</div>
+              <div class="plan-price" id="price-1">5 €</div>
             </div>
             <div class="plan-card" id="plan-2" onclick="selectPlan(2)">
               <div class="plan-years">2 Anos</div>
-              <div class="plan-price">9 €</div>
+              <div class="plan-price" id="price-2">9 €</div>
             </div>
             <div class="plan-card" id="plan-3" onclick="selectPlan(3)">
               <div class="plan-years">3 Anos</div>
-              <div class="plan-price">13 €</div>
+              <div class="plan-price" id="price-3">13 €</div>
             </div>
             <div class="plan-card" id="plan-4" onclick="selectPlan(4)">
               <div class="plan-years">4 Anos</div>
-              <div class="plan-price">16 €</div>
+              <div class="plan-price" id="price-4">16 €</div>
             </div>
             <div class="plan-card" id="plan-5" onclick="selectPlan(5)">
               <div class="plan-years">5 Anos</div>
-              <div class="plan-price">19 €</div>
+              <div class="plan-price" id="price-5">19 €</div>
+            </div>
+            <div class="plan-card" id="plan-offer" onclick="toggleOffer()">
+              <div class="plan-years">🎁 Oferta</div>
+              <div class="plan-price" style="color: var(--success);">0 € (Grátis)</div>
             </div>
           </div>
           <div class="plan-summary" id="planSummaryText"></div>
@@ -452,6 +466,7 @@
     let adminPassword = sessionStorage.getItem('kiko_admin_pass') || '';
     let sourceType = 'm3u';
     let selectedPlanYears = 1;
+    let selectedIsOffer = false;
     let currentUsers = [];
     let inspectTimer = null;
 
@@ -475,18 +490,42 @@
       return fmtDate(ms);
     }
 
-    function selectPlan(years) {
-      selectedPlanYears = Number(years) || 1;
+    function updatePlanUi() {
       [1, 2, 3, 4, 5].forEach(y => {
         const el = document.getElementById('plan-' + y);
+        const priceEl = document.getElementById('price-' + y);
         if (el) el.className = 'plan-card' + (y === selectedPlanYears ? ' active' : '');
+        if (priceEl) {
+          priceEl.textContent = selectedIsOffer ? '0 € (Oferta)' : (PLAN_PRICES[y] + ' €');
+          priceEl.style.color = selectedIsOffer ? 'var(--success)' : 'var(--warning)';
+        }
       });
-      const price = PLAN_PRICES[selectedPlanYears] || 5;
+      const offerEl = document.getElementById('plan-offer');
+      if (offerEl) {
+        offerEl.className = 'plan-card' + (selectedIsOffer ? ' offer-active' : '');
+      }
+      const price = selectedIsOffer ? 0 : (PLAN_PRICES[selectedPlanYears] || 5);
       const exp = new Date();
       exp.setFullYear(exp.getFullYear() + selectedPlanYears);
-      document.getElementById('planSummaryText').innerHTML =
-        `✅ Este login será válido por <strong>${selectedPlanYears} ${selectedPlanYears === 1 ? 'Ano' : 'Anos'}</strong> ` +
-        `(Custo: <strong style="color:var(--warning);">${price} €</strong>) · Expira em: <strong>${fmtDate(exp.getTime())}</strong>`;
+      if (selectedIsOffer) {
+        document.getElementById('planSummaryText').innerHTML =
+          `🎁 <strong style="color:var(--success);">MODO OFERTA ATIVO (0 € — Grátis):</strong> ` +
+          `Este login será válido por <strong>${selectedPlanYears} ${selectedPlanYears === 1 ? 'Ano' : 'Anos'}</strong> sem qualquer custo · Expira em: <strong>${fmtDate(exp.getTime())}</strong>`;
+      } else {
+        document.getElementById('planSummaryText').innerHTML =
+          `✅ Este login será válido por <strong>${selectedPlanYears} ${selectedPlanYears === 1 ? 'Ano' : 'Anos'}</strong> ` +
+          `(Custo: <strong style="color:var(--warning);">${price} €</strong>) · Expira em: <strong>${fmtDate(exp.getTime())}</strong>`;
+      }
+    }
+
+    function selectPlan(years) {
+      selectedPlanYears = Number(years) || 1;
+      updatePlanUi();
+    }
+
+    function toggleOffer(forceVal) {
+      selectedIsOffer = typeof forceVal === 'boolean' ? forceVal : !selectedIsOffer;
+      updatePlanUi();
     }
 
     selectPlan(1);
@@ -670,8 +709,12 @@
       document.getElementById('statTotal').textContent = String(currentUsers.length);
       const onlineCount = currentUsers.filter(u => u.isOnline).length;
       document.getElementById('statOnline').textContent = String(onlineCount);
-      const totalRev = currentUsers.reduce((acc, u) => acc + Number(u.planPrice || PLAN_PRICES[u.planYears || 1] || 5), 0);
-      document.getElementById('statRevenue').textContent = totalRev + ' €';
+      const totalRev = currentUsers.reduce((acc, u) => {
+        const isOffer = Boolean(u.isOffer || u.planPrice === 0);
+        return acc + (isOffer ? 0 : Number(u.planPrice ?? PLAN_PRICES[u.planYears || 1] ?? 5));
+      }, 0);
+      const offerCount = currentUsers.filter(u => u.isOffer || u.planPrice === 0).length;
+      document.getElementById('statRevenue').textContent = totalRev + ' €' + (offerCount ? ` (${offerCount} 🎁)` : '');
 
       const box = document.getElementById('usersList');
       if (!currentUsers.length) {
@@ -681,7 +724,8 @@
 
       box.innerHTML = currentUsers.map(u => {
         const years = u.planYears || 1;
-        const price = u.planPrice || PLAN_PRICES[years] || 5;
+        const isOffer = Boolean(u.isOffer || u.planPrice === 0);
+        const price = isOffer ? 0 : (u.planPrice ?? PLAN_PRICES[years] ?? 5);
         const appExpired = u.appExpDate && Date.now() > Number(u.appExpDate);
         const lineExpired = u.lineExpDate && Date.now() > Number(u.lineExpDate);
 
@@ -695,7 +739,10 @@
                   ? `<span class="pill pill-online">🟢 ONLINE AGORA</span>`
                   : `<span class="pill pill-offline">⚪ OFFLINE (${fmtRelative(u.lastSeenAt)})</span>`
                 }
-                <span class="pill pill-plan">💳 Plano ${years} ${years === 1 ? 'Ano' : 'Anos'} (${price} €)</span>
+                ${isOffer
+                  ? `<span class="pill pill-offer">🎁 OFERTA · ${years} ${years === 1 ? 'Ano' : 'Anos'} (0 €)</span>`
+                  : `<span class="pill pill-plan">💳 Plano ${years} ${years === 1 ? 'Ano' : 'Anos'} (${price} €)</span>`
+                }
                 ${u.active === false ? `<span class="pill pill-susp">SUSPENSO</span>` : ''}
               </div>
               <div style="display:flex;gap:8px;">
@@ -719,8 +766,8 @@
                 </strong>
               </div>
               <div class="meta-item">
-                <span>⏳ Validade do Login App (${years} ${years === 1 ? 'Ano' : 'Anos'} · ${price}€)</span>
-                <strong style="color:${appExpired ? 'var(--danger)' : 'var(--warning)'};">
+                <span>⏳ Validade do Login App (${years} ${years === 1 ? 'Ano' : 'Anos'} · ${isOffer ? '🎁 Oferta 0€' : price + '€'})</span>
+                <strong style="color:${appExpired ? 'var(--danger)' : (isOffer ? '#34D399' : 'var(--warning)')};">
                   ${u.appExpDate ? fmtDate(u.appExpDate) : 'Ilimitado'}
                 </strong>
               </div>
@@ -752,6 +799,7 @@
       document.getElementById('uXtreamUser').value = '';
       document.getElementById('uXtreamPass').value = '';
       document.getElementById('lineDetectedBox').style.display = 'none';
+      selectedIsOffer = false;
       selectPlan(1);
       document.getElementById('formTitle').textContent = '➕ Inserir / Editar Utilizador e Linha';
     }
@@ -770,6 +818,7 @@
       document.getElementById('uXtreamUser').value = u.xtreamUser || '';
       document.getElementById('uXtreamPass').value = u.xtreamPass || '';
       document.getElementById('uFormat').value = u.liveFormat || 'm3u8';
+      selectedIsOffer = Boolean(u.isOffer || u.planPrice === 0);
       selectPlan(u.planYears || 1);
       setSourceType(u.playlistType === 'xtream' && !u.m3uUrl ? 'xtream' : 'm3u');
       document.getElementById('formTitle').textContent = '✏️ A Editar Utilizador e Linha: ' + u.username;
@@ -794,6 +843,8 @@
           name: document.getElementById('uName').value.trim(),
           active: document.getElementById('uActive').value === 'true',
           planYears: selectedPlanYears,
+          isOffer: selectedIsOffer,
+          planPrice: selectedIsOffer ? 0 : (PLAN_PRICES[selectedPlanYears] || 5),
           renewFromNow: true,
           lineExpDate: detExp ? Number(detExp) : undefined,
           playlistType: sourceType,

@@ -430,7 +430,8 @@ module.exports = async function handler(req, res) {
             panelUsername: found.username,
             appExpDate: found.appExpDate || null,
             planYears: found.planYears || 1,
-            planPrice: found.planPrice || 5,
+            planPrice: found.isOffer ? 0 : (found.planPrice ?? 5),
+            isOffer: Boolean(found.isOffer),
           },
         });
       } else {
@@ -444,7 +445,8 @@ module.exports = async function handler(req, res) {
             panelUsername: found.username,
             appExpDate: found.appExpDate || null,
             planYears: found.planYears || 1,
-            planPrice: found.planPrice || 5,
+            planPrice: found.isOffer ? 0 : (found.planPrice ?? 5),
+            isOffer: Boolean(found.isOffer),
           },
         });
       }
@@ -597,8 +599,10 @@ module.exports = async function handler(req, res) {
         xtreamPass = autoXt.password;
       }
 
+      const isOffer = Boolean(u.isOffer || u.planPrice === 0 || String(u.planPrice) === '0');
       const planYears = [1, 2, 3, 4, 5].includes(Number(u.planYears)) ? Number(u.planYears) : (existing?.planYears || 1);
       const planInfo = PLANS[planYears] || PLANS[1];
+      const planPrice = isOffer ? 0 : planInfo.price;
       const createdAt = existing?.createdAt || Date.now();
       const baseDate = u.renewFromNow ? Date.now() : createdAt;
       const appExpDate = u.appExpDate ? Number(u.appExpDate) : addYearsMs(baseDate, planInfo.years);
@@ -631,7 +635,8 @@ module.exports = async function handler(req, res) {
         m3uUrl,
         liveFormat: u.liveFormat === 'ts' ? 'ts' : 'm3u8',
         planYears: planInfo.years,
-        planPrice: planInfo.price,
+        planPrice,
+        isOffer,
         createdAt,
         appExpDate,
         lineExpDate,
