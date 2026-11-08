@@ -53,6 +53,17 @@
         }
       ],
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "6d4ae678-008b-43cb-9dca-fb772b8cc735"
+      }
+    },
+    "owner": "vimasagodis-team"
   }
 }
