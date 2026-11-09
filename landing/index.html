@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- HLS.js for web live video streaming -->
+  <!-- HLS.js for live video streaming -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <style>
     :root {
@@ -42,16 +42,16 @@
     .container {
       max-width: 1260px;
       margin: 0 auto;
-      padding: 0 20px;
+      padding: 0 16px;
     }
 
     /* HEADER */
     header {
-      padding: 16px 0;
+      padding: 14px 0;
       border-bottom: 1px solid var(--border);
       position: sticky;
       top: 0;
-      background: rgba(9, 10, 15, 0.92);
+      background: rgba(9, 10, 15, 0.94);
       backdrop-filter: blur(14px);
       z-index: 100;
     }
@@ -63,7 +63,7 @@
     .logo {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       font-weight: 800;
       font-size: 22px;
       text-decoration: none;
@@ -71,33 +71,33 @@
       letter-spacing: -0.02em;
     }
     .logo-badge {
-      width: 34px;
-      height: 34px;
+      width: 32px;
+      height: 32px;
       background: var(--primary);
-      border-radius: 9px;
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
       color: #fff;
-      font-size: 14px;
-      box-shadow: 0 0 18px rgba(229, 9, 20, 0.45);
+      font-size: 13px;
+      box-shadow: 0 0 16px rgba(229, 9, 20, 0.45);
     }
     .logo span { color: var(--primary); }
 
     .header-actions {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
 
     /* BUTTONS */
     .btn {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 10px 18px;
-      border-radius: 10px;
-      font-size: 14px;
+      gap: 6px;
+      padding: 9px 16px;
+      border-radius: 9px;
+      font-size: 13px;
       font-weight: 700;
       text-decoration: none;
       transition: all 0.2s ease;
@@ -107,11 +107,11 @@
     .btn-primary {
       background: var(--primary);
       color: #fff;
-      box-shadow: 0 8px 20px -4px rgba(229, 9, 20, 0.5);
+      box-shadow: 0 6px 18px -4px rgba(229, 9, 20, 0.5);
     }
     .btn-primary:hover {
       background: var(--primary-hover);
-      transform: translateY(-2px);
+      transform: translateY(-1px);
     }
     .btn-secondary {
       background: var(--surface-alt);
@@ -121,31 +121,40 @@
     .btn-secondary:hover {
       background: var(--surface-card);
       border-color: var(--text-muted);
-      transform: translateY(-2px);
+      transform: translateY(-1px);
     }
-    .btn-sm { padding: 6px 12px; font-size: 12px; }
+    .btn-danger-outline {
+      background: rgba(229, 9, 20, 0.12);
+      color: #FF5A5F;
+      border: 1px solid rgba(229, 9, 20, 0.35);
+    }
+    .btn-danger-outline:hover {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-sm { padding: 5px 11px; font-size: 12px; }
 
-    /* HERO & TITLE */
+    /* HERO INTRO */
     .hero-intro {
-      padding: 32px 0 20px;
+      padding: 24px 0 16px;
       text-align: center;
     }
     .hero-badge {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 5px 14px;
+      padding: 4px 12px;
       background: rgba(229, 9, 20, 0.12);
       border: 1px solid rgba(229, 9, 20, 0.3);
       border-radius: 999px;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       color: #fff;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
     .live-pulse {
-      width: 8px;
-      height: 8px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
       background: var(--live);
       box-shadow: 0 0 10px var(--live);
@@ -157,10 +166,10 @@
       100% { opacity: 0.4; }
     }
     .hero-intro h1 {
-      font-size: clamp(26px, 4vw, 42px);
+      font-size: clamp(24px, 3.6vw, 38px);
       font-weight: 800;
       line-height: 1.2;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       letter-spacing: -0.02em;
     }
     .hero-intro h1 span {
@@ -169,22 +178,22 @@
       -webkit-text-fill-color: transparent;
     }
     .hero-intro p {
-      max-width: 640px;
+      max-width: 620px;
       margin: 0 auto;
-      font-size: 15px;
+      font-size: 14px;
       color: var(--text-muted);
     }
 
     /* =========================================================================
-       MAIN SPLIT STAGE: PLAYER (LEFT) + CHAT (RIGHT)
+       MAIN SPLIT STAGE: PLAYER (LEFT) + CHAT (RIGHT) ALWAYS SIDE-BY-SIDE
        ========================================================================= */
     .stage-wrapper {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 16px;
       overflow: hidden;
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
-      margin: 16px 0 48px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+      margin: 14px 0 44px;
       position: relative;
     }
     .stage-wrapper::before {
@@ -193,13 +202,15 @@
       top: 0; left: 0; right: 0;
       height: 2px;
       background: linear-gradient(90deg, transparent, var(--primary), var(--accent), transparent);
+      z-index: 20;
     }
     .stage-grid {
       display: grid;
-      grid-template-columns: 1fr 380px;
-      min-height: 580px;
+      grid-template-columns: minmax(0, 1fr) 350px;
+      min-height: 540px;
+      position: relative;
     }
-    @media (max-width: 992px) {
+    @media (max-width: 768px) {
       .stage-grid {
         grid-template-columns: 1fr;
       }
@@ -210,10 +221,12 @@
       display: flex;
       flex-direction: column;
       border-right: 1px solid var(--border);
-      background: #0B0D14;
+      background: #0A0C13;
       position: relative;
+      min-width: 0;
+      overflow: hidden;
     }
-    @media (max-width: 992px) {
+    @media (max-width: 768px) {
       .player-pane {
         border-right: none;
         border-bottom: 1px solid var(--border);
@@ -224,36 +237,39 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 12px 18px;
+      padding: 10px 14px;
       background: var(--surface);
       border-bottom: 1px solid var(--border);
-      gap: 12px;
+      gap: 10px;
     }
     .channel-info-bar {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       min-width: 0;
+      flex: 1;
     }
     .channel-badge {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       background: rgba(229, 9, 20, 0.15);
       border: 1px solid var(--primary);
       color: #fff;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 800;
-      padding: 3px 8px;
-      border-radius: 6px;
+      padding: 2px 7px;
+      border-radius: 5px;
       letter-spacing: 0.5px;
+      flex-shrink: 0;
     }
     .channel-title {
       font-weight: 800;
-      font-size: 15px;
+      font-size: 14px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      color: #fff;
     }
 
     /* VIDEO CONTAINER */
@@ -264,12 +280,13 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 340px;
+      min-height: 320px;
+      overflow: hidden;
     }
     video {
       width: 100%;
       height: 100%;
-      max-height: 520px;
+      max-height: 480px;
       background: #000;
       object-fit: contain;
     }
@@ -280,49 +297,106 @@
       transform: translate(-50%, -50%);
       text-align: center;
       color: #fff;
-      background: rgba(16, 19, 28, 0.85);
+      background: rgba(16, 19, 28, 0.9);
       border: 1px solid var(--border);
-      padding: 14px 22px;
-      border-radius: 12px;
+      padding: 12px 20px;
+      border-radius: 10px;
       font-size: 13px;
       pointer-events: none;
       backdrop-filter: blur(8px);
+      z-index: 10;
     }
 
-    /* CHANNEL QUICK SWITCHER */
-    .channel-switcher-bar {
-      padding: 10px 14px;
-      background: var(--surface);
-      border-top: 1px solid var(--border);
+    /* PLAYER BOTTOM BAR: PREV / CHOOSE / NEXT */
+    .player-controls-bar {
       display: flex;
       align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
       gap: 8px;
-      overflow-x: auto;
-      scrollbar-width: thin;
     }
-    .ch-chip {
-      display: inline-flex;
+
+    /* CHANNEL DRAWER (SLIDE-OVER LIST) */
+    .channel-drawer-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(10, 13, 20, 0.95);
+      backdrop-filter: blur(8px);
+      z-index: 40;
+      display: flex;
+      flex-direction: column;
+    }
+    .channel-drawer-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .channel-drawer-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
       align-items: center;
       gap: 6px;
-      padding: 6px 12px;
-      background: var(--surface-alt);
-      border: 1px solid var(--border);
-      border-radius: 8px;
+    }
+    .btn-close-drawer {
+      background: transparent;
+      border: none;
       color: var(--text-muted);
-      font-size: 12px;
-      font-weight: 700;
+      font-size: 18px;
       cursor: pointer;
-      white-space: nowrap;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+    .btn-close-drawer:hover { color: #fff; background: var(--surface-alt); }
+    .channel-items-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      scrollbar-width: thin;
+    }
+    .ch-item-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: var(--surface-alt);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      cursor: pointer;
       transition: all 0.15s ease;
     }
-    .ch-chip:hover {
+    .ch-item-row:hover {
       background: var(--surface-card);
-      color: #fff;
+      border-color: var(--border);
+      transform: translateX(2px);
     }
-    .ch-chip.active {
-      background: var(--primary);
+    .ch-item-row.active {
+      background: rgba(229, 9, 20, 0.18);
       border-color: var(--primary);
+    }
+    .ch-item-num {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--primary);
+      min-width: 24px;
+    }
+    .ch-item-name {
+      font-size: 12px;
+      font-weight: 700;
       color: #fff;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     /* LOGIN CARD (WHEN NOT LOGGED IN) */
@@ -331,38 +405,38 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 32px 20px;
-      background: radial-gradient(circle at center, rgba(229, 9, 20, 0.08) 0%, transparent 70%), #0B0D14;
+      padding: 24px 16px;
+      background: radial-gradient(circle at center, rgba(229, 9, 20, 0.08) 0%, transparent 70%), #0A0C13;
     }
     .login-card {
       width: 100%;
-      max-width: 440px;
+      max-width: 420px;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 24px 22px;
+      border-radius: 14px;
+      padding: 22px 20px;
       box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
     }
     .login-card-head {
       text-align: center;
     }
     .login-card-icon {
-      width: 46px;
-      height: 46px;
-      border-radius: 12px;
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
       background: rgba(229, 9, 20, 0.15);
       border: 1px solid var(--primary);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 20px;
-      margin: 0 auto 10px;
+      font-size: 18px;
+      margin: 0 auto 8px;
     }
     .login-card-title {
-      font-size: 19px;
+      font-size: 18px;
       font-weight: 800;
       margin-bottom: 4px;
     }
@@ -375,14 +449,14 @@
       display: flex;
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 8px;
       padding: 3px;
       gap: 3px;
     }
     .login-tab-btn {
       flex: 1;
-      padding: 8px 6px;
-      border-radius: 7px;
+      padding: 7px 4px;
+      border-radius: 6px;
       background: transparent;
       border: none;
       color: var(--text-muted);
@@ -391,14 +465,9 @@
       cursor: pointer;
       transition: all 0.15s ease;
       white-space: nowrap;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
+      text-align: center;
     }
-    .login-tab-btn:hover {
-      color: #fff;
-    }
+    .login-tab-btn:hover { color: #fff; }
     .login-tab-btn.active {
       background: var(--surface-card);
       color: #fff;
@@ -408,16 +477,16 @@
     .login-fields-group {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
     }
     .form-group {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 5px;
       text-align: left;
     }
     .form-label {
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       color: var(--text-muted);
     }
@@ -425,17 +494,17 @@
       width: 100%;
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 11px 14px;
+      border-radius: 8px;
+      padding: 10px 12px;
       color: #fff;
-      font-size: 14px;
+      font-size: 13px;
       font-family: inherit;
       outline: none;
       transition: border-color 0.2s;
     }
     .form-input:focus {
       border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.2);
+      box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.2);
     }
     .login-err {
       color: #EF4444;
@@ -452,7 +521,7 @@
       align-items: center;
       justify-content: space-between;
       margin-top: 4px;
-      font-size: 12px;
+      font-size: 11px;
       color: var(--text-muted);
     }
     .demo-link {
@@ -469,27 +538,26 @@
       flex-direction: column;
       background: #0E111A;
       height: 100%;
-      min-height: 580px;
+      min-height: 540px;
+      min-width: 320px;
+      overflow: hidden;
     }
     .chat-top-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 14px;
+      padding: 10px 12px;
       background: var(--surface);
       border-bottom: 1px solid var(--border);
-      gap: 8px;
+      gap: 6px;
     }
     .chat-rooms-nav {
       display: flex;
       align-items: center;
       gap: 4px;
-      overflow-x: auto;
-      scrollbar-width: none;
     }
-    .chat-rooms-nav::-webkit-scrollbar { display: none; }
     .chat-room-btn {
-      padding: 5px 10px;
+      padding: 4px 8px;
       border-radius: 6px;
       background: var(--bg);
       border: 1px solid var(--border);
@@ -509,13 +577,13 @@
     .chat-meta-bar {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
     }
     .chat-online-pill {
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      padding: 4px 8px;
+      padding: 4px 7px;
       background: var(--surface-alt);
       border: 1px solid var(--border);
       border-radius: 6px;
@@ -527,7 +595,7 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      padding: 4px 8px;
+      padding: 4px 7px;
       background: var(--surface-alt);
       border: 1px solid var(--border);
       border-radius: 6px;
@@ -541,18 +609,14 @@
     /* CHAT STREAM */
     .chat-stream {
       flex: 1;
-      padding: 10px;
+      padding: 10px 8px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 4px;
       scrollbar-width: thin;
-      scrollbar-color: var(--border) transparent;
-      max-height: 480px;
+      max-height: 440px;
     }
-    .chat-stream::-webkit-scrollbar { width: 5px; }
-    .chat-stream::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-
     .msg-item {
       background: #121622;
       border: 1px solid rgba(255, 255, 255, 0.05);
@@ -562,8 +626,7 @@
       line-height: 1.4;
       display: flex;
       flex-direction: column;
-      gap: 2px;
-      transition: background 0.15s;
+      gap: 1px;
     }
     .msg-item.msg-me {
       background: #1b1318;
@@ -595,7 +658,7 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 8px 10px;
+      padding: 8px;
       background: var(--surface);
       border-top: 1px solid var(--border);
     }
@@ -604,18 +667,16 @@
       background: var(--bg);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 8px 12px;
+      padding: 8px 10px;
       color: #fff;
       font-size: 12px;
       font-family: inherit;
       outline: none;
     }
-    .chat-input:focus {
-      border-color: var(--primary);
-    }
+    .chat-input:focus { border-color: var(--primary); }
     .chat-send-btn {
-      width: 36px;
-      height: 36px;
+      width: 34px;
+      height: 34px;
       border-radius: 8px;
       background: var(--primary);
       border: none;
@@ -626,10 +687,7 @@
       cursor: pointer;
       transition: transform 0.15s;
     }
-    .chat-send-btn:hover {
-      background: var(--primary-hover);
-      transform: scale(1.05);
-    }
+    .chat-send-btn:hover { background: var(--primary-hover); transform: scale(1.05); }
 
     /* NICKNAME MODAL */
     .modal-overlay {
@@ -645,30 +703,28 @@
     }
     .modal-box {
       width: 100%;
-      max-width: 380px;
+      max-width: 360px;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 24px;
+      border-radius: 14px;
+      padding: 22px;
       text-align: center;
       box-shadow: 0 20px 50px rgba(0,0,0,0.6);
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
     }
-    .modal-title { font-size: 18px; font-weight: 800; }
-    .modal-sub { font-size: 13px; color: var(--text-muted); }
+    .modal-title { font-size: 17px; font-weight: 800; }
+    .modal-sub { font-size: 12px; color: var(--text-muted); }
 
-    /* =========================================================================
-       BOTTOM SECTION: DOWNLOADS & GUIDES (CARDS)
-       ========================================================================= */
+    /* BOTTOM DOWNLOADS SECTION */
     .section-block {
-      padding: 48px 0;
+      padding: 44px 0;
       border-top: 1px solid var(--border);
     }
     .section-title {
       text-align: center;
-      font-size: 28px;
+      font-size: 26px;
       font-weight: 800;
       margin-bottom: 8px;
       letter-spacing: -0.02em;
@@ -676,46 +732,40 @@
     .section-sub {
       text-align: center;
       color: var(--text-muted);
-      margin-bottom: 36px;
-      max-width: 680px;
+      margin-bottom: 32px;
+      max-width: 660px;
       margin-left: auto;
       margin-right: auto;
-      font-size: 15px;
+      font-size: 14px;
     }
     .downloads-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 20px;
-      margin-bottom: 40px;
+      margin-bottom: 36px;
     }
     .download-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 14px;
-      padding: 24px;
+      padding: 22px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
-      transition: transform 0.2s, border-color 0.2s;
-    }
-    .download-card:hover {
-      transform: translateY(-3px);
-      border-color: rgba(229, 9, 20, 0.4);
+      gap: 12px;
     }
     .dl-card-icon {
-      width: 44px;
-      height: 44px;
+      width: 42px;
+      height: 42px;
       border-radius: 10px;
       background: rgba(229, 9, 20, 0.12);
       color: var(--primary);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 20px;
+      font-size: 18px;
     }
-    .dl-card-title { font-size: 18px; font-weight: 800; }
+    .dl-card-title { font-size: 17px; font-weight: 800; }
     .dl-card-text { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
-
     .code-pill {
       display: inline-block;
       background: var(--bg);
@@ -727,35 +777,33 @@
       padding: 8px 14px;
       border-radius: 8px;
       margin: 6px 0;
-      letter-spacing: 0.5px;
     }
-
     .smarttv-steps {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 20px;
     }
     .step-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 14px;
-      padding: 24px;
+      padding: 22px;
     }
     .step-card ol {
       padding-left: 20px;
       font-size: 13px;
       color: var(--text);
       display: grid;
-      gap: 10px;
-      margin-top: 12px;
+      gap: 8px;
+      margin-top: 10px;
     }
 
     footer {
-      padding: 36px 0;
+      padding: 32px 0;
       border-top: 1px solid var(--border);
       text-align: center;
       color: var(--text-muted);
-      font-size: 13px;
+      font-size: 12px;
     }
   </style>
 </head>
@@ -786,15 +834,15 @@
     </section>
 
     <!-- =========================================================================
-         OPÇÃO A: PLAYER / LOGIN À ESQUERDA + CHAT À DIREITA
+         OPÇÃO A: PLAYER / LOGIN À ESQUERDA + CHAT À DIREITA (SEMPRE LADO A LADO)
          ========================================================================= -->
     <section class="stage-wrapper">
       <div class="stage-grid">
         
-        <!-- LADO ESQUERDO: PLAYER WEB OU LOGIN -->
+        <!-- LADO ESQUERDO: PLAYER WEB OU LOGIN (OCUPA O MESMO LUGAR) -->
         <div class="player-pane" id="playerPane">
           
-          <!-- ESTADO 1: QUANDO NÃO ESTÁ AUTENTICADO (LOGIN) -->
+          <!-- ESTADO 1: FORMULÁRIO DE LOGIN -->
           <div class="login-box" id="loginBox">
             <div class="login-card">
               <div class="login-card-head">
@@ -803,7 +851,7 @@
                 <p class="login-card-sub" id="loginSubText">Inicia sessão para assistir à emissão em direto no teu computador ou telemóvel.</p>
               </div>
 
-              <!-- SEGMENTED TABS (CONTA COCAS / XTREAM / M3U) -->
+              <!-- SEGMENTED TABS -->
               <div class="login-tabs" id="loginTabs">
                 <button type="button" class="login-tab-btn active" data-mode="panel">👑 Conta Cocas</button>
                 <button type="button" class="login-tab-btn" data-mode="xtream">⚡ Xtream Codes</button>
@@ -848,7 +896,7 @@
                 </div>
               </div>
 
-              <button type="button" id="btnDoLogin" class="btn btn-primary" style="justify-content:center; padding: 12px;">
+              <button type="button" id="btnDoLogin" class="btn btn-primary" style="justify-content:center; padding: 11px;">
                 ▶ Entrar e Ver no Navegador
               </button>
 
@@ -859,37 +907,57 @@
             </div>
           </div>
 
-          <!-- ESTADO 2: PLAYER ATIVO (COM LOGIN OU DEMO) -->
-          <div id="activePlayerBox" style="display:none; flex-direction:column; height:100%;">
+          <!-- ESTADO 2: PLAYER ATIVO (COM CANAL E CONTROLES) -->
+          <div id="activePlayerBox" style="display:none; flex-direction:column; height:100%; position:relative;">
+            <!-- CABEÇALHO DO PLAYER COM BOTAO SAIR / LOGOUT -->
             <div class="player-header">
               <div class="channel-info-bar">
                 <span class="channel-badge"><span class="live-pulse"></span> DIRETO</span>
                 <span class="channel-title" id="currentChannelName">PT: RTP 1 HD</span>
               </div>
-              <div style="display:flex; gap:8px;">
-                <button type="button" class="btn btn-secondary btn-sm" id="btnToggleChannels">Canais</button>
-                <button type="button" class="btn btn-secondary btn-sm" id="btnLogout">Sair</button>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <button type="button" class="btn btn-secondary btn-sm" id="btnToggleChannels">📋 Canais</button>
+                <button type="button" class="btn btn-danger-outline btn-sm" id="btnLogout" title="Terminar Sessão">🚪 Sair</button>
               </div>
             </div>
 
+            <!-- VIEWPORT DE VÍDEO -->
             <div class="video-viewport">
               <video id="videoPlayer" controls playsinline autoplay></video>
-              <div class="video-overlay-msg" id="videoLoadingMsg" style="display:none;">A carregar emissão...</div>
+              <div class="video-overlay-msg" id="videoLoadingMsg" style="display:none;">A ligar à emissão...</div>
+
+              <!-- GAVETA LATERAL DE ESCOLHA DE CANAIS -->
+              <div class="channel-drawer-overlay" id="channelDrawer" style="display:none;">
+                <div class="channel-drawer-head">
+                  <div class="channel-drawer-title">
+                    <span>📋</span>
+                    <span>Lista de Canais (<span id="drawerChannelCount">0</span>)</span>
+                  </div>
+                  <button type="button" class="btn-close-drawer" id="btnCloseDrawer">✕</button>
+                </div>
+                <div style="padding: 8px 10px; border-bottom: 1px solid var(--border);">
+                  <input type="text" id="channelSearchInput" class="form-input" placeholder="🔍 Pesquisar canal..." style="padding: 7px 10px; font-size: 12px;">
+                </div>
+                <div class="channel-items-list" id="channelItemsList">
+                  <!-- Gerado via JS -->
+                </div>
+              </div>
             </div>
 
-            <!-- SELETOR DE CANAIS RÁPIDO -->
-            <div class="channel-switcher-bar" id="channelListBar">
-              <button class="ch-chip active" data-url="https://streaming-live.rtp.pt/liverepeater/rtp1HD.smil/playlist.m3u8">RTP 1</button>
-              <button class="ch-chip" data-url="https://streaming-live.rtp.pt/liverepeater/rtp2HD.smil/playlist.m3u8">RTP 2</button>
-              <button class="ch-chip" data-url="https://streaming-live.rtp.pt/liverepeater/rtp3.smil/playlist.m3u8">RTP 3</button>
-              <button class="ch-chip" data-url="https://streaming-live.rtp.pt/liverepeater/rtpmemoria.smil/playlist.m3u8">RTP Memória</button>
+            <!-- BARRA INFERIOR DE NAVEGAÇÃO ENTRE CANAIS -->
+            <div class="player-controls-bar">
+              <button type="button" class="btn btn-secondary btn-sm" id="btnPrevChannel">◀ Anterior</button>
+              <button type="button" class="btn btn-primary btn-sm" id="btnOpenChannelsBottom" style="flex:1; justify-content:center; max-width:200px;">
+                📋 Escolher Canal
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnNextChannel">Seguinte ▶</button>
             </div>
           </div>
 
         </div>
 
-        <!-- LADO DIREITO: CHAT DA COMUNIDADE VIVO -->
-        <div class="chat-pane">
+        <!-- LADO DIREITO: CHAT DA COMUNIDADE VIVO (SEMPRE VISÍVEL) -->
+        <div class="chat-pane" id="chatPane">
           <!-- TOP CHAT BAR -->
           <div class="chat-top-bar">
             <div class="chat-rooms-nav" id="chatRoomsNav">
@@ -918,7 +986,7 @@
           <div class="chat-input-row">
             <input type="text" id="chatInput" class="chat-input" placeholder="Escrever em #geral..." maxlength="300">
             <button type="button" id="chatSendBtn" class="chat-send-btn" title="Enviar">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
               </svg>
             </button>
@@ -974,7 +1042,7 @@
 
       <div class="smarttv-steps">
         <div class="step-card" style="border-color: rgba(229, 9, 20, 0.4);">
-          <h3 style="font-size: 17px; font-weight: 800; margin-bottom: 8px;">Método 1: Android TV / Fire Stick / Google TV</h3>
+          <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 8px;">Método 1: Android TV / Fire Stick / Google TV</h3>
           <p style="font-size: 13px; color: var(--text-muted);">Compatível com Sony, TCL, Philips, Xiaomi, Chromecast e Fire TV:</p>
           <ol>
             <li>Na loja da televisão, pesquisa e instala a app gratuita <strong>Downloader by AFTVnews</strong>.</li>
@@ -984,7 +1052,7 @@
         </div>
 
         <div class="step-card">
-          <h3 style="font-size: 17px; font-weight: 800; margin-bottom: 8px;">Método 2: Samsung (Tizen) & LG (webOS)</h3>
+          <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 8px;">Método 2: Samsung (Tizen) & LG (webOS)</h3>
           <p style="font-size: 13px; color: var(--text-muted);">As TVs Samsung e LG utilizam sistema próprio:</p>
           <ol>
             <li><strong>Opção A:</strong> Na loja de aplicações da TV, podes usar a app <strong>IPTV Smarters</strong> ou <strong>IBO Player</strong> com os dados da tua linha.</li>
@@ -1011,7 +1079,7 @@
   <!-- FOOTER -->
   <footer>
     <div class="container">
-      <p style="max-width:760px; margin:0 auto 10px; color:#CBD5E1; font-weight:600;">
+      <p style="max-width:760px; margin:0 auto 8px; color:#CBD5E1; font-weight:600;">
         ⚖️ Aviso Legal (EULA): A Cocas é exclusivamente um reprodutor multimédia e plataforma comunitária. Não fornecemos, não hospedamos nem vendemos conteúdos ou listas de canais de televisão.
       </p>
       <p>© Comunidade Cocas · Web, Android, iOS e Smart TV.</p>
@@ -1019,14 +1087,12 @@
   </footer>
 
   <!-- =========================================================================
-       JAVASCRIPT: WEB PLAYER + COMMUNITY CHAT ENGINE
+       JAVASCRIPT: WEB PLAYER (HLS + PROXY) + CANAIS + CHAT
        ========================================================================= -->
   <script>
-    // --- STORAGE KEYS ---
     const STORAGE_NICK = '@cocas_web_nick';
     const STORAGE_AUTH = '@cocas_web_auth';
 
-    // --- ROLE METADATA ---
     const ROLE_META = {
       owner: { label: 'Dono', badge: '👑', color: '#F59E0B' },
       admin: { label: 'Admin', badge: '🛡️', color: '#E50914' },
@@ -1035,21 +1101,22 @@
       guest: { label: 'Visitante', badge: '👤', color: '#94A3B8' }
     };
 
-    // --- STATE ---
+    // State
     let currentRoom = 'geral';
-    let currentLoginMode = 'panel'; // 'panel' | 'xtream' | 'm3u'
+    let currentLoginMode = 'panel';
     let myNick = localStorage.getItem(STORAGE_NICK) || '';
     let chatPollTimer = null;
     let hlsInstance = null;
     let authData = null;
     let channelList = [];
+    let currentChannelIndex = 0;
 
     try {
       const savedAuth = localStorage.getItem(STORAGE_AUTH);
       if (savedAuth) authData = JSON.parse(savedAuth);
     } catch (e) {}
 
-    // --- DOM REFS ---
+    // DOM
     const loginBox = document.getElementById('loginBox');
     const loginTabs = document.getElementById('loginTabs');
     const loginSubText = document.getElementById('loginSubText');
@@ -1065,12 +1132,22 @@
     const loginError = document.getElementById('loginError');
     const btnDoLogin = document.getElementById('btnDoLogin');
     const btnPlayDemo = document.getElementById('btnPlayDemo');
-    const btnLogout = document.getElementById('btnLogout');
+
     const activePlayerBox = document.getElementById('activePlayerBox');
     const videoPlayer = document.getElementById('videoPlayer');
     const videoLoadingMsg = document.getElementById('videoLoadingMsg');
     const currentChannelName = document.getElementById('currentChannelName');
-    const channelListBar = document.getElementById('channelListBar');
+    const btnLogout = document.getElementById('btnLogout');
+    const btnToggleChannels = document.getElementById('btnToggleChannels');
+    const btnOpenChannelsBottom = document.getElementById('btnOpenChannelsBottom');
+    const btnPrevChannel = document.getElementById('btnPrevChannel');
+    const btnNextChannel = document.getElementById('btnNextChannel');
+
+    const channelDrawer = document.getElementById('channelDrawer');
+    const btnCloseDrawer = document.getElementById('btnCloseDrawer');
+    const channelSearchInput = document.getElementById('channelSearchInput');
+    const channelItemsList = document.getElementById('channelItemsList');
+    const drawerChannelCount = document.getElementById('drawerChannelCount');
 
     const chatStream = document.getElementById('chatStream');
     const chatInput = document.getElementById('chatInput');
@@ -1084,7 +1161,6 @@
     const btnCloseNickModal = document.getElementById('btnCloseNickModal');
     const btnSaveNickModal = document.getElementById('btnSaveNickModal');
 
-    // --- INITIALIZE ---
     function init() {
       if (myNick) {
         myNickLabel.textContent = myNick;
@@ -1092,14 +1168,12 @@
         myNickLabel.textContent = 'Escolher Nick';
       }
 
-      // Check login state
       if (authData && authData.playlist) {
         showPlayerState(authData.playlist, authData.channels);
       } else {
         showLoginState();
       }
 
-      // Start Chat
       setupChatRooms();
       fetchChatMessages(false);
       chatPollTimer = setInterval(() => fetchChatMessages(true), 3500);
@@ -1107,9 +1181,8 @@
       setupEvents();
     }
 
-    // --- EVENTS SETUP ---
     function setupEvents() {
-      // Tab switcher for login mode
+      // Tab switcher
       loginTabs.addEventListener('click', (e) => {
         const btn = e.target.closest('.login-tab-btn');
         if (!btn) return;
@@ -1137,9 +1210,34 @@
       m3uUrl.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
 
       btnPlayDemo.addEventListener('click', () => {
-        playStream('https://streaming-live.rtp.pt/liverepeater/rtp1HD.smil/playlist.m3u8', 'PT: RTP 1 HD (Demonstração)');
+        const demoChannels = [
+          { name: 'PT: RTP 1 HD', url: 'https://streaming-live.rtp.pt/liverepeater/rtp1HD.smil/playlist.m3u8' },
+          { name: 'PT: RTP 2 HD', url: 'https://streaming-live.rtp.pt/liverepeater/rtp2HD.smil/playlist.m3u8' },
+          { name: 'PT: RTP 3', url: 'https://streaming-live.rtp.pt/liverepeater/rtp3.smil/playlist.m3u8' },
+          { name: 'PT: RTP Memória', url: 'https://streaming-live.rtp.pt/liverepeater/rtpmemoria.smil/playlist.m3u8' },
+        ];
+        showPlayerState({ name: 'Demonstração RTP', type: 'demo' }, demoChannels);
       });
+
       btnLogout.addEventListener('click', handleLogout);
+
+      // Channel drawer toggles
+      btnToggleChannels.addEventListener('click', () => openChannelDrawer());
+      btnOpenChannelsBottom.addEventListener('click', () => openChannelDrawer());
+      btnCloseDrawer.addEventListener('click', () => closeChannelDrawer());
+      channelSearchInput.addEventListener('input', (e) => filterChannelsList(e.target.value));
+
+      btnPrevChannel.addEventListener('click', () => {
+        if (channelList.length === 0) return;
+        currentChannelIndex = (currentChannelIndex - 1 + channelList.length) % channelList.length;
+        selectChannelByIndex(currentChannelIndex);
+      });
+
+      btnNextChannel.addEventListener('click', () => {
+        if (channelList.length === 0) return;
+        currentChannelIndex = (currentChannelIndex + 1) % channelList.length;
+        selectChannelByIndex(currentChannelIndex);
+      });
 
       // Nickname modal
       btnOpenNickModal.addEventListener('click', () => {
@@ -1154,20 +1252,9 @@
       // Chat input
       chatSendBtn.addEventListener('click', sendChatMessage);
       chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); });
-
-      // Channel chips in demo
-      channelListBar.addEventListener('click', (e) => {
-        const chip = e.target.closest('.ch-chip');
-        if (!chip) return;
-        document.querySelectorAll('.ch-chip').forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
-        const url = chip.getAttribute('data-url');
-        const name = chip.textContent.trim();
-        playStream(url, name);
-      });
     }
 
-    // --- LOGIN HANDLER (SUPPORTS CONTA COCAS, XTREAM CODES, AND M3U) ---
+    // --- LOGIN HANDLER ---
     async function handleLogin() {
       loginError.style.display = 'none';
 
@@ -1297,9 +1384,13 @@
     function handleLogout() {
       authData = null;
       localStorage.removeItem(STORAGE_AUTH);
-      if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+      if (hlsInstance) {
+        hlsInstance.destroy();
+        hlsInstance = null;
+      }
       videoPlayer.pause();
       videoPlayer.src = '';
+      closeChannelDrawer();
       showLoginState();
     }
 
@@ -1316,13 +1407,16 @@
 
       if (Array.isArray(preloadedChannels) && preloadedChannels.length > 0) {
         channelList = preloadedChannels;
-        renderChannelChips(preloadedChannels);
-        playStream(preloadedChannels[0].url, preloadedChannels[0].name);
+        currentChannelIndex = 0;
+        buildChannelDrawer(preloadedChannels);
+        selectChannelByIndex(0);
         return;
       }
 
-      // Load channels via server proxy
+      // Load channels from API
       if (playlist && (playlist.server || playlist.m3uUrl)) {
+        videoLoadingMsg.style.display = 'block';
+        videoLoadingMsg.textContent = 'A carregar lista de canais...';
         try {
           const res = await fetch('/api/panel', {
             method: 'POST',
@@ -1338,71 +1432,138 @@
           const chData = await res.json();
           if (chData.ok && Array.isArray(chData.channels) && chData.channels.length > 0) {
             channelList = chData.channels;
-            renderChannelChips(chData.channels);
-            playStream(chData.channels[0].url, chData.channels[0].name);
+            currentChannelIndex = 0;
+            buildChannelDrawer(chData.channels);
+            selectChannelByIndex(0);
             return;
           }
         } catch (e) {}
       }
 
-      // Default demo stream if no direct xtream channel returned
-      playStream('https://streaming-live.rtp.pt/liverepeater/rtp1HD.smil/playlist.m3u8', playlist.name || 'PT: RTP 1 HD');
+      // Fallback Demo
+      const fallbackList = [
+        { name: 'PT: RTP 1 HD', url: 'https://streaming-live.rtp.pt/liverepeater/rtp1HD.smil/playlist.m3u8' },
+        { name: 'PT: RTP 2 HD', url: 'https://streaming-live.rtp.pt/liverepeater/rtp2HD.smil/playlist.m3u8' },
+        { name: 'PT: RTP 3', url: 'https://streaming-live.rtp.pt/liverepeater/rtp3.smil/playlist.m3u8' }
+      ];
+      channelList = fallbackList;
+      buildChannelDrawer(fallbackList);
+      selectChannelByIndex(0);
     }
 
-    function renderChannelChips(channels) {
-      channelListBar.innerHTML = '';
-      channels.slice(0, 30).forEach((ch, idx) => {
-        const btn = document.createElement('button');
-        btn.className = 'ch-chip' + (idx === 0 ? ' active' : '');
-        btn.textContent = ch.name;
-        btn.setAttribute('data-url', ch.url);
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('.ch-chip').forEach(c => c.classList.remove('active'));
-          btn.classList.add('active');
-          playStream(ch.url, ch.name);
+    // --- CHANNEL DRAWER & SELECTION ---
+    function openChannelDrawer() {
+      channelDrawer.style.display = 'flex';
+      channelSearchInput.value = '';
+      filterChannelsList('');
+      channelSearchInput.focus();
+    }
+
+    function closeChannelDrawer() {
+      channelDrawer.style.display = 'none';
+    }
+
+    function buildChannelDrawer(channels) {
+      drawerChannelCount.textContent = channels.length;
+      renderChannelItems(channels);
+    }
+
+    function renderChannelItems(channels) {
+      channelItemsList.innerHTML = '';
+      channels.forEach((ch, idx) => {
+        const row = document.createElement('div');
+        row.className = 'ch-item-row' + (idx === currentChannelIndex ? ' active' : '');
+        row.innerHTML = `
+          <span class="ch-item-num">${String(idx + 1).padStart(3, '0')}</span>
+          <span class="ch-item-name">${ch.name}</span>
+          <span style="font-size:10px; color:var(--text-muted);">▶</span>
+        `;
+        row.addEventListener('click', () => {
+          currentChannelIndex = idx;
+          selectChannelByIndex(idx);
+          closeChannelDrawer();
         });
-        channelListBar.appendChild(btn);
+        channelItemsList.appendChild(row);
       });
     }
 
-    // --- VIDEO STREAM PLAYER (HLS) ---
+    function filterChannelsList(query) {
+      const q = query.trim().toLowerCase();
+      const filtered = channelList.filter(c => c.name.toLowerCase().includes(q));
+      renderChannelItems(filtered);
+    }
+
+    function selectChannelByIndex(idx) {
+      if (!channelList[idx]) return;
+      const ch = channelList[idx];
+      playStream(ch.url, ch.name);
+    }
+
+    // --- VIDEO STREAM PLAYER (HLS + HTTPS SERVER PROXY) ---
     function playStream(url, channelName) {
       currentChannelName.textContent = channelName || 'Emissão em Direto';
       videoLoadingMsg.style.display = 'block';
+      videoLoadingMsg.textContent = 'A ligar à emissão...';
+
+      // Route through serverless stream proxy if external or HTTP to bypass mixed content & CORS blocks
+      let playUrl = url;
+      if (url && (url.startsWith('http://') || !url.startsWith('https://streaming-live.rtp.pt'))) {
+        playUrl = '/api/stream?url=' + encodeURIComponent(url);
+      }
 
       if (hlsInstance) {
         hlsInstance.destroy();
         hlsInstance = null;
       }
 
-      if (Hls.isSupported() && url.includes('.m3u8')) {
-        hlsInstance = new Hls({ enableWorker: true, lowLatencyMode: true });
-        hlsInstance.loadSource(url);
+      if (Hls.isSupported()) {
+        hlsInstance = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          manifestLoadingTimeOut: 10000,
+          manifestLoadingMaxRetry: 4,
+          levelLoadingTimeOut: 10000,
+          fragLoadingTimeOut: 15000,
+        });
+
+        hlsInstance.loadSource(playUrl);
         hlsInstance.attachMedia(videoPlayer);
+
         hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
           videoLoadingMsg.style.display = 'none';
           videoPlayer.play().catch(() => {});
         });
+
         hlsInstance.on(Hls.Events.ERROR, (event, data) => {
           if (data.fatal) {
-            videoLoadingMsg.textContent = 'Falha ao reproduzir fluxo. Tenta outro canal.';
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                videoLoadingMsg.textContent = 'A reconectar ao canal...';
+                hlsInstance.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                hlsInstance.recoverMediaError();
+                break;
+              default:
+                videoLoadingMsg.textContent = 'Canal indisponível de momento. Tenta outro canal.';
+                break;
+            }
           }
         });
       } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
-        // Safari native HLS
-        videoPlayer.src = url;
+        videoPlayer.src = playUrl;
         videoPlayer.addEventListener('loadedmetadata', () => {
           videoLoadingMsg.style.display = 'none';
           videoPlayer.play().catch(() => {});
         });
       } else {
-        videoPlayer.src = url;
+        videoPlayer.src = playUrl;
         videoLoadingMsg.style.display = 'none';
         videoPlayer.play().catch(() => {});
       }
     }
 
-    // --- NICKNAME LOGIC ---
+    // --- NICKNAME ---
     function saveNickname() {
       const val = nickInputModal.value.trim().replace(/\s+/g, '_').slice(0, 20);
       if (val.length < 2) {
@@ -1495,11 +1656,10 @@
         chatStream.appendChild(row);
       });
 
-      // Pin latest message to bottom smoothly
       chatStream.scrollTop = chatStream.scrollHeight;
     }
 
-    // --- SEND CHAT MESSAGE ---
+    // --- SEND MESSAGE ---
     async function sendChatMessage() {
       const text = chatInput.value.trim();
       if (!text) return;
@@ -1532,7 +1692,6 @@
       } catch (err) {}
     }
 
-    // Run on page ready
     document.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
