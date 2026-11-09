@@ -12,8 +12,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- HLS.js for live video streaming -->
+  <!-- HLS.js and MPEGTS.js for web live video streaming -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mpegts.js@latest/dist/mpegts.js"></script>
   <style>
     :root {
       --bg: #090A0F;
@@ -1302,6 +1303,7 @@
     let editLineMode = 'xtream';
     let chatPollTimer = null;
     let hlsInstance = null;
+    let mpegtsInstance = null;
     let authData = null;
     let channelList = [];
     let currentChannelIndex = 0;
@@ -1606,6 +1608,10 @@
         hlsInstance.destroy();
         hlsInstance = null;
       }
+      if (mpegtsInstance) {
+        mpegtsInstance.destroy();
+        mpegtsInstance = null;
+      }
       videoPlayer.pause();
       videoPlayer.src = '';
       myNickLabel.textContent = 'Visitante';
@@ -1720,7 +1726,7 @@
       playStream(ch.url, ch.name);
     }
 
-    // --- VIDEO STREAM PLAYER (HLS + HTTPS SERVER PROXY) ---
+    // --- VIDEO STREAM PLAYER (HLS + MPEG-TS + HTTPS SERVER PROXY) ---
     function playStream(url, channelName) {
       currentChannelName.textContent = channelName || 'Emissão em Direto';
       videoLoadingMsg.style.display = 'block';
@@ -1735,15 +1741,47 @@
         hlsInstance.destroy();
         hlsInstance = null;
       }
+      if (mpegtsInstance) {
+        mpegtsInstance.destroy();
+        mpegtsInstance = null;
+      }
 
-      if (Hls.isSupported()) {
+      function startMpegTs() {
+        if (window.mpegts && mpegts.isSupported()) {
+          try {
+            videoLoadingMsg.textContent = 'A ligar via MPEG-TS...';
+            mpegtsInstance = mpegts.createPlayer({
+              type: 'mse',
+              isLive: true,
+              url: playUrl,
+            }, {
+              enableWorker: true,
+              lazyLoadMaxDuration: 2 * 60,
+              seekType: 'range',
+            });
+            mpegtsInstance.attachMediaElement(videoPlayer);
+            mpegtsInstance.load();
+            mpegtsInstance.play().then(() => {
+              videoLoadingMsg.style.display = 'none';
+            }).catch(() => {});
+            return true;
+          } catch (e) {
+            return false;
+          }
+        }
+        return false;
+      }
+
+      const isExplicitTs = url && (url.endsWith('.ts') || !url.includes('.m3u8'));
+
+      if (!isExplicitTs && Hls.isSupported()) {
         hlsInstance = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
-          manifestLoadingTimeOut: 10000,
-          manifestLoadingMaxRetry: 4,
-          levelLoadingTimeOut: 10000,
-          fragLoadingTimeOut: 15000,
+          manifestLoadingTimeOut: 8000,
+          manifestLoadingMaxRetry: 3,
+          levelLoadingTimeOut: 8000,
+          fragLoadingTimeOut: 12000,
         });
 
         hlsInstance.loadSource(playUrl);
@@ -1756,20 +1794,18 @@
 
         hlsInstance.on(Hls.Events.ERROR, (event, data) => {
           if (data.fatal) {
-            switch (data.type) {
-              case Hls.ErrorTypes.NETWORK_ERROR:
-                videoLoadingMsg.textContent = 'A reconectar ao canal...';
-                hlsInstance.startLoad();
-                break;
-              case Hls.ErrorTypes.MEDIA_ERROR:
-                hlsInstance.recoverMediaError();
-                break;
-              default:
-                videoLoadingMsg.textContent = 'Canal indisponível de momento. Tenta outro canal.';
-                break;
+            // If HLS fails, try MPEG-TS engine
+            if (!startMpegTs()) {
+              videoLoadingMsg.textContent = 'Canal indisponível no navegador web. Experimenta outro canal ou usa a app.';
             }
           }
         });
+      } else if (isExplicitTs) {
+        if (!startMpegTs()) {
+          videoPlayer.src = playUrl;
+          videoLoadingMsg.style.display = 'none';
+          videoPlayer.play().catch(() => {});
+        }
       } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
         videoPlayer.src = playUrl;
         videoPlayer.addEventListener('loadedmetadata', () => {
@@ -1777,9 +1813,11 @@
           videoPlayer.play().catch(() => {});
         });
       } else {
-        videoPlayer.src = playUrl;
-        videoLoadingMsg.style.display = 'none';
-        videoPlayer.play().catch(() => {});
+        if (!startMpegTs()) {
+          videoPlayer.src = playUrl;
+          videoLoadingMsg.style.display = 'none';
+          videoPlayer.play().catch(() => {});
+        }
       }
     }
 

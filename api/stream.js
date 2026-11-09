@@ -30,7 +30,8 @@ module.exports = async (req, res) => {
 
     const upstreamRes = await fetch(targetUrl, {
       headers: {
-        'User-Agent': 'IPTVSmartersPro/1.0',
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
         'Accept': '*/*',
         ...(req.headers.range ? { Range: req.headers.range } : {}),
       },
@@ -38,9 +39,10 @@ module.exports = async (req, res) => {
     });
     clearTimeout(timeout);
 
+    const finalUrl = upstreamRes.url || targetUrl;
     const contentType = upstreamRes.headers.get('content-type') || '';
     const isM3U8 =
-      targetUrl.includes('.m3u8') ||
+      finalUrl.includes('.m3u8') ||
       contentType.includes('mpegurl') ||
       contentType.includes('application/x-mpegURL');
 
@@ -52,7 +54,7 @@ module.exports = async (req, res) => {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith('#')) return line;
         try {
-          const resolved = new URL(trimmed, targetUrl).href;
+          const resolved = new URL(trimmed, finalUrl).href;
           return `/api/stream?url=${encodeURIComponent(resolved)}`;
         } catch {
           return line;
