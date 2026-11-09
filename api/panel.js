@@ -651,6 +651,43 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // Fetch channels for Web Player (bypasses browser CORS & Mixed-Content)
+    if (action === 'get_web_channels') {
+      const srv = normalizeServerUrl(body.server);
+      const usr = String(body.username || '').trim();
+      const pwd = String(body.password || '').trim();
+      if (!srv || !usr || !pwd) {
+        return res.status(200).json({ ok: false, error: 'Dados da linha incompletos.' });
+      }
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 7000);
+        const url = `${srv}/player_api.php?username=${encodeURIComponent(usr)}&password=${encodeURIComponent(pwd)}&action=get_live_streams`;
+        const r = await fetch(url, {
+          headers: { 'User-Agent': 'IPTVSmartersPro/1.0' },
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
+        if (!r.ok) {
+          return res.status(200).json({ ok: false, error: 'Servidor da linha indisponível.' });
+        }
+        const list = await r.json();
+        if (!Array.isArray(list)) {
+          return res.status(200).json({ ok: false, error: 'Lista vazia ou dados inválidos.' });
+        }
+        const channels = list.slice(0, 150).map((c) => ({
+          id: c.stream_id,
+          num: c.num || c.stream_id,
+          name: c.name || `Canal ${c.stream_id}`,
+          logo: c.stream_icon || '',
+          url: `${srv}/live/${usr}/${pwd}/${c.stream_id}.m3u8`,
+        }));
+        return res.status(200).json({ ok: true, channels });
+      } catch (e) {
+        return res.status(200).json({ ok: false, error: 'Erro ao obter canais: ' + (e.message || 'timeout') });
+      }
+    }
+
     // 2. Real-time Heartbeat from Cocas Player
     if (action === 'heartbeat') {
       const panelUsr = String(body.panelUsername || '').trim().toLowerCase();
