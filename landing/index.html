@@ -986,22 +986,22 @@
 
                 <div class="form-group">
                   <label class="form-label">Nome Completo</label>
-                  <input type="text" id="regName" class="form-input" placeholder="Ex: Victor Silva">
+                  <input type="text" id="regName" class="form-input" placeholder="O teu nome completo" autocomplete="off" value="">
                 </div>
 
                 <div class="form-group">
                   <label class="form-label">Email</label>
-                  <input type="email" id="regEmail" class="form-input" placeholder="teu@email.com">
+                  <input type="email" id="regEmail" class="form-input" placeholder="O teu email" autocomplete="off" value="">
                 </div>
 
                 <div style="display:flex; gap:8px;">
                   <div class="form-group" style="flex:1;">
                     <label class="form-label">Username (Login & Chat)</label>
-                    <input type="text" id="regUser" class="form-input" placeholder="Ex: victor_pt" maxlength="20">
+                    <input type="text" id="regUser" class="form-input" placeholder="Escolhe um username" maxlength="20" autocomplete="off" value="">
                   </div>
                   <div class="form-group" style="flex:1;">
                     <label class="form-label">Palavra-passe</label>
-                    <input type="password" id="regPass" class="form-input" placeholder="••••••••">
+                    <input type="password" id="regPass" class="form-input" placeholder="Cria uma palavra-passe" autocomplete="new-password" value="">
                   </div>
                 </div>
 
@@ -1015,16 +1015,16 @@
                 <div id="regXtreamFields">
                   <div class="form-group" style="margin-bottom:6px;">
                     <label class="form-label">Servidor / URL Xtream</label>
-                    <input type="text" id="regServer" class="form-input" placeholder="http://servidor.com:8080">
+                    <input type="text" id="regServer" class="form-input" placeholder="http://servidor.com:porta" autocomplete="off" value="">
                   </div>
                   <div style="display:flex; gap:8px;">
                     <div class="form-group" style="flex:1;">
                       <label class="form-label">Utilizador da Linha</label>
-                      <input type="text" id="regXtreamUser" class="form-input" placeholder="Utilizador">
+                      <input type="text" id="regXtreamUser" class="form-input" placeholder="Utilizador" autocomplete="off" value="">
                     </div>
                     <div class="form-group" style="flex:1;">
                       <label class="form-label">Password da Linha</label>
-                      <input type="password" id="regXtreamPass" class="form-input" placeholder="••••••••">
+                      <input type="password" id="regXtreamPass" class="form-input" placeholder="Password" autocomplete="new-password" value="">
                     </div>
                   </div>
                 </div>
@@ -1058,12 +1058,12 @@
 
                 <div class="form-group">
                   <label class="form-label">Nome de Utilizador</label>
-                  <input type="text" id="loginUser" class="form-input" placeholder="Ex: victor_pt" autocomplete="username">
+                  <input type="text" id="loginUser" class="form-input" placeholder="Nome de utilizador" autocomplete="off" value="">
                 </div>
 
                 <div class="form-group">
                   <label class="form-label">Palavra-passe</label>
-                  <input type="password" id="loginPass" class="form-input" placeholder="••••••••" autocomplete="current-password">
+                  <input type="password" id="loginPass" class="form-input" placeholder="Palavra-passe" autocomplete="new-password" value="">
                 </div>
 
                 <button type="button" id="btnDoLogin" class="btn btn-primary" style="justify-content:center; padding:11px;">
@@ -1255,7 +1255,7 @@
           </div>
           <div class="form-group" style="flex:1;">
             <label class="form-label">Password</label>
-            <input type="password" id="editXtreamPass" class="form-input" placeholder="••••••••">
+            <input type="password" id="editXtreamPass" class="form-input" placeholder="Nova password" autocomplete="new-password">
           </div>
         </div>
       </div>
@@ -1380,6 +1380,21 @@
       return authData?.playlist?.panelUsername || authData?.playlist?.username || '';
     }
 
+    function clearAuthInputs() {
+      if (loginUser) loginUser.value = '';
+      if (loginPass) loginPass.value = '';
+      if (regName) regName.value = '';
+      if (regEmail) regEmail.value = '';
+      if (regUser) regUser.value = '';
+      if (regPass) regPass.value = '';
+      if (regServer) regServer.value = '';
+      if (regXtreamUser) regXtreamUser.value = '';
+      if (regXtreamPass) regXtreamPass.value = '';
+      if (regM3uUrl) regM3uUrl.value = '';
+      if (loginError) { loginError.textContent = ''; loginError.style.display = 'none'; }
+      if (registerError) { registerError.textContent = ''; registerError.style.display = 'none'; }
+    }
+
     function init() {
       const activeUser = getLoggedUsername();
       if (activeUser) {
@@ -1391,6 +1406,7 @@
       if (authData && authData.playlist) {
         showPlayerState(authData.playlist, authData.channels);
       } else {
+        clearAuthInputs();
         showAuthState();
       }
 
@@ -1399,21 +1415,21 @@
       chatPollTimer = setInterval(() => fetchChatMessages(true), 3500);
 
       setupEvents();
+      // Ensure browser autofill does not inject ghost credentials
+      setTimeout(clearAuthInputs, 150);
     }
 
     function setupEvents() {
       // Toggle Register / Login
       btnSwitchToLogin.addEventListener('click', () => {
+        clearAuthInputs();
         registerCard.style.display = 'none';
         loginCard.style.display = 'flex';
-        registerError.style.display = 'none';
-        loginError.style.display = 'none';
       });
       btnSwitchToRegister.addEventListener('click', () => {
+        clearAuthInputs();
         loginCard.style.display = 'none';
         registerCard.style.display = 'flex';
-        registerError.style.display = 'none';
-        loginError.style.display = 'none';
       });
 
       // Register line tabs
@@ -1605,6 +1621,7 @@
     function handleLogout() {
       authData = null;
       localStorage.removeItem(STORAGE_AUTH);
+      clearAuthInputs();
       if (hlsInstance) {
         hlsInstance.destroy();
         hlsInstance = null;
