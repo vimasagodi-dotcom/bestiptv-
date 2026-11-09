@@ -41,6 +41,7 @@ interface ChatMessage {
   room: string;
   nick: string;
   role: ChatRole;
+  avatar?: string;
   text: string;
   ts: number;
 }
@@ -107,6 +108,7 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
   const [sending, setSending] = useState(false);
 
   const listRef = useRef<any>(null);
+  const lastSendRef = useRef<number>(0);
 
   // Each account (Cocas login or own line) has its OWN chat identity.
   // Switching account never reuses the previous account's nickname/role.
@@ -153,7 +155,7 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
           if (data.topic) setTopic(data.topic);
           if (data.myProfile) setMyProfile(data.myProfile);
           if (Array.isArray(data.chatUsers)) setChatUsers(data.chatUsers);
-          if (Array.isArray(data.messages)) setMessages(data.messages);
+          if (Array.isArray(data.messages)) setMessages(data.messages.slice(-50));
           if (Array.isArray(data.privateRooms)) {
             setPrivateRooms((prev) => {
               const map = new Map<string, PrivateRoom>();
@@ -232,6 +234,9 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
   const handleSend = async () => {
     const msgText = text.trim();
     if (!msgText || !savedNick || sending) return;
+    const now = Date.now();
+    if (now - lastSendRef.current < 1200) return;
+    lastSendRef.current = now;
     setSending(true);
     setText('');
     try {
@@ -246,7 +251,7 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
       if (!data?.ok) {
         Alert.alert('Chat Cocas', data?.error || 'Não foi possível enviar a mensagem.');
       } else {
-        if (Array.isArray(data.messages)) setMessages(data.messages);
+        if (Array.isArray(data.messages)) setMessages(data.messages.slice(-50));
         if (data.myProfile) setMyProfile(data.myProfile);
       }
     } catch {
@@ -538,18 +543,35 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
               renderItem={({ item }) => {
                 const rMeta = ROLE_META[item.role] || ROLE_META.guest;
                 const isMe = Boolean(savedNick && item.nick.toLowerCase() === savedNick.toLowerCase());
+                const hasMention = Boolean(savedNick && !isMe && item.text.toLowerCase().includes(`@${savedNick.toLowerCase()}`));
                 return (
                   <Pressable
                     onLongPress={() => canModerate && handleModAction(item.nick, item.id)}
-                    style={[styles.msgRow, isMe && styles.msgRowMe]}
+                    style={[styles.msgRow, isMe && styles.msgRowMe, hasMention && { borderColor: colors.accent, borderWidth: 1 }]}
                   >
-                    <View style={styles.msgHeader}>
-                      <Text style={[styles.msgNick, { color: rMeta.color }]}>
-                        {rMeta.badge} {item.nick}
-                      </Text>
-                      <Text style={styles.msgTime}>{formatTime(item.ts)}</Text>
+                    <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
+                      <View style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 13,
+                        backgroundColor: '#1B2030',
+                        borderWidth: 1,
+                        borderColor: rMeta.color,
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Text style={{ fontSize: 13 }}>{item.avatar || item.nick.charAt(0).toUpperCase()}</Text>
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <View style={styles.msgHeader}>
+                          <Text style={[styles.msgNick, { color: rMeta.color }]}>
+                            {rMeta.badge} {item.nick}{hasMention ? ' @Mencionou-te' : ''}
+                          </Text>
+                          <Text style={styles.msgTime}>{formatTime(item.ts)}</Text>
+                        </View>
+                        <Text style={styles.msgText}>{item.text}</Text>
+                      </View>
                     </View>
-                    <Text style={styles.msgText}>{item.text}</Text>
                   </Pressable>
                 );
               }}

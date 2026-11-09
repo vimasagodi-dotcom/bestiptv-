@@ -420,17 +420,34 @@ module.exports = async function handler(req, res) {
             banned: false,
             muted: false,
             room,
+            avatar: String(body.avatar || '').trim(),
             lastSeenAt: Date.now(),
           };
           db.chatUsers.push(cu);
           await saveDb(db, sha).catch(() => {});
         } else {
           if (cu.role === 'guest' && isPaidMember) cu.role = 'member';
+          if (body.avatar) cu.avatar = String(body.avatar).trim();
           cu.lastSeenAt = Date.now();
           cu.room = room;
         }
         myProfile = cu;
       }
+
+      // In-memory typing tracker (cleaned up automatically)
+      db.typingUsers = db.typingUsers || {};
+      const nowTs = Date.now();
+      for (const k of Object.keys(db.typingUsers)) {
+        if (!db.typingUsers[k] || nowTs - (db.typingUsers[k].ts || 0) > 4000) {
+          delete db.typingUsers[k];
+        }
+      }
+      if (nick && body.typing) {
+        db.typingUsers[nick.toLowerCase()] = { nick, room, ts: nowTs };
+      }
+      const typingList = Object.values(db.typingUsers)
+        .filter((t) => t.room === room && t.nick.toLowerCase() !== nick.toLowerCase())
+        .map((t) => t.nick);
 
       const roleOrder = { owner: 0, admin: 1, mod: 2, member: 3, guest: 4 };
       const sortedUsers = [...db.chatUsers]
@@ -458,7 +475,7 @@ module.exports = async function handler(req, res) {
         privateRooms = Array.from(privMap.values());
       }
 
-      const messages = db.chatMessages.filter((m) => (m.room || 'geral') === room).slice(-60);
+      const messages = db.chatMessages.filter((m) => (m.room || 'geral') === room).slice(-50);
       return res.status(200).json({
         ok: true,
         topic: db.chatTopic,
@@ -466,6 +483,7 @@ module.exports = async function handler(req, res) {
         chatUsers: sortedUsers,
         messages,
         privateRooms,
+        typingList,
       });
     }
 
@@ -517,11 +535,20 @@ module.exports = async function handler(req, res) {
         return res.status(403).json({ ok: false, error: 'Está temporariamente silenciado (mute) no chat.' });
       }
 
+      // Anti-spam cooldown (1.2s)
+      const nowMsg = Date.now();
+      if (cu.lastMsgAt && nowMsg - cu.lastMsgAt < 1200) {
+        return res.status(429).json({ ok: false, error: 'Aguarde 1 segundo antes de enviar outra mensagem (anti-spam).' });
+      }
+      cu.lastMsgAt = nowMsg;
+      if (body.avatar) cu.avatar = String(body.avatar).trim();
+
       const msg = {
         id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
         room,
         nick: cu.nick,
         role: cu.role,
+        avatar: cu.avatar || '',
         text: text.slice(0, 400),
         ts: Date.now(),
       };
@@ -531,7 +558,7 @@ module.exports = async function handler(req, res) {
       }
       await saveDb(db, sha);
 
-      const messages = db.chatMessages.filter((m) => (m.room || 'geral') === room).slice(-60);
+      const messages = db.chatMessages.filter((m) => (m.room || 'geral') === room).slice(-50);
       return res.status(200).json({ ok: true, messages, myProfile: cu });
     }
 
@@ -539,7 +566,7 @@ module.exports = async function handler(req, res) {
     if (action === 'chat_mod_action') {
       const actorNick = String(body.actorNick || '').trim();
       const targetNick = String(body.targetNick || '').trim();
-      const modOp = String(body.modOp || ''); // 'mute' | 'unmute' | 'ban' | 'delete_msg'
+      const modOp = String(body.modOp || ''); // 'mute' | 'unmute' | 'ban' | 'kick' | 'delete_msg'
       const msgId = String(body.msgId || '');
 
       const actor = db.chatUsers.find((u) => u.nick.toLowerCase() === actorNick.toLowerCase());
@@ -559,6 +586,9 @@ module.exports = async function handler(req, res) {
         if (target && target.role !== 'owner') {
           if (modOp === 'mute') target.muted = !target.muted;
           if (modOp === 'ban' && ['owner', 'admin'].includes(actor.role)) target.banned = !target.banned;
+          if (modOp === 'kick' && ['owner', 'admin', 'mod'].includes(actor.role)) {
+            db.chatUsers = db.chatUsers.filter((u) => u.nick.toLowerCase() !== targetNick.toLowerCase());
+          }
         }
       }
       await saveDb(db, sha);

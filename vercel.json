@@ -4,6 +4,10 @@
   "outputDirectory": "landing",
   "rewrites": [
     {
+      "source": "/chat",
+      "destination": "/chat.html"
+    },
+    {
       "source": "/tv",
       "destination": "/api/download"
     },
