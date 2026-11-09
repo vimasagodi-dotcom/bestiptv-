@@ -28,6 +28,8 @@
       --live: #22C55E;
       --text: #F8FAFC;
       --text-muted: #94A3B8;
+      --movies: #3B82F6;
+      --series: #10B981;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -134,7 +136,116 @@
     }
     .btn-sm { padding: 5px 11px; font-size: 12px; }
 
-    /* HERO INTRO */
+    /* =========================================================================
+       DISPLAY MODES: WEB DESKTOP VS MOBILE APP
+       ========================================================================= */
+    .web-only-stage {
+      display: block;
+    }
+    .mobile-only-hero {
+      display: none;
+    }
+
+    @media (max-width: 768px) {
+      .web-only-stage {
+        display: none !important;
+      }
+      .mobile-only-hero {
+        display: block !important;
+      }
+    }
+
+    /* MOBILE HERO (ORIGINAL LAYOUT BEFORE CHANGES) */
+    .mobile-hero-box {
+      padding: 44px 0 32px;
+      text-align: center;
+    }
+    .mobile-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 14px;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 18px;
+    }
+    .mobile-badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+    .mobile-hero-box h1 {
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1.25;
+      margin-bottom: 14px;
+      letter-spacing: -0.02em;
+    }
+    .mobile-hero-box h1 span {
+      background: linear-gradient(135deg, #FF3B30 0%, #E50914 60%, #F59E0B 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .mobile-hero-box p {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 26px;
+      line-height: 1.5;
+    }
+    .mobile-btn-col {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+    .mobile-btn-col .btn {
+      justify-content: center;
+      padding: 14px 20px;
+      font-size: 15px;
+    }
+
+    /* TILES PREVIEW (MYTVONLINE+) */
+    .tiles-preview {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin: 20px 0 40px;
+    }
+    .tile-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px;
+      text-align: left;
+      position: relative;
+    }
+    .tile-card.live { border-top: 3px solid var(--primary); }
+    .tile-card.movies { border-top: 3px solid var(--movies); }
+    .tile-card.series { border-top: 3px solid var(--series); }
+    .tile-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+      font-size: 18px;
+    }
+    .tile-card.live .tile-icon { background: rgba(229, 9, 20, 0.15); color: var(--primary); }
+    .tile-card.movies .tile-icon { background: rgba(59, 130, 246, 0.15); color: var(--movies); }
+    .tile-card.series .tile-icon { background: rgba(16, 185, 129, 0.15); color: var(--series); }
+    .tile-card h3 { font-size: 17px; margin-bottom: 6px; }
+    .tile-card p { font-size: 13px; color: var(--text-muted); line-height: 1.45; }
+
+    /* =========================================================================
+       DESKTOP WEB STAGE: PLAYER (LEFT) + CHAT (RIGHT) SIDE-BY-SIDE
+       ========================================================================= */
     .hero-intro {
       padding: 24px 0 16px;
       text-align: center;
@@ -184,9 +295,6 @@
       color: var(--text-muted);
     }
 
-    /* =========================================================================
-       MAIN SPLIT STAGE: PLAYER (LEFT) + CHAT (RIGHT) ALWAYS SIDE-BY-SIDE
-       ========================================================================= */
     .stage-wrapper {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -207,16 +315,11 @@
     .stage-grid {
       display: grid;
       grid-template-columns: minmax(0, 1fr) 350px;
-      min-height: 540px;
+      min-height: 560px;
       position: relative;
     }
-    @media (max-width: 768px) {
-      .stage-grid {
-        grid-template-columns: 1fr;
-      }
-    }
 
-    /* LEFT PANE: PLAYER OR LOGIN */
+    /* LEFT PANE: PLAYER OR FORM */
     .player-pane {
       display: flex;
       flex-direction: column;
@@ -225,12 +328,6 @@
       position: relative;
       min-width: 0;
       overflow: hidden;
-    }
-    @media (max-width: 768px) {
-      .player-pane {
-        border-right: none;
-        border-bottom: 1px solid var(--border);
-      }
     }
 
     .player-header {
@@ -272,7 +369,7 @@
       color: #fff;
     }
 
-    /* VIDEO CONTAINER */
+    /* VIDEO VIEWPORT */
     .video-viewport {
       flex: 1;
       background: #000;
@@ -280,7 +377,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 320px;
+      min-height: 330px;
       overflow: hidden;
     }
     video {
@@ -307,7 +404,6 @@
       z-index: 10;
     }
 
-    /* PLAYER BOTTOM BAR: PREV / CHOOSE / NEXT */
     .player-controls-bar {
       display: flex;
       align-items: center;
@@ -318,7 +414,7 @@
       gap: 8px;
     }
 
-    /* CHANNEL DRAWER (SLIDE-OVER LIST) */
+    /* CHANNEL DRAWER */
     .channel-drawer-overlay {
       position: absolute;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -399,33 +495,33 @@
       text-overflow: ellipsis;
     }
 
-    /* LOGIN CARD (WHEN NOT LOGGED IN) */
+    /* REGISTRATION / LOGIN CARD */
     .login-box {
       flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px 16px;
+      padding: 20px 16px;
       background: radial-gradient(circle at center, rgba(229, 9, 20, 0.08) 0%, transparent 70%), #0A0C13;
     }
-    .login-card {
+    .auth-card {
       width: 100%;
-      max-width: 420px;
+      max-width: 440px;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 14px;
-      padding: 22px 20px;
+      padding: 20px;
       box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
     }
-    .login-card-head {
+    .auth-card-head {
       text-align: center;
     }
-    .login-card-icon {
-      width: 42px;
-      height: 42px;
+    .auth-card-icon {
+      width: 40px;
+      height: 40px;
       border-radius: 10px;
       background: rgba(229, 9, 20, 0.15);
       border: 1px solid var(--primary);
@@ -433,29 +529,30 @@
       align-items: center;
       justify-content: center;
       font-size: 18px;
-      margin: 0 auto 8px;
+      margin: 0 auto 6px;
     }
-    .login-card-title {
+    .auth-card-title {
       font-size: 18px;
       font-weight: 800;
-      margin-bottom: 4px;
+      margin-bottom: 2px;
     }
-    .login-card-sub {
+    .auth-card-sub {
       font-size: 12px;
       color: var(--text-muted);
-      line-height: 1.4;
+      line-height: 1.35;
     }
-    .login-tabs {
+    .auth-tabs {
       display: flex;
       background: var(--bg);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 3px;
-      gap: 3px;
+      padding: 2px;
+      gap: 2px;
+      margin-bottom: 2px;
     }
-    .login-tab-btn {
+    .auth-tab-btn {
       flex: 1;
-      padding: 7px 4px;
+      padding: 6px 4px;
       border-radius: 6px;
       background: transparent;
       border: none;
@@ -467,22 +564,16 @@
       white-space: nowrap;
       text-align: center;
     }
-    .login-tab-btn:hover { color: #fff; }
-    .login-tab-btn.active {
+    .auth-tab-btn:hover { color: #fff; }
+    .auth-tab-btn.active {
       background: var(--surface-card);
       color: #fff;
       border: 1px solid var(--border-light);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    }
-    .login-fields-group {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
     }
     .form-group {
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 4px;
       text-align: left;
     }
     .form-label {
@@ -494,10 +585,10 @@
       width: 100%;
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 12px;
+      border-radius: 7px;
+      padding: 8px 11px;
       color: #fff;
-      font-size: 13px;
+      font-size: 12px;
       font-family: inherit;
       outline: none;
       transition: border-color 0.2s;
@@ -506,31 +597,29 @@
       border-color: var(--primary);
       box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.2);
     }
-    .login-err {
+    .auth-err {
       color: #EF4444;
       background: rgba(239, 68, 68, 0.1);
       border: 1px solid rgba(239, 68, 68, 0.3);
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 12px;
+      padding: 7px 10px;
+      border-radius: 7px;
+      font-size: 11px;
       display: none;
       text-align: center;
     }
-    .demo-btn-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-top: 4px;
-      font-size: 11px;
+    .auth-switch-link {
+      text-align: center;
+      margin-top: 6px;
+      font-size: 12px;
       color: var(--text-muted);
     }
-    .demo-link {
-      color: var(--accent);
+    .auth-switch-link a {
+      color: var(--primary);
       font-weight: 700;
       text-decoration: none;
       cursor: pointer;
     }
-    .demo-link:hover { text-decoration: underline; }
+    .auth-switch-link a:hover { text-decoration: underline; }
 
     /* RIGHT PANE: COMMUNITY CHAT */
     .chat-pane {
@@ -538,7 +627,7 @@
       flex-direction: column;
       background: #0E111A;
       height: 100%;
-      min-height: 540px;
+      min-height: 560px;
       min-width: 320px;
       overflow: hidden;
     }
@@ -591,7 +680,7 @@
       font-weight: 800;
       color: #fff;
     }
-    .my-nick-btn {
+    .my-nick-badge {
       display: inline-flex;
       align-items: center;
       gap: 4px;
@@ -602,9 +691,7 @@
       font-size: 11px;
       font-weight: 700;
       color: var(--accent);
-      cursor: pointer;
     }
-    .my-nick-btn:hover { border-color: var(--accent); }
 
     /* CHAT STREAM */
     .chat-stream {
@@ -615,7 +702,7 @@
       flex-direction: column;
       gap: 4px;
       scrollbar-width: thin;
-      max-height: 440px;
+      max-height: 450px;
     }
     .msg-item {
       background: #121622;
@@ -689,26 +776,25 @@
     }
     .chat-send-btn:hover { background: var(--primary-hover); transform: scale(1.05); }
 
-    /* NICKNAME MODAL */
+    /* EDIT LINE MODAL */
     .modal-overlay {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.75);
+      background: rgba(0, 0, 0, 0.8);
       backdrop-filter: blur(6px);
       display: none;
       align-items: center;
       justify-content: center;
       z-index: 1000;
-      padding: 20px;
+      padding: 16px;
     }
     .modal-box {
       width: 100%;
-      max-width: 360px;
+      max-width: 400px;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 14px;
       padding: 22px;
-      text-align: center;
       box-shadow: 0 20px 50px rgba(0,0,0,0.6);
       display: flex;
       flex-direction: column;
@@ -824,180 +910,259 @@
   </header>
 
   <main class="container">
-    <!-- HERO INTRO -->
-    <section class="hero-intro">
-      <div class="hero-badge">
-        <span class="live-pulse"></span> Em Direto na Web & Comunidade Oficial
+
+    <!-- =========================================================================
+         1. MODO TELEMÓVEL: LAYOUT ORIGINAL (HERO + BOTÕES + TILES)
+         ========================================================================= -->
+    <section class="mobile-only-hero">
+      <div class="mobile-hero-box">
+        <div class="mobile-badge"><span class="mobile-badge-dot"></span> Interface Oficial Estilo MYTVOnline+</div>
+        <h1>TV em Direto, Filmes e Séries em <span>Telemóvel e Smart TV</span></h1>
+        <p>Leitor integrado no topo do ecrã com EPG ao vivo, reconexão automática de canais e modo 3 colunas otimizado para Smart TV e TV Box.</p>
+
+        <div class="mobile-btn-col">
+          <a href="/tv" class="btn btn-primary">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.551 0 .9993.4482.9993.9993s-.4483.9997-.9993.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993s-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1523-.5676.416.416 0 00-.5676.1523l-2.0223 3.503C15.5902 8.411 13.8559 8.1 12 8.1s-3.5902.311-5.1366.8499L4.8411 5.4469a.416.416 0 00-.5676-.1523.416.416 0 00-.1523.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.78h24c-.3432-4.1211-2.6889-7.5933-6.1185-9.4586"/></svg>
+            Baixar APK (Android / TV Box)
+          </a>
+          <a href="exp://u.expo.dev/6d4ae678-008b-43cb-9dca-fb772b8cc735?channel-name=preview&runtime-version=exposdk%3A58.0.0" class="btn btn-secondary">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.75 1.04-1.8 0.93-2.85-.9.04-1.99.6-2.61 1.34-.55.63-1.03 1.68-.9 2.71 1 .08 2.03-.51 2.58-1.2"/></svg>
+            Abrir no iPhone (iOS)
+          </a>
+          <a href="#tv" class="btn btn-secondary">
+            📺 Instalar em Smart TV
+          </a>
+        </div>
+
+        <div class="tiles-preview">
+          <div class="tile-card live">
+            <div class="tile-icon">📺</div>
+            <h3>Leitor MYTVOnline+</h3>
+            <p>Vídeo integrado no topo do ecrã enquanto navega nos grupos e canais, ou ecrã inteiro limpo com gaveta lateral.</p>
+          </div>
+          <div class="tile-card movies">
+            <div class="tile-icon">🎬</div>
+            <h3>Reconexão Inteligente</h3>
+            <p>Libertação imediata de ligação ao mudar de canal e auto-retry para linhas de 1 ligação nunca falharem.</p>
+          </div>
+          <div class="tile-card series">
+            <div class="tile-icon">🖥️</div>
+            <h3>Modo Smart TV (3 Colunas)</h3>
+            <p>Em Smart TVs, Tablets e TV Boxes, a interface adapta-se para Grupos + Canais + Pré-visualização com EPG.</p>
+          </div>
+        </div>
       </div>
-      <h1>TV em Direto & <span>Chat da Comunidade</span></h1>
-      <p>Assiste aos canais diretamente no navegador ou descarrega a app para a tua televisão e telemóvel enquanto conversas no chat em tempo real.</p>
     </section>
 
     <!-- =========================================================================
-         OPÇÃO A: PLAYER / LOGIN À ESQUERDA + CHAT À DIREITA (SEMPRE LADO A LADO)
+         2. MODO WEB (DESKTOP): PLAYER + CHAT LADO A LADO COM REGISTO OBRIGATÓRIO
          ========================================================================= -->
-    <section class="stage-wrapper">
-      <div class="stage-grid">
-        
-        <!-- LADO ESQUERDO: PLAYER WEB OU LOGIN (OCUPA O MESMO LUGAR) -->
-        <div class="player-pane" id="playerPane">
+    <section class="web-only-stage">
+      <div class="hero-intro">
+        <div class="hero-badge">
+          <span class="live-pulse"></span> Em Direto na Web & Comunidade Oficial
+        </div>
+        <h1>TV em Direto & <span>Chat da Comunidade</span></h1>
+        <p>Regista a tua conta para assistir no navegador ou descarrega a app para a tua televisão enquanto conversas no chat em tempo real.</p>
+      </div>
+
+      <div class="stage-wrapper">
+        <div class="stage-grid">
           
-          <!-- ESTADO 1: FORMULÁRIO DE LOGIN -->
-          <div class="login-box" id="loginBox">
-            <div class="login-card">
-              <div class="login-card-head">
-                <div class="login-card-icon">📺</div>
-                <h2 class="login-card-title">Leitor Web Cocas</h2>
-                <p class="login-card-sub" id="loginSubText">Inicia sessão para assistir à emissão em direto no teu computador ou telemóvel.</p>
+          <!-- LADO ESQUERDO: REGISTO / LOGIN / PLAYER (SEMPRE NO MESMO SÍTIO) -->
+          <div class="player-pane" id="playerPane">
+            
+            <!-- ESTADO 1: FORMULÁRIO DE REGISTO OBRIGATÓRIO (DEFAULT) -->
+            <div class="login-box" id="authBox">
+              <div class="auth-card" id="registerCard">
+                <div class="auth-card-head">
+                  <div class="auth-card-icon">👑</div>
+                  <h2 class="auth-card-title">Criar Conta Web Cocas</h2>
+                  <p class="auth-card-sub">Cria a tua conta para acederes ao leitor web e participares no chat oficial.</p>
+                </div>
+
+                <div id="registerError" class="auth-err"></div>
+
+                <div class="form-group">
+                  <label class="form-label">Nome Completo</label>
+                  <input type="text" id="regName" class="form-input" placeholder="Ex: Victor Silva">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Email</label>
+                  <input type="email" id="regEmail" class="form-input" placeholder="teu@email.com">
+                </div>
+
+                <div style="display:flex; gap:8px;">
+                  <div class="form-group" style="flex:1;">
+                    <label class="form-label">Username (Login & Chat)</label>
+                    <input type="text" id="regUser" class="form-input" placeholder="Ex: victor_pt" maxlength="20">
+                  </div>
+                  <div class="form-group" style="flex:1;">
+                    <label class="form-label">Palavra-passe</label>
+                    <input type="password" id="regPass" class="form-input" placeholder="••••••••">
+                  </div>
+                </div>
+
+                <!-- TABS DE LINHA: XTREAM OU M3U -->
+                <div class="auth-tabs" id="regLineTabs">
+                  <button type="button" class="auth-tab-btn active" data-linemode="xtream">⚡ Xtream Codes</button>
+                  <button type="button" class="auth-tab-btn" data-linemode="m3u">📋 Lista M3U</button>
+                </div>
+
+                <!-- CAMPOS XTREAM -->
+                <div id="regXtreamFields">
+                  <div class="form-group" style="margin-bottom:6px;">
+                    <label class="form-label">Servidor / URL Xtream</label>
+                    <input type="text" id="regServer" class="form-input" placeholder="http://servidor.com:8080">
+                  </div>
+                  <div style="display:flex; gap:8px;">
+                    <div class="form-group" style="flex:1;">
+                      <label class="form-label">Utilizador da Linha</label>
+                      <input type="text" id="regXtreamUser" class="form-input" placeholder="Utilizador">
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                      <label class="form-label">Password da Linha</label>
+                      <input type="password" id="regXtreamPass" class="form-input" placeholder="••••••••">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CAMPOS M3U -->
+                <div id="regM3uFields" style="display:none;">
+                  <div class="form-group">
+                    <label class="form-label">Link M3U / get.php</label>
+                    <input type="text" id="regM3uUrl" class="form-input" placeholder="http://servidor.com:8080/get.php?username=...">
+                  </div>
+                </div>
+
+                <button type="button" id="btnDoRegister" class="btn btn-primary" style="justify-content:center; padding:10px; margin-top:2px;">
+                  ▶ Criar Conta e Assistir TV
+                </button>
+
+                <div class="auth-switch-link">
+                  Já tens conta criada? <a id="btnSwitchToLogin">Iniciar Sessão</a>
+                </div>
               </div>
 
-              <!-- SEGMENTED TABS -->
-              <div class="login-tabs" id="loginTabs">
-                <button type="button" class="login-tab-btn active" data-mode="panel">👑 Conta Cocas</button>
-                <button type="button" class="login-tab-btn" data-mode="xtream">⚡ Xtream Codes</button>
-                <button type="button" class="login-tab-btn" data-mode="m3u">📋 Lista M3U</button>
-              </div>
+              <!-- FORMULÁRIO DE LOGIN (PARA QUEM JÁ TEM CONTA) -->
+              <div class="auth-card" id="loginCard" style="display:none;">
+                <div class="auth-card-head">
+                  <div class="auth-card-icon">📺</div>
+                  <h2 class="auth-card-title">Iniciar Sessão</h2>
+                  <p class="auth-card-sub">Introduz o teu username e palavra-passe da tua conta Cocas.</p>
+                </div>
 
-              <div id="loginError" class="login-err"></div>
+                <div id="loginError" class="auth-err"></div>
 
-              <!-- MODO 1: CONTA COCAS -->
-              <div id="fieldsPanel" class="login-fields-group">
                 <div class="form-group">
                   <label class="form-label">Nome de Utilizador</label>
-                  <input type="text" id="loginUser" class="form-input" placeholder="Ex: victor" autocomplete="username">
+                  <input type="text" id="loginUser" class="form-input" placeholder="Ex: victor_pt" autocomplete="username">
                 </div>
+
                 <div class="form-group">
                   <label class="form-label">Palavra-passe</label>
                   <input type="password" id="loginPass" class="form-input" placeholder="••••••••" autocomplete="current-password">
                 </div>
-              </div>
 
-              <!-- MODO 2: XTREAM CODES -->
-              <div id="fieldsXtream" class="login-fields-group" style="display:none;">
-                <div class="form-group">
-                  <label class="form-label">Servidor / URL da Linha</label>
-                  <input type="text" id="xtreamServer" class="form-input" placeholder="http://exemplo.com:8080">
+                <button type="button" id="btnDoLogin" class="btn btn-primary" style="justify-content:center; padding:11px;">
+                  ▶ Entrar e Ver no Navegador
+                </button>
+
+                <div class="auth-switch-link">
+                  Ainda não tens conta? <a id="btnSwitchToRegister">Criar Conta Gratuita</a>
                 </div>
-                <div class="form-group">
-                  <label class="form-label">Nome de Utilizador</label>
-                  <input type="text" id="xtreamUser" class="form-input" placeholder="Utilizador da linha">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Palavra-passe</label>
-                  <input type="password" id="xtreamPass" class="form-input" placeholder="••••••••">
-                </div>
-              </div>
-
-              <!-- MODO 3: LISTA M3U -->
-              <div id="fieldsM3u" class="login-fields-group" style="display:none;">
-                <div class="form-group">
-                  <label class="form-label">Link M3U / get.php</label>
-                  <input type="text" id="m3uUrl" class="form-input" placeholder="http://servidor.com:8080/get.php?username=...">
-                </div>
-              </div>
-
-              <button type="button" id="btnDoLogin" class="btn btn-primary" style="justify-content:center; padding: 11px;">
-                ▶ Entrar e Ver no Navegador
-              </button>
-
-              <div class="demo-btn-row">
-                <span>Queres apenas testar o leitor?</span>
-                <a class="demo-link" id="btnPlayDemo">⚡ Canal de Demonstração (RTP 1)</a>
-              </div>
-            </div>
-          </div>
-
-          <!-- ESTADO 2: PLAYER ATIVO (COM CANAL E CONTROLES) -->
-          <div id="activePlayerBox" style="display:none; flex-direction:column; height:100%; position:relative;">
-            <!-- CABEÇALHO DO PLAYER COM BOTAO SAIR / LOGOUT -->
-            <div class="player-header">
-              <div class="channel-info-bar">
-                <span class="channel-badge"><span class="live-pulse"></span> DIRETO</span>
-                <span class="channel-title" id="currentChannelName">PT: RTP 1 HD</span>
-              </div>
-              <div style="display:flex; align-items:center; gap:6px;">
-                <button type="button" class="btn btn-secondary btn-sm" id="btnToggleChannels">📋 Canais</button>
-                <button type="button" class="btn btn-danger-outline btn-sm" id="btnLogout" title="Terminar Sessão">🚪 Sair</button>
               </div>
             </div>
 
-            <!-- VIEWPORT DE VÍDEO -->
-            <div class="video-viewport">
-              <video id="videoPlayer" controls playsinline autoplay></video>
-              <div class="video-overlay-msg" id="videoLoadingMsg" style="display:none;">A ligar à emissão...</div>
+            <!-- ESTADO 2: PLAYER ATIVO (COM VÍDEO E GAVETA DE CANAIS) -->
+            <div id="activePlayerBox" style="display:none; flex-direction:column; height:100%; position:relative;">
+              <div class="player-header">
+                <div class="channel-info-bar">
+                  <span class="channel-badge"><span class="live-pulse"></span> DIRETO</span>
+                  <span class="channel-title" id="currentChannelName">PT: RTP 1 HD</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <button type="button" class="btn btn-secondary btn-sm" id="btnToggleChannels">📋 Canais</button>
+                  <button type="button" class="btn btn-secondary btn-sm" id="btnOpenEditLineModal" title="Editar a minha linha IPTV">⚙️ Linha</button>
+                  <button type="button" class="btn btn-danger-outline btn-sm" id="btnLogout" title="Terminar Sessão">🚪 Sair</button>
+                </div>
+              </div>
 
-              <!-- GAVETA LATERAL DE ESCOLHA DE CANAIS -->
-              <div class="channel-drawer-overlay" id="channelDrawer" style="display:none;">
-                <div class="channel-drawer-head">
-                  <div class="channel-drawer-title">
-                    <span>📋</span>
-                    <span>Lista de Canais (<span id="drawerChannelCount">0</span>)</span>
+              <div class="video-viewport">
+                <video id="videoPlayer" controls playsinline autoplay></video>
+                <div class="video-overlay-msg" id="videoLoadingMsg" style="display:none;">A ligar à emissão...</div>
+
+                <!-- GAVETA LATERAL DE ESCOLHA DE CANAIS -->
+                <div class="channel-drawer-overlay" id="channelDrawer" style="display:none;">
+                  <div class="channel-drawer-head">
+                    <div class="channel-drawer-title">
+                      <span>📋</span>
+                      <span>Lista de Canais (<span id="drawerChannelCount">0</span>)</span>
+                    </div>
+                    <button type="button" class="btn-close-drawer" id="btnCloseDrawer">✕</button>
                   </div>
-                  <button type="button" class="btn-close-drawer" id="btnCloseDrawer">✕</button>
+                  <div style="padding: 8px 10px; border-bottom: 1px solid var(--border);">
+                    <input type="text" id="channelSearchInput" class="form-input" placeholder="🔍 Pesquisar canal..." style="padding: 7px 10px; font-size: 12px;">
+                  </div>
+                  <div class="channel-items-list" id="channelItemsList">
+                    <!-- Gerado via JS -->
+                  </div>
                 </div>
-                <div style="padding: 8px 10px; border-bottom: 1px solid var(--border);">
-                  <input type="text" id="channelSearchInput" class="form-input" placeholder="🔍 Pesquisar canal..." style="padding: 7px 10px; font-size: 12px;">
+              </div>
+
+              <!-- BARRA INFERIOR DE NAVEGAÇÃO ENTRE CANAIS -->
+              <div class="player-controls-bar">
+                <button type="button" class="btn btn-secondary btn-sm" id="btnPrevChannel">◀ Anterior</button>
+                <button type="button" class="btn btn-primary btn-sm" id="btnOpenChannelsBottom" style="flex:1; justify-content:center; max-width:200px;">
+                  📋 Escolher Canal
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" id="btnNextChannel">Seguinte ▶</button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- LADO DIREITO: CHAT DA COMUNIDADE VIVO (SEMPRE LADO A LADO) -->
+          <div class="chat-pane" id="chatPane">
+            <div class="chat-top-bar">
+              <div class="chat-rooms-nav" id="chatRoomsNav">
+                <button class="chat-room-btn active" data-room="geral">#Geral</button>
+                <button class="chat-room-btn" data-room="desporto">#Desporto</button>
+                <button class="chat-room-btn" data-room="ajuda">#Ajuda</button>
+              </div>
+              <div class="chat-meta-bar">
+                <div class="chat-online-pill">
+                  👥 <span id="onlineCount">1</span>
                 </div>
-                <div class="channel-items-list" id="channelItemsList">
-                  <!-- Gerado via JS -->
+                <div class="my-nick-badge" id="myNickDisplay">
+                  👤 <span id="myNickLabel">Visitante</span>
                 </div>
               </div>
             </div>
 
-            <!-- BARRA INFERIOR DE NAVEGAÇÃO ENTRE CANAIS -->
-            <div class="player-controls-bar">
-              <button type="button" class="btn btn-secondary btn-sm" id="btnPrevChannel">◀ Anterior</button>
-              <button type="button" class="btn btn-primary btn-sm" id="btnOpenChannelsBottom" style="flex:1; justify-content:center; max-width:200px;">
-                📋 Escolher Canal
-              </button>
-              <button type="button" class="btn btn-secondary btn-sm" id="btnNextChannel">Seguinte ▶</button>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- LADO DIREITO: CHAT DA COMUNIDADE VIVO (SEMPRE VISÍVEL) -->
-        <div class="chat-pane" id="chatPane">
-          <!-- TOP CHAT BAR -->
-          <div class="chat-top-bar">
-            <div class="chat-rooms-nav" id="chatRoomsNav">
-              <button class="chat-room-btn active" data-room="geral">#Geral</button>
-              <button class="chat-room-btn" data-room="desporto">#Desporto</button>
-              <button class="chat-room-btn" data-room="ajuda">#Ajuda</button>
-            </div>
-            <div class="chat-meta-bar">
-              <div class="chat-online-pill">
-                👥 <span id="onlineCount">1</span>
+            <div class="chat-stream" id="chatStream">
+              <div style="text-align:center;color:var(--text-muted);font-size:11px;padding:20px;">
+                A ligar ao chat da comunidade...
               </div>
-              <button type="button" class="my-nick-btn" id="btnOpenNickModal">
-                👤 <span id="myNickLabel">Visitante</span>
+            </div>
+
+            <div class="chat-input-row">
+              <input type="text" id="chatInput" class="chat-input" placeholder="Escrever em #geral..." maxlength="300">
+              <button type="button" id="chatSendBtn" class="chat-send-btn" title="Enviar">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
               </button>
             </div>
           </div>
 
-          <!-- MENSAGENS STREAM -->
-          <div class="chat-stream" id="chatStream">
-            <div style="text-align:center;color:var(--text-muted);font-size:11px;padding:20px;">
-              A ligar ao chat da comunidade...
-            </div>
-          </div>
-
-          <!-- INPUT BARRA -->
-          <div class="chat-input-row">
-            <input type="text" id="chatInput" class="chat-input" placeholder="Escrever em #geral..." maxlength="300">
-            <button type="button" id="chatSendBtn" class="chat-send-btn" title="Enviar">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-              </svg>
-            </button>
-          </div>
         </div>
-
       </div>
     </section>
 
     <!-- =========================================================================
-         DOWNLOADS & INSTALAÇÃO (ZONA INFERIOR)
+         DOWNLOADS & GUIA SMART TV (COMUM A TODOS OS DISPOSITIVOS)
          ========================================================================= -->
     <section class="section-block" id="download">
       <h2 class="section-title">📱 Aplicações Oficiais & Transferências</h2>
@@ -1063,15 +1228,46 @@
     </section>
   </main>
 
-  <!-- NICKNAME MODAL -->
-  <div class="modal-overlay" id="nickModal">
+  <!-- MODAL: ALTERAR A MINHA LINHA IPTV -->
+  <div class="modal-overlay" id="editLineModal">
     <div class="modal-box">
-      <h3 class="modal-title">Escolhe o teu Nickname</h3>
-      <p class="modal-sub">Define como queres ser identificado no chat da comunidade Cocas.</p>
-      <input type="text" id="nickInputModal" class="form-input" placeholder="Ex: Jorge_PT" maxlength="20" style="text-align:center; font-weight:700;">
-      <div style="display:flex; gap:8px;">
-        <button type="button" class="btn btn-secondary" style="flex:1; justify-content:center;" id="btnCloseNickModal">Cancelar</button>
-        <button type="button" class="btn btn-primary" style="flex:1; justify-content:center;" id="btnSaveNickModal">Guardar</button>
+      <h3 class="modal-title">⚙️ Alterar Linha IPTV</h3>
+      <p class="modal-sub">Atualiza os dados da tua linha Xtream Codes ou M3U para o leitor web.</p>
+      
+      <div id="editLineError" class="auth-err"></div>
+
+      <div class="auth-tabs" id="editLineTabs">
+        <button type="button" class="auth-tab-btn active" data-editmode="xtream">⚡ Xtream Codes</button>
+        <button type="button" class="auth-tab-btn" data-editmode="m3u">📋 Lista M3U</button>
+      </div>
+
+      <div id="editXtreamFields">
+        <div class="form-group" style="margin-bottom:6px;">
+          <label class="form-label">Servidor / URL Xtream</label>
+          <input type="text" id="editServer" class="form-input" placeholder="http://servidor.com:8080">
+        </div>
+        <div style="display:flex; gap:8px;">
+          <div class="form-group" style="flex:1;">
+            <label class="form-label">Utilizador</label>
+            <input type="text" id="editXtreamUser" class="form-input" placeholder="Utilizador">
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label class="form-label">Password</label>
+            <input type="password" id="editXtreamPass" class="form-input" placeholder="••••••••">
+          </div>
+        </div>
+      </div>
+
+      <div id="editM3uFields" style="display:none;">
+        <div class="form-group">
+          <label class="form-label">Link M3U / get.php</label>
+          <input type="text" id="editM3uUrl" class="form-input" placeholder="http://servidor.com:8080/get.php?username=...">
+        </div>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-top:4px;">
+        <button type="button" class="btn btn-secondary" style="flex:1; justify-content:center;" id="btnCloseEditLineModal">Cancelar</button>
+        <button type="button" class="btn btn-primary" style="flex:1; justify-content:center;" id="btnSaveEditLine">Guardar Linha</button>
       </div>
     </div>
   </div>
@@ -1087,10 +1283,9 @@
   </footer>
 
   <!-- =========================================================================
-       JAVASCRIPT: WEB PLAYER (HLS + PROXY) + CANAIS + CHAT
+       JAVASCRIPT: REGISTO OBRIGATÓRIO + LOGIN + WEB PLAYER + CHAT
        ========================================================================= -->
   <script>
-    const STORAGE_NICK = '@cocas_web_nick';
     const STORAGE_AUTH = '@cocas_web_auth';
 
     const ROLE_META = {
@@ -1103,8 +1298,8 @@
 
     // State
     let currentRoom = 'geral';
-    let currentLoginMode = 'panel';
-    let myNick = localStorage.getItem(STORAGE_NICK) || '';
+    let regLineMode = 'xtream';
+    let editLineMode = 'xtream';
     let chatPollTimer = null;
     let hlsInstance = null;
     let authData = null;
@@ -1117,21 +1312,30 @@
     } catch (e) {}
 
     // DOM
-    const loginBox = document.getElementById('loginBox');
-    const loginTabs = document.getElementById('loginTabs');
-    const loginSubText = document.getElementById('loginSubText');
-    const fieldsPanel = document.getElementById('fieldsPanel');
-    const fieldsXtream = document.getElementById('fieldsXtream');
-    const fieldsM3u = document.getElementById('fieldsM3u');
+    const authBox = document.getElementById('authBox');
+    const registerCard = document.getElementById('registerCard');
+    const loginCard = document.getElementById('loginCard');
+    const registerError = document.getElementById('registerError');
+    const loginError = document.getElementById('loginError');
+    const btnSwitchToLogin = document.getElementById('btnSwitchToLogin');
+    const btnSwitchToRegister = document.getElementById('btnSwitchToRegister');
+
+    const regName = document.getElementById('regName');
+    const regEmail = document.getElementById('regEmail');
+    const regUser = document.getElementById('regUser');
+    const regPass = document.getElementById('regPass');
+    const regLineTabs = document.getElementById('regLineTabs');
+    const regXtreamFields = document.getElementById('regXtreamFields');
+    const regM3uFields = document.getElementById('regM3uFields');
+    const regServer = document.getElementById('regServer');
+    const regXtreamUser = document.getElementById('regXtreamUser');
+    const regXtreamPass = document.getElementById('regXtreamPass');
+    const regM3uUrl = document.getElementById('regM3uUrl');
+    const btnDoRegister = document.getElementById('btnDoRegister');
+
     const loginUser = document.getElementById('loginUser');
     const loginPass = document.getElementById('loginPass');
-    const xtreamServer = document.getElementById('xtreamServer');
-    const xtreamUser = document.getElementById('xtreamUser');
-    const xtreamPass = document.getElementById('xtreamPass');
-    const m3uUrl = document.getElementById('m3uUrl');
-    const loginError = document.getElementById('loginError');
     const btnDoLogin = document.getElementById('btnDoLogin');
-    const btnPlayDemo = document.getElementById('btnPlayDemo');
 
     const activePlayerBox = document.getElementById('activePlayerBox');
     const videoPlayer = document.getElementById('videoPlayer');
@@ -1149,29 +1353,42 @@
     const channelItemsList = document.getElementById('channelItemsList');
     const drawerChannelCount = document.getElementById('drawerChannelCount');
 
+    const editLineModal = document.getElementById('editLineModal');
+    const btnOpenEditLineModal = document.getElementById('btnOpenEditLineModal');
+    const btnCloseEditLineModal = document.getElementById('btnCloseEditLineModal');
+    const btnSaveEditLine = document.getElementById('btnSaveEditLine');
+    const editLineError = document.getElementById('editLineError');
+    const editLineTabs = document.getElementById('editLineTabs');
+    const editXtreamFields = document.getElementById('editXtreamFields');
+    const editM3uFields = document.getElementById('editM3uFields');
+    const editServer = document.getElementById('editServer');
+    const editXtreamUser = document.getElementById('editXtreamUser');
+    const editXtreamPass = document.getElementById('editXtreamPass');
+    const editM3uUrl = document.getElementById('editM3uUrl');
+
     const chatStream = document.getElementById('chatStream');
     const chatInput = document.getElementById('chatInput');
     const chatSendBtn = document.getElementById('chatSendBtn');
     const chatRoomsNav = document.getElementById('chatRoomsNav');
     const onlineCount = document.getElementById('onlineCount');
     const myNickLabel = document.getElementById('myNickLabel');
-    const btnOpenNickModal = document.getElementById('btnOpenNickModal');
-    const nickModal = document.getElementById('nickModal');
-    const nickInputModal = document.getElementById('nickInputModal');
-    const btnCloseNickModal = document.getElementById('btnCloseNickModal');
-    const btnSaveNickModal = document.getElementById('btnSaveNickModal');
+
+    function getLoggedUsername() {
+      return authData?.playlist?.panelUsername || authData?.playlist?.username || '';
+    }
 
     function init() {
-      if (myNick) {
-        myNickLabel.textContent = myNick;
+      const activeUser = getLoggedUsername();
+      if (activeUser) {
+        myNickLabel.textContent = activeUser;
       } else {
-        myNickLabel.textContent = 'Escolher Nick';
+        myNickLabel.textContent = 'Visitante';
       }
 
       if (authData && authData.playlist) {
         showPlayerState(authData.playlist, authData.channels);
       } else {
-        showLoginState();
+        showAuthState();
       }
 
       setupChatRooms();
@@ -1182,42 +1399,34 @@
     }
 
     function setupEvents() {
-      // Tab switcher
-      loginTabs.addEventListener('click', (e) => {
-        const btn = e.target.closest('.login-tab-btn');
-        if (!btn) return;
-        document.querySelectorAll('.login-tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentLoginMode = btn.getAttribute('data-mode');
-
-        fieldsPanel.style.display = currentLoginMode === 'panel' ? 'flex' : 'none';
-        fieldsXtream.style.display = currentLoginMode === 'xtream' ? 'flex' : 'none';
-        fieldsM3u.style.display = currentLoginMode === 'm3u' ? 'flex' : 'none';
+      // Toggle Register / Login
+      btnSwitchToLogin.addEventListener('click', () => {
+        registerCard.style.display = 'none';
+        loginCard.style.display = 'flex';
+        registerError.style.display = 'none';
         loginError.style.display = 'none';
-
-        if (currentLoginMode === 'panel') {
-          loginSubText.textContent = 'Inicia sessão com a tua conta Cocas registada no painel.';
-        } else if (currentLoginMode === 'xtream') {
-          loginSubText.textContent = 'Liga a tua linha Xtream Codes introduzindo o servidor e credenciais.';
-        } else {
-          loginSubText.textContent = 'Introduz o link M3U / get.php fornecido pelo teu operador de IPTV.';
-        }
+      });
+      btnSwitchToRegister.addEventListener('click', () => {
+        loginCard.style.display = 'none';
+        registerCard.style.display = 'flex';
+        registerError.style.display = 'none';
+        loginError.style.display = 'none';
       });
 
+      // Register line tabs
+      regLineTabs.addEventListener('click', (e) => {
+        const btn = e.target.closest('.auth-tab-btn');
+        if (!btn) return;
+        regLineTabs.querySelectorAll('.auth-tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        regLineMode = btn.getAttribute('data-linemode');
+        regXtreamFields.style.display = regLineMode === 'xtream' ? 'block' : 'none';
+        regM3uFields.style.display = regLineMode === 'm3u' ? 'block' : 'none';
+      });
+
+      btnDoRegister.addEventListener('click', handleRegister);
       btnDoLogin.addEventListener('click', handleLogin);
       loginPass.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
-      xtreamPass.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
-      m3uUrl.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
-
-      btnPlayDemo.addEventListener('click', () => {
-        const demoChannels = [
-          { name: 'PT: RTP 1 HD', url: 'https://streaming-live.rtp.pt/liverepeater/rtp1HD.smil/playlist.m3u8' },
-          { name: 'PT: RTP 2 HD', url: 'https://streaming-live.rtp.pt/liverepeater/rtp2HD.smil/playlist.m3u8' },
-          { name: 'PT: RTP 3', url: 'https://streaming-live.rtp.pt/liverepeater/rtp3.smil/playlist.m3u8' },
-          { name: 'PT: RTP Memória', url: 'https://streaming-live.rtp.pt/liverepeater/rtpmemoria.smil/playlist.m3u8' },
-        ];
-        showPlayerState({ name: 'Demonstração RTP', type: 'demo' }, demoChannels);
-      });
 
       btnLogout.addEventListener('click', handleLogout);
 
@@ -1239,145 +1448,154 @@
         selectChannelByIndex(currentChannelIndex);
       });
 
-      // Nickname modal
-      btnOpenNickModal.addEventListener('click', () => {
-        nickInputModal.value = myNick || '';
-        nickModal.style.display = 'flex';
-        nickInputModal.focus();
+      // Edit line modal
+      btnOpenEditLineModal.addEventListener('click', openEditLineModal);
+      btnCloseEditLineModal.addEventListener('click', () => { editLineModal.style.display = 'none'; });
+      btnSaveEditLine.addEventListener('click', handleSaveEditLine);
+
+      editLineTabs.addEventListener('click', (e) => {
+        const btn = e.target.closest('.auth-tab-btn');
+        if (!btn) return;
+        editLineTabs.querySelectorAll('.auth-tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        editLineMode = btn.getAttribute('data-editmode');
+        editXtreamFields.style.display = editLineMode === 'xtream' ? 'block' : 'none';
+        editM3uFields.style.display = editLineMode === 'm3u' ? 'block' : 'none';
       });
-      btnCloseNickModal.addEventListener('click', () => { nickModal.style.display = 'none'; });
-      btnSaveNickModal.addEventListener('click', saveNickname);
-      nickInputModal.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveNickname(); });
 
       // Chat input
       chatSendBtn.addEventListener('click', sendChatMessage);
       chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); });
     }
 
+    // --- REGISTRATION HANDLER ---
+    async function handleRegister() {
+      registerError.style.display = 'none';
+
+      const name = regName.value.trim();
+      const email = regEmail.value.trim();
+      const username = regUser.value.trim().toLowerCase();
+      const password = regPass.value.trim();
+
+      if (!name) {
+        showRegError('Por favor introduz o teu nome completo.');
+        return;
+      }
+      if (!email || !email.includes('@')) {
+        showRegError('Por favor introduz um email válido.');
+        return;
+      }
+      if (!username || username.length < 3) {
+        showRegError('O username deve ter pelo menos 3 caracteres.');
+        return;
+      }
+      if (!password || password.length < 4) {
+        showRegError('A palavra-passe deve ter pelo menos 4 caracteres.');
+        return;
+      }
+
+      const payload = {
+        action: 'client_register',
+        name,
+        email,
+        username,
+        password,
+        lineType: regLineMode
+      };
+
+      if (regLineMode === 'xtream') {
+        const srv = regServer.value.trim();
+        const usr = regXtreamUser.value.trim();
+        const pwd = regXtreamPass.value.trim();
+        if (!srv || !usr || !pwd) {
+          showRegError('Preenche o servidor, utilizador e password da tua linha Xtream.');
+          return;
+        }
+        payload.server = srv;
+        payload.xtreamUser = usr;
+        payload.xtreamPass = pwd;
+      } else {
+        const url = regM3uUrl.value.trim();
+        if (!url) {
+          showRegError('Por favor introduz o endereço do link M3U.');
+          return;
+        }
+        payload.m3uUrl = url;
+      }
+
+      btnDoRegister.textContent = 'A criar conta e a carregar linha...';
+      btnDoRegister.disabled = true;
+
+      try {
+        const res = await fetch('/api/panel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!data || !data.ok) {
+          showRegError(data.error || 'Não foi possível criar a conta.');
+          btnDoRegister.textContent = '▶ Criar Conta e Assistir TV';
+          btnDoRegister.disabled = false;
+          return;
+        }
+
+        // Account successfully created
+        authData = { playlist: data.playlist, rawCreds: { username, password } };
+        localStorage.setItem(STORAGE_AUTH, JSON.stringify(authData));
+        myNickLabel.textContent = username;
+        showPlayerState(data.playlist);
+      } catch (err) {
+        showRegError('Erro ao ligar ao servidor. Tenta novamente.');
+        btnDoRegister.textContent = '▶ Criar Conta e Assistir TV';
+        btnDoRegister.disabled = false;
+      }
+    }
+
+    function showRegError(msg) {
+      registerError.textContent = msg;
+      registerError.style.display = 'block';
+    }
+
     // --- LOGIN HANDLER ---
     async function handleLogin() {
       loginError.style.display = 'none';
+      const u = loginUser.value.trim().toLowerCase();
+      const p = loginPass.value.trim();
 
-      if (currentLoginMode === 'panel') {
-        const u = loginUser.value.trim();
-        const p = loginPass.value.trim();
-        if (!u || !p) {
-          loginError.textContent = 'Por favor introduz o utilizador e a palavra-passe.';
-          loginError.style.display = 'block';
-          return;
-        }
+      if (!u || !p) {
+        loginError.textContent = 'Introduz o utilizador e a palavra-passe.';
+        loginError.style.display = 'block';
+        return;
+      }
 
-        btnDoLogin.textContent = 'A verificar conta...';
-        btnDoLogin.disabled = true;
+      btnDoLogin.textContent = 'A entrar...';
+      btnDoLogin.disabled = true;
 
-        try {
-          const res = await fetch('/api/panel', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'client_login', username: u, password: p })
-          });
-          const data = await res.json();
-          if (!data || !data.ok) {
-            loginError.textContent = data.error || 'Credenciais inválidas.';
-            loginError.style.display = 'block';
-            btnDoLogin.textContent = '▶ Entrar e Ver no Navegador';
-            btnDoLogin.disabled = false;
-            return;
-          }
-
-          authData = data;
-          localStorage.setItem(STORAGE_AUTH, JSON.stringify(data));
-          showPlayerState(data.playlist);
-        } catch (err) {
-          loginError.textContent = 'Erro ao contactar o servidor. Tenta novamente.';
+      try {
+        const res = await fetch('/api/panel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'client_login', username: u, password: p })
+        });
+        const data = await res.json();
+        if (!data || !data.ok) {
+          loginError.textContent = data.error || 'Credenciais inválidas.';
           loginError.style.display = 'block';
           btnDoLogin.textContent = '▶ Entrar e Ver no Navegador';
           btnDoLogin.disabled = false;
-        }
-      } else if (currentLoginMode === 'xtream') {
-        const srv = xtreamServer.value.trim();
-        const usr = xtreamUser.value.trim();
-        const pwd = xtreamPass.value.trim();
-        if (!srv || !usr || !pwd) {
-          loginError.textContent = 'Preenche o servidor, o utilizador e a palavra-passe Xtream.';
-          loginError.style.display = 'block';
           return;
         }
 
-        btnDoLogin.textContent = 'A carregar canais Xtream...';
-        btnDoLogin.disabled = true;
-
-        try {
-          const res = await fetch('/api/panel', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'get_web_channels', server: srv, username: usr, password: pwd })
-          });
-          const data = await res.json();
-          if (!data || !data.ok || !Array.isArray(data.channels) || data.channels.length === 0) {
-            loginError.textContent = data.error || 'Não foi possível carregar a linha Xtream. Verifica os dados.';
-            loginError.style.display = 'block';
-            btnDoLogin.textContent = '▶ Entrar e Ver no Navegador';
-            btnDoLogin.disabled = false;
-            return;
-          }
-
-          const pl = {
-            name: `Xtream (${usr})`,
-            type: 'xtream',
-            server: srv,
-            username: usr,
-            password: pwd
-          };
-          authData = { playlist: pl, channels: data.channels };
-          localStorage.setItem(STORAGE_AUTH, JSON.stringify(authData));
-          showPlayerState(pl, data.channels);
-        } catch (err) {
-          loginError.textContent = 'Erro ao ligar ao servidor da linha.';
-          loginError.style.display = 'block';
-          btnDoLogin.textContent = '▶ Entrar e Ver no Navegador';
-          btnDoLogin.disabled = false;
-        }
-      } else if (currentLoginMode === 'm3u') {
-        const url = m3uUrl.value.trim();
-        if (!url) {
-          loginError.textContent = 'Por favor introduz o endereço do link M3U / get.php.';
-          loginError.style.display = 'block';
-          return;
-        }
-
-        btnDoLogin.textContent = 'A processar lista M3U...';
-        btnDoLogin.disabled = true;
-
-        try {
-          const res = await fetch('/api/panel', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'get_web_channels', m3uUrl: url })
-          });
-          const data = await res.json();
-          if (!data || !data.ok || !Array.isArray(data.channels) || data.channels.length === 0) {
-            loginError.textContent = data.error || 'Lista M3U vazia ou inacessível.';
-            loginError.style.display = 'block';
-            btnDoLogin.textContent = '▶ Entrar e Ver no Navegador';
-            btnDoLogin.disabled = false;
-            return;
-          }
-
-          const pl = {
-            name: 'Lista M3U',
-            type: 'm3u',
-            m3uUrl: url
-          };
-          authData = { playlist: pl, channels: data.channels };
-          localStorage.setItem(STORAGE_AUTH, JSON.stringify(authData));
-          showPlayerState(pl, data.channels);
-        } catch (err) {
-          loginError.textContent = 'Erro ao descarregar a lista M3U.';
-          loginError.style.display = 'block';
-          btnDoLogin.textContent = '▶ Entrar e Ver no Navegador';
-          btnDoLogin.disabled = false;
-        }
+        authData = { playlist: data.playlist, rawCreds: { username: u, password: p } };
+        localStorage.setItem(STORAGE_AUTH, JSON.stringify(authData));
+        myNickLabel.textContent = u;
+        showPlayerState(data.playlist);
+      } catch (err) {
+        loginError.textContent = 'Erro ao contactar o servidor.';
+        loginError.style.display = 'block';
+        btnDoLogin.textContent = '▶ Entrar e Ver no Navegador';
+        btnDoLogin.disabled = false;
       }
     }
 
@@ -1390,19 +1608,22 @@
       }
       videoPlayer.pause();
       videoPlayer.src = '';
+      myNickLabel.textContent = 'Visitante';
       closeChannelDrawer();
-      showLoginState();
+      showAuthState();
     }
 
-    function showLoginState() {
-      loginBox.style.display = 'flex';
+    function showAuthState() {
+      authBox.style.display = 'flex';
       activePlayerBox.style.display = 'none';
+      btnDoRegister.textContent = '▶ Criar Conta e Assistir TV';
+      btnDoRegister.disabled = false;
       btnDoLogin.textContent = '▶ Entrar e Ver no Navegador';
       btnDoLogin.disabled = false;
     }
 
     async function showPlayerState(playlist, preloadedChannels) {
-      loginBox.style.display = 'none';
+      authBox.style.display = 'none';
       activePlayerBox.style.display = 'flex';
 
       if (Array.isArray(preloadedChannels) && preloadedChannels.length > 0) {
@@ -1413,10 +1634,10 @@
         return;
       }
 
-      // Load channels from API
+      videoLoadingMsg.style.display = 'block';
+      videoLoadingMsg.textContent = 'A carregar lista de canais...';
+
       if (playlist && (playlist.server || playlist.m3uUrl)) {
-        videoLoadingMsg.style.display = 'block';
-        videoLoadingMsg.textContent = 'A carregar lista de canais...';
         try {
           const res = await fetch('/api/panel', {
             method: 'POST',
@@ -1505,7 +1726,6 @@
       videoLoadingMsg.style.display = 'block';
       videoLoadingMsg.textContent = 'A ligar à emissão...';
 
-      // Route through serverless stream proxy if external or HTTP to bypass mixed content & CORS blocks
       let playUrl = url;
       if (url && (url.startsWith('http://') || !url.startsWith('https://streaming-live.rtp.pt'))) {
         playUrl = '/api/stream?url=' + encodeURIComponent(url);
@@ -1563,18 +1783,93 @@
       }
     }
 
-    // --- NICKNAME ---
-    function saveNickname() {
-      const val = nickInputModal.value.trim().replace(/\s+/g, '_').slice(0, 20);
-      if (val.length < 2) {
-        alert('Escolhe um nickname com pelo menos 2 letras.');
-        return;
+    // --- EDIT MY LINE MODAL ---
+    function openEditLineModal() {
+      if (!authData || !authData.playlist) return;
+      const pl = authData.playlist;
+      editLineError.style.display = 'none';
+
+      if (pl.type === 'm3u') {
+        editLineMode = 'm3u';
+        editLineTabs.querySelectorAll('.auth-tab-btn').forEach(b => b.classList.remove('active'));
+        editLineTabs.querySelector('[data-editmode="m3u"]')?.classList.add('active');
+        editXtreamFields.style.display = 'none';
+        editM3uFields.style.display = 'block';
+        editM3uUrl.value = pl.m3uUrl || pl.url || '';
+      } else {
+        editLineMode = 'xtream';
+        editLineTabs.querySelectorAll('.auth-tab-btn').forEach(b => b.classList.remove('active'));
+        editLineTabs.querySelector('[data-editmode="xtream"]')?.classList.add('active');
+        editXtreamFields.style.display = 'block';
+        editM3uFields.style.display = 'none';
+        editServer.value = pl.server || '';
+        editXtreamUser.value = pl.username || '';
+        editXtreamPass.value = pl.password || '';
       }
-      myNick = val;
-      localStorage.setItem(STORAGE_NICK, val);
-      myNickLabel.textContent = val;
-      nickModal.style.display = 'none';
-      fetchChatMessages(false);
+
+      editLineModal.style.display = 'flex';
+    }
+
+    async function handleSaveEditLine() {
+      editLineError.style.display = 'none';
+      const rawUser = getLoggedUsername();
+      const rawPwd = authData?.rawCreds?.password || authData?.playlist?.password || '';
+
+      const payload = {
+        action: 'update_my_line',
+        username: rawUser,
+        password: rawPwd,
+        lineType: editLineMode
+      };
+
+      if (editLineMode === 'xtream') {
+        payload.server = editServer.value.trim();
+        payload.xtreamUser = editXtreamUser.value.trim();
+        payload.xtreamPass = editXtreamPass.value.trim();
+        if (!payload.server || !payload.xtreamUser || !payload.xtreamPass) {
+          editLineError.textContent = 'Preenche todos os campos Xtream.';
+          editLineError.style.display = 'block';
+          return;
+        }
+      } else {
+        payload.m3uUrl = editM3uUrl.value.trim();
+        if (!payload.m3uUrl) {
+          editLineError.textContent = 'Introduz o link M3U.';
+          editLineError.style.display = 'block';
+          return;
+        }
+      }
+
+      btnSaveEditLine.textContent = 'A guardar...';
+      btnSaveEditLine.disabled = true;
+
+      try {
+        const res = await fetch('/api/panel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!data || !data.ok) {
+          editLineError.textContent = data.error || 'Não foi possível guardar.';
+          editLineError.style.display = 'block';
+          btnSaveEditLine.textContent = 'Guardar Linha';
+          btnSaveEditLine.disabled = false;
+          return;
+        }
+
+        authData.playlist = data.playlist;
+        localStorage.setItem(STORAGE_AUTH, JSON.stringify(authData));
+        editLineModal.style.display = 'none';
+        btnSaveEditLine.textContent = 'Guardar Linha';
+        btnSaveEditLine.disabled = false;
+        showPlayerState(data.playlist);
+      } catch (e) {
+        editLineError.textContent = 'Erro ao contactar o servidor.';
+        editLineError.style.display = 'block';
+        btnSaveEditLine.textContent = 'Guardar Linha';
+        btnSaveEditLine.disabled = false;
+      }
     }
 
     // --- CHAT ROOMS ---
@@ -1593,10 +1888,12 @@
     // --- CHAT FETCH & RENDER ---
     async function fetchChatMessages(silent = false) {
       try {
+        const userNick = getLoggedUsername() || 'Visitante_Web';
         const payload = {
           action: 'chat_state',
           room: currentRoom,
-          nick: myNick || 'Visitante_Web'
+          nick: userNick,
+          panelUsername: userNick
         };
         const res = await fetch('/api/panel', {
           method: 'POST',
@@ -1621,10 +1918,11 @@
         return;
       }
 
+      const activeUser = getLoggedUsername();
       chatStream.innerHTML = '';
       messages.forEach(m => {
         const rMeta = ROLE_META[m.role] || ROLE_META.guest;
-        const isMe = Boolean(myNick && m.nick.toLowerCase() === myNick.toLowerCase());
+        const isMe = Boolean(activeUser && m.nick.toLowerCase() === activeUser.toLowerCase());
 
         const row = document.createElement('div');
         row.className = 'msg-item' + (isMe ? ' msg-me' : '');
@@ -1664,10 +1962,9 @@
       const text = chatInput.value.trim();
       if (!text) return;
 
-      if (!myNick) {
-        nickInputModal.value = '';
-        nickModal.style.display = 'flex';
-        nickInputModal.focus();
+      const activeUser = getLoggedUsername();
+      if (!activeUser) {
+        alert('Cria uma conta ou inicia sessão na caixa ao lado para poderes participar no chat!');
         return;
       }
 
@@ -1677,7 +1974,8 @@
         const payload = {
           action: 'chat_send',
           room: currentRoom,
-          nick: myNick,
+          nick: activeUser,
+          panelUsername: activeUser,
           text: text
         };
         const res = await fetch('/api/panel', {

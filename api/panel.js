@@ -651,6 +651,169 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // 1b. Client Registration from Web (obligatory user account creation)
+    if (action === 'client_register') {
+      const name = String(body.name || '').trim();
+      const email = String(body.email || '').trim().toLowerCase();
+      const rawUser = String(body.username || '').trim().toLowerCase().replace(/\s+/g, '_');
+      const password = String(body.password || '').trim();
+      const lineType = String(body.lineType || 'xtream').toLowerCase();
+      const server = String(body.server || '').trim();
+      const xtreamUser = String(body.xtreamUser || '').trim();
+      const xtreamPass = String(body.xtreamPass || '').trim();
+      const m3uUrl = String(body.m3uUrl || '').trim();
+
+      if (!name || name.length < 2) {
+        return res.status(200).json({ ok: false, error: 'Por favor introduz o teu nome completo.' });
+      }
+      if (!email || !email.includes('@') || !email.includes('.')) {
+        return res.status(200).json({ ok: false, error: 'Por favor introduz um endereço de email válido.' });
+      }
+      if (!rawUser || rawUser.length < 3) {
+        return res.status(200).json({ ok: false, error: 'O nome de utilizador deve ter pelo menos 3 caracteres.' });
+      }
+      if (!password || password.length < 4) {
+        return res.status(200).json({ ok: false, error: 'A palavra-passe deve ter pelo menos 4 caracteres.' });
+      }
+
+      // Check unique username (no duplicates allowed for login and chat)
+      const userExists = (db.users || []).some(
+        (u) => String(u.username || '').toLowerCase() === rawUser
+      );
+      if (userExists) {
+        return res.status(200).json({
+          ok: false,
+          error: 'Este nome de utilizador já se encontra registado. Escolhe outro.',
+        });
+      }
+
+      const emailExists = (db.users || []).some(
+        (u) => String(u.email || '').toLowerCase() === email
+      );
+      if (emailExists) {
+        return res.status(200).json({
+          ok: false,
+          error: 'Este email já está associado a outra conta. Faz login ou utiliza outro email.',
+        });
+      }
+
+      if (lineType === 'xtream') {
+        if (!server || !xtreamUser || !xtreamPass) {
+          return res.status(200).json({
+            ok: false,
+            error: 'Preenche o servidor, utilizador e password da tua linha Xtream.',
+          });
+        }
+      } else if (lineType === 'm3u') {
+        if (!m3uUrl) {
+          return res.status(200).json({
+            ok: false,
+            error: 'Por favor introduz o link da tua lista M3U.',
+          });
+        }
+      }
+
+      const newUser = {
+        id: `u_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        name,
+        email,
+        username: rawUser,
+        password,
+        playlistType: lineType === 'xtream' ? 'xtream' : 'm3u',
+        server: lineType === 'xtream' ? normalizeServerUrl(server) : '',
+        xtreamUser: lineType === 'xtream' ? xtreamUser : '',
+        xtreamPass: lineType === 'xtream' ? xtreamPass : '',
+        m3uUrl: lineType === 'm3u' ? m3uUrl : '',
+        liveFormat: 'm3u8',
+        isSelfRegistered: true,
+        isPrivateLine: true, // Administrator cannot view customer's private line
+        active: true,
+        createdAt: Date.now(),
+        lastSeenAt: Date.now(),
+      };
+
+      db.users.push(newUser);
+
+      // Bind username to chat as VIP Member
+      let cu = db.chatUsers.find((u) => u.nick.toLowerCase() === rawUser);
+      if (!cu) {
+        db.chatUsers.push({
+          nick: rawUser,
+          ownerKey: `panel:${rawUser}`,
+          role: 'member',
+          banned: false,
+          muted: false,
+          room: 'geral',
+          lastSeenAt: Date.now(),
+        });
+      } else {
+        cu.role = 'member';
+        cu.ownerKey = `panel:${rawUser}`;
+        cu.lastSeenAt = Date.now();
+      }
+
+      await saveDb(db, sha).catch(() => {});
+
+      return res.status(200).json({
+        ok: true,
+        playlist: {
+          name: newUser.name,
+          type: newUser.playlistType,
+          server: newUser.server,
+          username: newUser.xtreamUser,
+          password: newUser.xtreamPass,
+          m3uUrl: newUser.m3uUrl,
+          liveFormat: 'm3u8',
+          panelUsername: newUser.username,
+        },
+      });
+    }
+
+    // 1c. Member updates their own line details
+    if (action === 'update_my_line') {
+      const usr = String(body.username || '').trim().toLowerCase();
+      const pwd = String(body.password || '').trim();
+      const lineType = String(body.lineType || 'xtream').toLowerCase();
+      const server = String(body.server || '').trim();
+      const xtreamUser = String(body.xtreamUser || '').trim();
+      const xtreamPass = String(body.xtreamPass || '').trim();
+      const m3uUrl = String(body.m3uUrl || '').trim();
+
+      const user = (db.users || []).find(
+        (u) => String(u.username || '').toLowerCase() === usr && u.password === pwd
+      );
+      if (!user) {
+        return res.status(401).json({ ok: false, error: 'Credenciais inválidas.' });
+      }
+
+      user.playlistType = lineType === 'xtream' ? 'xtream' : 'm3u';
+      if (lineType === 'xtream') {
+        user.server = normalizeServerUrl(server);
+        user.xtreamUser = xtreamUser;
+        user.xtreamPass = xtreamPass;
+      } else {
+        user.m3uUrl = m3uUrl;
+      }
+      user.isPrivateLine = true;
+      user.lastSeenAt = Date.now();
+
+      await saveDb(db, sha).catch(() => {});
+
+      return res.status(200).json({
+        ok: true,
+        playlist: {
+          name: user.name,
+          type: user.playlistType,
+          server: user.server,
+          username: user.xtreamUser,
+          password: user.xtreamPass,
+          m3uUrl: user.m3uUrl,
+          liveFormat: 'm3u8',
+          panelUsername: user.username,
+        },
+      });
+    }
+
     // Fetch channels for Web Player (supports Xtream Codes and M3U playlists, bypassing browser CORS & Mixed-Content)
     if (action === 'get_web_channels') {
       let srv = normalizeServerUrl(body.server);
@@ -822,8 +985,13 @@ module.exports = async function handler(req, res) {
         const recentlySeen = u.lastSeenAt && now - u.lastSeenAt < 110000;
         const lineActive = Number(u.lineActiveCons || 0) > 0;
         const isOnline = Boolean((recentlySeen && u.currentChannel) || lineActive);
+        const isPrivate = Boolean(u.isPrivateLine || u.isSelfRegistered);
         return {
           ...u,
+          server: isPrivate ? '🔒 [Linha Privada do Membro]' : u.server,
+          xtreamUser: isPrivate ? '🔒 [Protegido]' : u.xtreamUser,
+          xtreamPass: isPrivate ? '🔒 [Protegido]' : u.xtreamPass,
+          m3uUrl: isPrivate ? '🔒 [Linha Privada do Membro]' : u.m3uUrl,
           isOnline,
           currentChannel: recentlySeen ? u.currentChannel : lineActive ? (u.currentChannel || 'Canal em Direto (Ativo na Linha)') : null,
         };
