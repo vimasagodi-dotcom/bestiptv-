@@ -72,11 +72,11 @@ async function requestChatApi(payload: Record<string, any>): Promise<any> {
 }
 
 const ROLE_META: Record<ChatRole, { label: string; badge: string; color: string }> = {
-  owner: { label: 'Dono', badge: '👑', color: '#F59E0B' },
-  admin: { label: 'Admin', badge: '🛡️', color: '#E50914' },
-  mod: { label: 'Moderador', badge: '⚔️', color: '#3B82F6' },
-  member: { label: 'Membro VIP', badge: '⭐', color: '#10B981' },
-  guest: { label: 'Visitante', badge: '👤', color: '#94A3B8' },
+  owner: { label: 'Dono (Owner)', badge: '🟠', color: '#ff9900' },
+  admin: { label: 'Moderador (Mod)', badge: '⚪', color: '#ffffff' },
+  mod: { label: 'Moderador (Mod)', badge: '⚪', color: '#ffffff' },
+  member: { label: 'Membro VIP', badge: '🔵', color: '#60a5fa' },
+  guest: { label: 'Visitante (Guest)', badge: '🟢', color: '#4ade80' },
 };
 
 const ROOMS = [
