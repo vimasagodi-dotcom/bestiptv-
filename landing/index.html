@@ -340,36 +340,75 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 16px;
-      padding: 28px 24px;
+      padding: 24px 22px;
       box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 14px;
     }
     .login-card-head {
       text-align: center;
     }
     .login-card-icon {
-      width: 50px;
-      height: 50px;
-      border-radius: 14px;
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
       background: rgba(229, 9, 20, 0.15);
       border: 1px solid var(--primary);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 22px;
-      margin: 0 auto 12px;
+      font-size: 20px;
+      margin: 0 auto 10px;
     }
     .login-card-title {
-      font-size: 20px;
+      font-size: 19px;
       font-weight: 800;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
     .login-card-sub {
-      font-size: 13px;
+      font-size: 12px;
       color: var(--text-muted);
-      line-height: 1.5;
+      line-height: 1.4;
+    }
+    .login-tabs {
+      display: flex;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 3px;
+      gap: 3px;
+    }
+    .login-tab-btn {
+      flex: 1;
+      padding: 8px 6px;
+      border-radius: 7px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .login-tab-btn:hover {
+      color: #fff;
+    }
+    .login-tab-btn.active {
+      background: var(--surface-card);
+      color: #fff;
+      border: 1px solid var(--border-light);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .login-fields-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
     .form-group {
       display: flex;
@@ -761,19 +800,52 @@
               <div class="login-card-head">
                 <div class="login-card-icon">📺</div>
                 <h2 class="login-card-title">Leitor Web Cocas</h2>
-                <p class="login-card-sub">Inicia sessão para assistir à emissão em direto dos teus canais no ecrã do teu computador ou telemóvel.</p>
+                <p class="login-card-sub" id="loginSubText">Inicia sessão para assistir à emissão em direto no teu computador ou telemóvel.</p>
+              </div>
+
+              <!-- SEGMENTED TABS (CONTA COCAS / XTREAM / M3U) -->
+              <div class="login-tabs" id="loginTabs">
+                <button type="button" class="login-tab-btn active" data-mode="panel">👑 Conta Cocas</button>
+                <button type="button" class="login-tab-btn" data-mode="xtream">⚡ Xtream Codes</button>
+                <button type="button" class="login-tab-btn" data-mode="m3u">📋 Lista M3U</button>
               </div>
 
               <div id="loginError" class="login-err"></div>
 
-              <div class="form-group">
-                <label class="form-label">Nome de Utilizador</label>
-                <input type="text" id="loginUser" class="form-input" placeholder="Ex: victor" autocomplete="username">
+              <!-- MODO 1: CONTA COCAS -->
+              <div id="fieldsPanel" class="login-fields-group">
+                <div class="form-group">
+                  <label class="form-label">Nome de Utilizador</label>
+                  <input type="text" id="loginUser" class="form-input" placeholder="Ex: victor" autocomplete="username">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Palavra-passe</label>
+                  <input type="password" id="loginPass" class="form-input" placeholder="••••••••" autocomplete="current-password">
+                </div>
               </div>
 
-              <div class="form-group">
-                <label class="form-label">Palavra-passe</label>
-                <input type="password" id="loginPass" class="form-input" placeholder="••••••••" autocomplete="current-password">
+              <!-- MODO 2: XTREAM CODES -->
+              <div id="fieldsXtream" class="login-fields-group" style="display:none;">
+                <div class="form-group">
+                  <label class="form-label">Servidor / URL da Linha</label>
+                  <input type="text" id="xtreamServer" class="form-input" placeholder="http://exemplo.com:8080">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Nome de Utilizador</label>
+                  <input type="text" id="xtreamUser" class="form-input" placeholder="Utilizador da linha">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Palavra-passe</label>
+                  <input type="password" id="xtreamPass" class="form-input" placeholder="••••••••">
+                </div>
+              </div>
+
+              <!-- MODO 3: LISTA M3U -->
+              <div id="fieldsM3u" class="login-fields-group" style="display:none;">
+                <div class="form-group">
+                  <label class="form-label">Link M3U / get.php</label>
+                  <input type="text" id="m3uUrl" class="form-input" placeholder="http://servidor.com:8080/get.php?username=...">
+                </div>
               </div>
 
               <button type="button" id="btnDoLogin" class="btn btn-primary" style="justify-content:center; padding: 12px;">
@@ -965,6 +1037,7 @@
 
     // --- STATE ---
     let currentRoom = 'geral';
+    let currentLoginMode = 'panel'; // 'panel' | 'xtream' | 'm3u'
     let myNick = localStorage.getItem(STORAGE_NICK) || '';
     let chatPollTimer = null;
     let hlsInstance = null;
@@ -978,13 +1051,22 @@
 
     // --- DOM REFS ---
     const loginBox = document.getElementById('loginBox');
-    const activePlayerBox = document.getElementById('activePlayerBox');
+    const loginTabs = document.getElementById('loginTabs');
+    const loginSubText = document.getElementById('loginSubText');
+    const fieldsPanel = document.getElementById('fieldsPanel');
+    const fieldsXtream = document.getElementById('fieldsXtream');
+    const fieldsM3u = document.getElementById('fieldsM3u');
     const loginUser = document.getElementById('loginUser');
     const loginPass = document.getElementById('loginPass');
+    const xtreamServer = document.getElementById('xtreamServer');
+    const xtreamUser = document.getElementById('xtreamUser');
+    const xtreamPass = document.getElementById('xtreamPass');
+    const m3uUrl = document.getElementById('m3uUrl');
     const loginError = document.getElementById('loginError');
     const btnDoLogin = document.getElementById('btnDoLogin');
     const btnPlayDemo = document.getElementById('btnPlayDemo');
     const btnLogout = document.getElementById('btnLogout');
+    const activePlayerBox = document.getElementById('activePlayerBox');
     const videoPlayer = document.getElementById('videoPlayer');
     const videoLoadingMsg = document.getElementById('videoLoadingMsg');
     const currentChannelName = document.getElementById('currentChannelName');
@@ -1012,7 +1094,7 @@
 
       // Check login state
       if (authData && authData.playlist) {
-        showPlayerState(authData.playlist);
+        showPlayerState(authData.playlist, authData.channels);
       } else {
         showLoginState();
       }
@@ -1027,8 +1109,33 @@
 
     // --- EVENTS SETUP ---
     function setupEvents() {
+      // Tab switcher for login mode
+      loginTabs.addEventListener('click', (e) => {
+        const btn = e.target.closest('.login-tab-btn');
+        if (!btn) return;
+        document.querySelectorAll('.login-tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentLoginMode = btn.getAttribute('data-mode');
+
+        fieldsPanel.style.display = currentLoginMode === 'panel' ? 'flex' : 'none';
+        fieldsXtream.style.display = currentLoginMode === 'xtream' ? 'flex' : 'none';
+        fieldsM3u.style.display = currentLoginMode === 'm3u' ? 'flex' : 'none';
+        loginError.style.display = 'none';
+
+        if (currentLoginMode === 'panel') {
+          loginSubText.textContent = 'Inicia sessão com a tua conta Cocas registada no painel.';
+        } else if (currentLoginMode === 'xtream') {
+          loginSubText.textContent = 'Liga a tua linha Xtream Codes introduzindo o servidor e credenciais.';
+        } else {
+          loginSubText.textContent = 'Introduz o link M3U / get.php fornecido pelo teu operador de IPTV.';
+        }
+      });
+
       btnDoLogin.addEventListener('click', handleLogin);
       loginPass.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
+      xtreamPass.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
+      m3uUrl.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
+
       btnPlayDemo.addEventListener('click', () => {
         playStream('https://streaming-live.rtp.pt/liverepeater/rtp1HD.smil/playlist.m3u8', 'PT: RTP 1 HD (Demonstração)');
       });
@@ -1060,44 +1167,130 @@
       });
     }
 
-    // --- LOGIN HANDLER ---
+    // --- LOGIN HANDLER (SUPPORTS CONTA COCAS, XTREAM CODES, AND M3U) ---
     async function handleLogin() {
-      const u = loginUser.value.trim();
-      const p = loginPass.value.trim();
       loginError.style.display = 'none';
 
-      if (!u || !p) {
-        loginError.textContent = 'Por favor introduz o utilizador e a palavra-passe.';
-        loginError.style.display = 'block';
-        return;
-      }
-
-      btnDoLogin.textContent = 'A verificar conta...';
-      btnDoLogin.disabled = true;
-
-      try {
-        const res = await fetch('/api/panel', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'client_login', username: u, password: p })
-        });
-        const data = await res.json();
-        if (!data || !data.ok) {
-          loginError.textContent = data.error || 'Credenciais inválidas.';
+      if (currentLoginMode === 'panel') {
+        const u = loginUser.value.trim();
+        const p = loginPass.value.trim();
+        if (!u || !p) {
+          loginError.textContent = 'Por favor introduz o utilizador e a palavra-passe.';
           loginError.style.display = 'block';
-          btnDoLogin.textContent = '▶ Entrar e Ver no Navegador';
-          btnDoLogin.disabled = false;
           return;
         }
 
-        authData = data;
-        localStorage.setItem(STORAGE_AUTH, JSON.stringify(data));
-        showPlayerState(data.playlist);
-      } catch (err) {
-        loginError.textContent = 'Erro ao contactar o servidor. Tenta novamente.';
-        loginError.style.display = 'block';
-        btnDoLogin.textContent = '▶ Entrar e Ver no Navegador';
-        btnDoLogin.disabled = false;
+        btnDoLogin.textContent = 'A verificar conta...';
+        btnDoLogin.disabled = true;
+
+        try {
+          const res = await fetch('/api/panel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'client_login', username: u, password: p })
+          });
+          const data = await res.json();
+          if (!data || !data.ok) {
+            loginError.textContent = data.error || 'Credenciais inválidas.';
+            loginError.style.display = 'block';
+            btnDoLogin.textContent = '▶ Entrar e Ver no Navegador';
+            btnDoLogin.disabled = false;
+            return;
+          }
+
+          authData = data;
+          localStorage.setItem(STORAGE_AUTH, JSON.stringify(data));
+          showPlayerState(data.playlist);
+        } catch (err) {
+          loginError.textContent = 'Erro ao contactar o servidor. Tenta novamente.';
+          loginError.style.display = 'block';
+          btnDoLogin.textContent = '▶ Entrar e Ver no Navegador';
+          btnDoLogin.disabled = false;
+        }
+      } else if (currentLoginMode === 'xtream') {
+        const srv = xtreamServer.value.trim();
+        const usr = xtreamUser.value.trim();
+        const pwd = xtreamPass.value.trim();
+        if (!srv || !usr || !pwd) {
+          loginError.textContent = 'Preenche o servidor, o utilizador e a palavra-passe Xtream.';
+          loginError.style.display = 'block';
+          return;
+        }
+
+        btnDoLogin.textContent = 'A carregar canais Xtream...';
+        btnDoLogin.disabled = true;
+
+        try {
+          const res = await fetch('/api/panel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_web_channels', server: srv, username: usr, password: pwd })
+          });
+          const data = await res.json();
+          if (!data || !data.ok || !Array.isArray(data.channels) || data.channels.length === 0) {
+            loginError.textContent = data.error || 'Não foi possível carregar a linha Xtream. Verifica os dados.';
+            loginError.style.display = 'block';
+            btnDoLogin.textContent = '▶ Entrar e Ver no Navegador';
+            btnDoLogin.disabled = false;
+            return;
+          }
+
+          const pl = {
+            name: `Xtream (${usr})`,
+            type: 'xtream',
+            server: srv,
+            username: usr,
+            password: pwd
+          };
+          authData = { playlist: pl, channels: data.channels };
+          localStorage.setItem(STORAGE_AUTH, JSON.stringify(authData));
+          showPlayerState(pl, data.channels);
+        } catch (err) {
+          loginError.textContent = 'Erro ao ligar ao servidor da linha.';
+          loginError.style.display = 'block';
+          btnDoLogin.textContent = '▶ Entrar e Ver no Navegador';
+          btnDoLogin.disabled = false;
+        }
+      } else if (currentLoginMode === 'm3u') {
+        const url = m3uUrl.value.trim();
+        if (!url) {
+          loginError.textContent = 'Por favor introduz o endereço do link M3U / get.php.';
+          loginError.style.display = 'block';
+          return;
+        }
+
+        btnDoLogin.textContent = 'A processar lista M3U...';
+        btnDoLogin.disabled = true;
+
+        try {
+          const res = await fetch('/api/panel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_web_channels', m3uUrl: url })
+          });
+          const data = await res.json();
+          if (!data || !data.ok || !Array.isArray(data.channels) || data.channels.length === 0) {
+            loginError.textContent = data.error || 'Lista M3U vazia ou inacessível.';
+            loginError.style.display = 'block';
+            btnDoLogin.textContent = '▶ Entrar e Ver no Navegador';
+            btnDoLogin.disabled = false;
+            return;
+          }
+
+          const pl = {
+            name: 'Lista M3U',
+            type: 'm3u',
+            m3uUrl: url
+          };
+          authData = { playlist: pl, channels: data.channels };
+          localStorage.setItem(STORAGE_AUTH, JSON.stringify(authData));
+          showPlayerState(pl, data.channels);
+        } catch (err) {
+          loginError.textContent = 'Erro ao descarregar a lista M3U.';
+          loginError.style.display = 'block';
+          btnDoLogin.textContent = '▶ Entrar e Ver no Navegador';
+          btnDoLogin.disabled = false;
+        }
       }
     }
 
@@ -1117,12 +1310,19 @@
       btnDoLogin.disabled = false;
     }
 
-    async function showPlayerState(playlist) {
+    async function showPlayerState(playlist, preloadedChannels) {
       loginBox.style.display = 'none';
       activePlayerBox.style.display = 'flex';
 
+      if (Array.isArray(preloadedChannels) && preloadedChannels.length > 0) {
+        channelList = preloadedChannels;
+        renderChannelChips(preloadedChannels);
+        playStream(preloadedChannels[0].url, preloadedChannels[0].name);
+        return;
+      }
+
       // Load channels via server proxy
-      if (playlist && playlist.server && playlist.username && playlist.password) {
+      if (playlist && (playlist.server || playlist.m3uUrl)) {
         try {
           const res = await fetch('/api/panel', {
             method: 'POST',
@@ -1131,7 +1331,8 @@
               action: 'get_web_channels',
               server: playlist.server,
               username: playlist.username,
-              password: playlist.password
+              password: playlist.password,
+              m3uUrl: playlist.m3uUrl
             })
           });
           const chData = await res.json();
