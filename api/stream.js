@@ -28,16 +28,27 @@ module.exports = async (req, res) => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 12000);
 
+    const reqHeaders = {
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+      'Accept': '*/*',
+      ...(req.headers.range ? { Range: req.headers.range } : {}),
+    };
+
+    if (targetUrl.includes('rtp.pt')) {
+      reqHeaders['Referer'] = 'https://www.rtp.pt/play/direto/rtp1';
+      reqHeaders['Origin'] = 'https://www.rtp.pt';
+    }
+
     const upstreamRes = await fetch(targetUrl, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
-        'Accept': '*/*',
-        ...(req.headers.range ? { Range: req.headers.range } : {}),
-      },
+      headers: reqHeaders,
       signal: controller.signal,
     });
     clearTimeout(timeout);
+
+    if (!upstreamRes.ok) {
+      return res.status(upstreamRes.status).send(`Upstream error: ${upstreamRes.status}`);
+    }
 
     const finalUrl = upstreamRes.url || targetUrl;
     const contentType = upstreamRes.headers.get('content-type') || '';

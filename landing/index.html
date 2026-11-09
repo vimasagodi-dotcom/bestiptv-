@@ -1085,6 +1085,7 @@
                 </div>
                 <div style="display:flex; align-items:center; gap:6px;">
                   <button type="button" class="btn btn-secondary btn-sm" id="btnToggleChannels">📋 Canais</button>
+                  <button type="button" class="btn btn-secondary btn-sm" id="btnDownloadVlcChannel" onclick="window.downloadCurrentChannelM3u()" title="Descarregar ficheiro .m3u para abrir no VLC ou Leitor Externo com 100% de qualidade">⚡ VLC</button>
                   <button type="button" class="btn btn-secondary btn-sm" id="btnOpenEditLineModal" title="Editar a minha linha IPTV">⚙️ Linha</button>
                   <button type="button" class="btn btn-danger-outline btn-sm" id="btnLogout" title="Terminar Sessão">🚪 Sair</button>
                 </div>
@@ -1669,9 +1670,9 @@
 
       // Fallback Demo
       const fallbackList = [
-        { name: 'PT: RTP 1 HD', url: 'https://streaming-live.rtp.pt/liverepeater/rtp1HD.smil/playlist.m3u8' },
-        { name: 'PT: RTP 2 HD', url: 'https://streaming-live.rtp.pt/liverepeater/rtp2HD.smil/playlist.m3u8' },
-        { name: 'PT: RTP 3', url: 'https://streaming-live.rtp.pt/liverepeater/rtp3.smil/playlist.m3u8' }
+        { name: 'PT: RTP 1 HD', url: 'https://streaming-live.rtp.pt/liverepeater/smil:rtp1HD.smil/playlist.m3u8' },
+        { name: 'PT: TVI', url: 'https://raw.githubusercontent.com/LITUATUI/M3UPT/main/M3U/TVI.m3u8' },
+        { name: 'PT: RTP 2 HD', url: 'https://streaming-live.rtp.pt/liverepeater/smil:rtp2HD.smil/playlist.m3u8' }
       ];
       channelList = fallbackList;
       buildChannelDrawer(fallbackList);
@@ -1679,6 +1680,8 @@
     }
 
     // --- CHANNEL DRAWER & SELECTION ---
+    let currentPlayingChannel = null;
+
     function openChannelDrawer() {
       channelDrawer.style.display = 'flex';
       channelSearchInput.value = '';
@@ -1723,18 +1726,43 @@
     function selectChannelByIndex(idx) {
       if (!channelList[idx]) return;
       const ch = channelList[idx];
-      playStream(ch.url, ch.name);
+      currentPlayingChannel = ch;
+      playStream(ch);
     }
 
-    // --- VIDEO STREAM PLAYER (HLS + MPEG-TS + HTTPS SERVER PROXY) ---
-    function playStream(url, channelName) {
-      currentChannelName.textContent = channelName || 'Emissão em Direto';
-      videoLoadingMsg.style.display = 'block';
-      videoLoadingMsg.textContent = 'A ligar à emissão...';
+    window.downloadCurrentChannelM3u = function() {
+      if (!currentPlayingChannel) return;
+      const ch = currentPlayingChannel;
+      const rawUrl = ch.directUrl || ch.tsUrl || ch.url || '';
+      const content = `#EXTM3U\n#EXTINF:-1 tvg-name="${ch.name}",${ch.name}\n${rawUrl}\n`;
+      const blob = new Blob([content], { type: 'audio/x-mpegurl' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${(ch.name || 'canal').replace(/[^a-z0-9]/gi, '_')}.m3u`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    };
 
-      let playUrl = url;
-      if (url && (url.startsWith('http://') || !url.startsWith('https://streaming-live.rtp.pt'))) {
-        playUrl = '/api/stream?url=' + encodeURIComponent(url);
+    // --- VIDEO STREAM PLAYER (HLS + MPEG-TS + HTTPS SERVER PROXY) ---
+    function playStream(chOrUrl, channelName) {
+      let targetUrl = '';
+      let chName = channelName;
+      if (typeof chOrUrl === 'object' && chOrUrl !== null) {
+        targetUrl = chOrUrl.url;
+        chName = chOrUrl.name;
+        currentPlayingChannel = chOrUrl;
+      } else {
+        targetUrl = chOrUrl;
+      }
+
+      currentChannelName.textContent = chName || 'Emissão em Direto';
+      videoLoadingMsg.style.display = 'block';
+      videoLoadingMsg.innerHTML = 'A ligar à emissão...';
+
+      let playUrl = targetUrl;
+      if (targetUrl && (targetUrl.startsWith('http://') || !targetUrl.includes('cocas.online'))) {
+        playUrl = '/api/stream?url=' + encodeURIComponent(targetUrl);
       }
 
       if (hlsInstance) {
@@ -1746,14 +1774,35 @@
         mpegtsInstance = null;
       }
 
+      function showBrowserPlaybackWarning() {
+        videoLoadingMsg.style.display = 'block';
+        videoLoadingMsg.innerHTML = `
+          <div style="font-size:13px; font-weight:700; margin-bottom:5px; color:#FCA5A5;">⚠️ Fluxo restrito no navegador</div>
+          <div style="font-size:11px; color:#CBD5E1; margin-bottom:8px; line-height:1.35;">
+            Os navegadores web não suportam áudio AC3/fluxo bruto MPEG-TS deste canal.
+          </div>
+          <div style="display:flex; gap:6px; justify-content:center; flex-wrap:wrap;">
+            <button type="button" class="btn btn-primary btn-sm" onclick="window.downloadCurrentChannelM3u()" style="font-size:11px; padding:5px 9px;">
+              ⚡ Abrir no VLC / PC
+            </button>
+            <a href="#download" class="btn btn-secondary btn-sm" style="font-size:11px; padding:5px 9px;">
+              📱 Usar App
+            </a>
+          </div>
+        `;
+      }
+
       function startMpegTs() {
         if (window.mpegts && mpegts.isSupported()) {
           try {
             videoLoadingMsg.textContent = 'A ligar via MPEG-TS...';
+            const rawTs = (currentPlayingChannel && currentPlayingChannel.tsUrl) || targetUrl.replace(/\.m3u8(\?|$)/i, '.ts$1');
+            const tsProxyUrl = '/api/stream?url=' + encodeURIComponent(rawTs);
+
             mpegtsInstance = mpegts.createPlayer({
               type: 'mse',
               isLive: true,
-              url: playUrl,
+              url: tsProxyUrl,
             }, {
               enableWorker: true,
               lazyLoadMaxDuration: 2 * 60,
@@ -1763,7 +1812,9 @@
             mpegtsInstance.load();
             mpegtsInstance.play().then(() => {
               videoLoadingMsg.style.display = 'none';
-            }).catch(() => {});
+            }).catch(() => {
+              showBrowserPlaybackWarning();
+            });
             return true;
           } catch (e) {
             return false;
@@ -1772,14 +1823,14 @@
         return false;
       }
 
-      const isExplicitTs = url && (url.endsWith('.ts') || !url.includes('.m3u8'));
+      const isExplicitTs = targetUrl && (targetUrl.endsWith('.ts') || !targetUrl.includes('.m3u8'));
 
       if (!isExplicitTs && Hls.isSupported()) {
         hlsInstance = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
           manifestLoadingTimeOut: 8000,
-          manifestLoadingMaxRetry: 3,
+          manifestLoadingMaxRetry: 2,
           levelLoadingTimeOut: 8000,
           fragLoadingTimeOut: 12000,
         });
@@ -1796,7 +1847,7 @@
           if (data.fatal) {
             // If HLS fails, try MPEG-TS engine
             if (!startMpegTs()) {
-              videoLoadingMsg.textContent = 'Canal indisponível no navegador web. Experimenta outro canal ou usa a app.';
+              showBrowserPlaybackWarning();
             }
           }
         });
@@ -1804,7 +1855,9 @@
         if (!startMpegTs()) {
           videoPlayer.src = playUrl;
           videoLoadingMsg.style.display = 'none';
-          videoPlayer.play().catch(() => {});
+          videoPlayer.play().catch(() => {
+            showBrowserPlaybackWarning();
+          });
         }
       } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
         videoPlayer.src = playUrl;
@@ -1816,7 +1869,9 @@
         if (!startMpegTs()) {
           videoPlayer.src = playUrl;
           videoLoadingMsg.style.display = 'none';
-          videoPlayer.play().catch(() => {});
+          videoPlayer.play().catch(() => {
+            showBrowserPlaybackWarning();
+          });
         }
       }
     }

@@ -849,6 +849,8 @@ module.exports = async function handler(req, res) {
                 name: c.name || `Canal ${c.stream_id}`,
                 logo: c.stream_icon || '',
                 url: `${srv}/live/${usr}/${pwd}/${c.stream_id}.m3u8`,
+                tsUrl: `${srv}/live/${usr}/${pwd}/${c.stream_id}.ts`,
+                directUrl: `${srv}/live/${usr}/${pwd}/${c.stream_id}.ts`,
               }));
               return res.status(200).json({ ok: true, channels });
             }
