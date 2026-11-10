@@ -990,15 +990,16 @@ export function LiveTvView({
       <Pressable
         hitSlop={8}
         onPress={() => setSubView((v) => (v === 'chat' ? 'channels' : 'chat'))}
-        style={styles.infoTogglePill}
+        style={[styles.infoTogglePill, subView === 'chat' && styles.infoTogglePillChat]}
       >
-        <View style={[styles.infoToggleKnob, subView === 'chat' && styles.infoToggleKnobRight]}>
-          <Ionicons
-            name={subView === 'chat' ? 'chatbubbles-outline' : 'list-outline'}
-            size={18}
-            color="#d1d5db"
-          />
-        </View>
+        <Ionicons
+          name={subView === 'chat' ? 'list' : 'chatbubbles'}
+          size={14}
+          color="#fff"
+        />
+        <Text style={styles.infoToggleText}>
+          {subView === 'chat' ? 'Ver Canais' : 'Abrir Chat'}
+        </Text>
       </Pressable>
     </View>
   );
@@ -1416,26 +1417,25 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   infoTogglePill: {
-    width: 68,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     height: 36,
+    paddingHorizontal: 12,
     borderRadius: 18,
     backgroundColor: '#1c1d21',
     borderWidth: 1,
-    borderColor: '#2c2e35',
-    padding: 3,
+    borderColor: '#374151',
     justifyContent: 'center',
   },
-  infoToggleKnob: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#383b44',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  infoToggleKnobRight: {
-    alignSelf: 'flex-end',
+  infoTogglePillChat: {
     backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  infoToggleText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
   },
   epgBarBg: { height: 3, borderRadius: 2, backgroundColor: '#ffffff1f', overflow: 'hidden' },
   epgBarFg: { height: 3, backgroundColor: colors.primary },

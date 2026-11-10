@@ -460,8 +460,8 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={compact ? 0 : 90}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? (compact ? 240 : 100) : 0}
     >
       {/* Top Header: Rooms + Private Rooms + Users Online Toggle + My Nickname */}
       <View style={[styles.topHeader, compact && { paddingHorizontal: 6, paddingVertical: 4 }]}>
