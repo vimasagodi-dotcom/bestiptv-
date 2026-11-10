@@ -48,6 +48,8 @@ export function LiveTvView({
   const [fullscreen, setFullscreen] = useState(false);
   const isFull = fullscreen || isPhoneLandscape;
   const [locked, setLocked] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [fit, setFit] = useState<'contain' | 'cover'>('contain');
   const [overlay, setOverlay] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -315,13 +317,26 @@ export function LiveTvView({
     ? Math.min(1, Math.max(0, (Date.now() - nowEpg.start) / Math.max(1, nowEpg.end - nowEpg.start)))
     : 0;
 
-  // ---- Fullscreen overlay timer ----
+  // ---- Player overlay timer ----
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bumpOverlay = useCallback(() => {
     setOverlay(true);
     if (hideTimer.current) clearTimeout(hideTimer.current);
-    hideTimer.current = setTimeout(() => setOverlay(false), 3500);
+    hideTimer.current = setTimeout(() => {
+      setOverlay(false);
+      setSettingsOpen(false);
+    }, 4000);
   }, []);
+
+  const toggleMute = useCallback(() => {
+    setMuted((prev) => {
+      const next = !prev;
+      try {
+        player.muted = next;
+      } catch {}
+      return next;
+    });
+  }, [player]);
 
   useEffect(() => {
     return () => {
@@ -358,6 +373,285 @@ export function LiveTvView({
   const isFav = currentChannel ? isFavorite('live', currentChannel.id) : false;
   const showSpinner = status === 'loading' || status === 'idle' || retrying;
   const showError = status === 'error' && !retrying && retryCount >= 3;
+
+  // ---- Shared Clean Player Controls Overlay (Anexo 1: 100% clean when idle, Anexo 2: controls on tap) ----
+  const renderCleanOverlay = (inFullscreen: boolean) => (
+    <>
+      <Pressable
+        style={[StyleSheet.absoluteFill, overlay && styles.cleanOverlayBackdrop]}
+        onPress={() => {
+          if (overlay) {
+            setOverlay(false);
+            setSettingsOpen(false);
+          } else {
+            bumpOverlay();
+          }
+        }}
+      />
+
+      {overlay && locked && (
+        <View
+          style={[
+            styles.cleanTopBar,
+            inFullscreen && {
+              top: Math.max(insets.top, 12),
+              left: Math.max(insets.left, 16),
+              right: Math.max(insets.right, 16),
+            },
+          ]}
+          pointerEvents="box-none"
+        >
+          <View style={{ flex: 1 }} />
+          <Pressable
+            hitSlop={12}
+            onPress={() => {
+              setLocked(false);
+              bumpOverlay();
+            }}
+            style={styles.cleanLockActiveBtn}
+          >
+            <Ionicons name="lock-closed" size={22} color="#fff" />
+          </Pressable>
+        </View>
+      )}
+
+      {overlay && !locked && (
+        <>
+          {/* Top Bar: Left Close (X), Right 5 Function Icons */}
+          <View
+            style={[
+              styles.cleanTopBar,
+              inFullscreen && {
+                top: Math.max(insets.top, 12),
+                left: Math.max(insets.left, 16),
+                right: Math.max(insets.right, 16),
+              },
+            ]}
+            pointerEvents="box-none"
+          >
+            <Pressable
+              hitSlop={12}
+              onPress={() => {
+                setSettingsOpen(false);
+                if (inFullscreen) {
+                  exitFullscreen();
+                } else {
+                  setOverlay(false);
+                }
+              }}
+            >
+              <Ionicons name="close" size={26} color="#fff" />
+            </Pressable>
+
+            <View style={{ flex: 1 }} />
+
+            <View style={styles.cleanTopRightGroup}>
+              {/* 1. Audio / Mute */}
+              <Pressable
+                hitSlop={10}
+                onPress={() => {
+                  toggleMute();
+                  bumpOverlay();
+                }}
+              >
+                <Ionicons
+                  name={muted ? 'volume-mute-outline' : 'volume-high-outline'}
+                  size={23}
+                  color="#fff"
+                />
+              </Pressable>
+
+              {/* 2. Aspect / PiP Screen Icon (matching Anexo 2) */}
+              <Pressable
+                hitSlop={10}
+                onPress={() => {
+                  setFit((f) => (f === 'contain' ? 'cover' : 'contain'));
+                  bumpOverlay();
+                }}
+              >
+                <View style={styles.pipIconBox}>
+                  <View style={styles.pipIconDashTop} />
+                  <View style={styles.pipIconDashBottom} />
+                  <View
+                    style={[
+                      styles.pipIconInnerRect,
+                      fit === 'cover' && { backgroundColor: '#fff' },
+                    ]}
+                  />
+                </View>
+              </Pressable>
+
+              {/* 3. Favorite Star */}
+              <Pressable
+                hitSlop={10}
+                onPress={() => {
+                  if (currentChannel) {
+                    toggleFavorite({
+                      kind: 'live',
+                      id: currentChannel.id,
+                      name: currentChannel.name,
+                      icon: currentChannel.icon,
+                    });
+                  }
+                  bumpOverlay();
+                }}
+              >
+                <Ionicons
+                  name={isFav ? 'star' : 'star-outline'}
+                  size={23}
+                  color={isFav ? '#facc15' : '#fff'}
+                />
+              </Pressable>
+
+              {/* 4. Lock Controls */}
+              <Pressable
+                hitSlop={10}
+                onPress={() => {
+                  setLocked(true);
+                  setSettingsOpen(false);
+                  bumpOverlay();
+                }}
+              >
+                <Ionicons name="lock-open-outline" size={23} color="#fff" />
+              </Pressable>
+
+              {/* 5. Settings Gear */}
+              <Pressable
+                hitSlop={10}
+                onPress={() => {
+                  setSettingsOpen((v) => !v);
+                  bumpOverlay();
+                }}
+              >
+                <Ionicons name="settings-outline" size={23} color="#fff" />
+              </Pressable>
+            </View>
+          </View>
+
+          {/* Compact Settings Popover when Gear is tapped */}
+          {settingsOpen && (
+            <View
+              style={[
+                styles.cleanSettingsMenu,
+                inFullscreen && {
+                  top: Math.max(insets.top, 12) + 36,
+                  right: Math.max(insets.right, 16),
+                },
+              ]}
+            >
+              <Pressable
+                onPress={() => {
+                  setFit((f) => (f === 'contain' ? 'cover' : 'contain'));
+                  setSettingsOpen(false);
+                  bumpOverlay();
+                }}
+                style={styles.cleanSettingsItem}
+              >
+                <Ionicons name="resize-outline" size={16} color="#fff" />
+                <Text style={styles.cleanSettingsText}>
+                  Formato: {fit === 'contain' ? '16:9 Original' : 'Preencher'}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  loadChannel(currentChannel, 1);
+                  setSettingsOpen(false);
+                  bumpOverlay();
+                }}
+                style={styles.cleanSettingsItem}
+              >
+                <Ionicons name="refresh-outline" size={16} color="#fff" />
+                <Text style={styles.cleanSettingsText}>Reconectar Sinal</Text>
+              </Pressable>
+              {inFullscreen && (
+                <>
+                  <Pressable
+                    onPress={() => {
+                      setDrawerOpen((v) => !v);
+                      setSettingsOpen(false);
+                    }}
+                    style={styles.cleanSettingsItem}
+                  >
+                    <Ionicons name="list-outline" size={16} color="#fff" />
+                    <Text style={styles.cleanSettingsText}>Lista de Canais</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      setFsChatVisible((v) => !v);
+                      setSettingsOpen(false);
+                    }}
+                    style={styles.cleanSettingsItem}
+                  >
+                    <Ionicons name="chatbubbles-outline" size={16} color="#fff" />
+                    <Text style={styles.cleanSettingsText}>Chat em Direto</Text>
+                  </Pressable>
+                </>
+              )}
+            </View>
+          )}
+
+          {/* Center Controls: Previous | Play/Pause | Next */}
+          <View style={styles.cleanCenterRow} pointerEvents="box-none">
+            <Pressable
+              hitSlop={16}
+              onPress={() => {
+                zap(-1);
+                bumpOverlay();
+              }}
+            >
+              <Ionicons name="play-skip-back" size={28} color="#fff" />
+            </Pressable>
+
+            <Pressable
+              hitSlop={18}
+              onPress={() => {
+                if (isPlaying) player.pause();
+                else player.play();
+                bumpOverlay();
+              }}
+            >
+              <Ionicons name={isPlaying ? 'pause' : 'play'} size={50} color="#fff" />
+            </Pressable>
+
+            <Pressable
+              hitSlop={16}
+              onPress={() => {
+                zap(1);
+                bumpOverlay();
+              }}
+            >
+              <Ionicons name="play-skip-forward" size={28} color="#fff" />
+            </Pressable>
+          </View>
+
+          {/* Bottom-Right Fullscreen Expand Button */}
+          <Pressable
+            hitSlop={12}
+            onPress={() => (inFullscreen ? exitFullscreen() : enterFullscreen())}
+            style={[
+              styles.cleanBottomRightBtn,
+              inFullscreen && {
+                right: Math.max(insets.right, 16),
+                bottom: Math.max(insets.bottom, 16),
+              },
+            ]}
+          >
+            <Ionicons name="scan-outline" size={22} color="#fff" />
+          </Pressable>
+
+          {/* Bottom Edge Progress Bar */}
+          <View style={styles.cleanBottomProgressTrack} pointerEvents="none">
+            <View
+              style={[
+                styles.cleanBottomProgressFill,
+                { width: `${nowEpg ? Math.max(5, epgProgress * 100) : 6}%` },
+              ]}
+            />
+          </View>
+        </>
+      )}
+    </>
+  );
 
   // ---- Docked Player Surface (Portrait / Wide Tablet) ----
   const playerBox = (
@@ -418,26 +712,7 @@ export function LiveTvView({
         </View>
       )}
 
-      {/* Docked / Wide quick overlay controls */}
-      <Pressable style={StyleSheet.absoluteFill} onPress={enterFullscreen}>
-        <View style={styles.dockedBadges}>
-          <View style={styles.liveBadge}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveBadgeText}>DIRETO</Text>
-          </View>
-          <View style={{ flex: 1 }} />
-          <Pressable
-            hitSlop={10}
-            onPress={() => loadChannel(currentChannel, 1)}
-            style={styles.miniControlBtn}
-          >
-            <Ionicons name="refresh" size={18} color="#fff" />
-          </Pressable>
-          <Pressable hitSlop={10} onPress={enterFullscreen} style={styles.miniControlBtn}>
-            <Ionicons name="scan-outline" size={18} color="#fff" />
-          </Pressable>
-        </View>
-      </Pressable>
+      {renderCleanOverlay(false)}
     </View>
   );
 
@@ -546,198 +821,8 @@ export function LiveTvView({
                 </View>
               )}
 
-              {/* Fullscreen Overlay click to toggle controls */}
-              <Pressable
-                style={StyleSheet.absoluteFill}
-                onPress={() => (overlay ? setOverlay(false) : bumpOverlay())}
-              />
-
-              {/* Lock Button */}
-              {overlay && locked && (
-                <View style={[styles.lockFloating, { top: insets.top + 16, left: Math.max(insets.left, 20) }]}>
-                  <Pressable
-                    onPress={() => {
-                      setLocked(false);
-                      bumpOverlay();
-                    }}
-                    style={styles.osdCircleBtnActive}
-                  >
-                    <Ionicons name="lock-closed" size={22} color="#fff" />
-                  </Pressable>
-                  <Text style={styles.lockHint}>Toque para desbloquear</Text>
-                </View>
-              )}
-
-              {/* Fullscreen OSD Controls */}
-              {overlay && !locked && (
-                <>
-                  {/* Top OSD Bar */}
-                  <View
-                    style={[
-                      styles.fsTopBar,
-                      {
-                        paddingTop: insets.top + 8,
-                        paddingLeft: Math.max(insets.left, 16),
-                        paddingRight: Math.max(insets.right, 16),
-                      },
-                    ]}
-                  >
-                    <Pressable onPress={exitFullscreen} style={styles.osdCircleBtn}>
-                      <Ionicons name="chevron-down" size={24} color="#fff" />
-                    </Pressable>
-                    <Pressable
-                      onPress={() => setDrawerOpen((v) => !v)}
-                      style={[styles.osdPillBtn, drawerOpen && { backgroundColor: colors.primary }]}
-                    >
-                      <Ionicons name="list" size={18} color="#fff" />
-                      <Text style={styles.osdPillText}>Canais</Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => setFsChatVisible((v) => !v)}
-                      style={[styles.osdPillBtn, fsChatVisible && { backgroundColor: '#E50914' }]}
-                    >
-                      <Ionicons name="chatbubbles" size={17} color="#fff" />
-                      <Text style={styles.osdPillText}>Chat</Text>
-                    </Pressable>
-                    <View style={{ flex: 1 }} />
-                    <Pressable
-                      onPress={() => setFit((f) => (f === 'contain' ? 'cover' : 'contain'))}
-                      style={styles.osdPillBtn}
-                    >
-                      <Ionicons name="resize-outline" size={17} color="#fff" />
-                      <Text style={styles.osdPillText}>{fit === 'contain' ? '16:9' : 'Preencher'}</Text>
-                    </Pressable>
-                    <Pressable onPress={() => loadChannel(currentChannel, 1)} style={styles.osdCircleBtn}>
-                      <Ionicons name="refresh" size={20} color="#fff" />
-                    </Pressable>
-                    <Pressable onPress={() => setLocked(true)} style={styles.osdCircleBtn}>
-                      <Ionicons name="lock-open-outline" size={20} color="#fff" />
-                    </Pressable>
-                  </View>
-
-                  {/* Center Zap Controls */}
-                  <View style={styles.fsCenterControls} pointerEvents="box-none">
-                    <Pressable
-                      onPress={() => {
-                        zap(-1);
-                        bumpOverlay();
-                      }}
-                      style={styles.osdZapBtn}
-                    >
-                      <Ionicons name="play-skip-back" size={26} color="#fff" />
-                    </Pressable>
-                    <Pressable
-                      onPress={() => {
-                        if (isPlaying) player.pause();
-                        else player.play();
-                        bumpOverlay();
-                      }}
-                      style={styles.osdPlayBtn}
-                    >
-                      <Ionicons name={isPlaying ? 'pause' : 'play'} size={34} color="#fff" />
-                    </Pressable>
-                    <Pressable
-                      onPress={() => {
-                        zap(1);
-                        bumpOverlay();
-                      }}
-                      style={styles.osdZapBtn}
-                    >
-                      <Ionicons name="play-skip-forward" size={26} color="#fff" />
-                    </Pressable>
-                  </View>
-
-                  {/* Bottom Channel Info & EPG Card */}
-                  <View
-                    style={[
-                      styles.fsBottomCard,
-                      {
-                        marginBottom: Math.max(insets.bottom, 12),
-                        marginLeft: Math.max(insets.left, 16),
-                        marginRight: Math.max(insets.right, 16),
-                      },
-                    ]}
-                  >
-                    <View style={styles.fsChannelHeader}>
-                      <View style={styles.fsNumBadge}>
-                        <Text style={styles.fsNumText}>
-                          {String(currentChannel?.num ?? 1).padStart(3, '0')}
-                        </Text>
-                      </View>
-                      <View style={styles.fsLogoBox}>
-                        {currentChannel?.icon ? (
-                          <Image source={currentChannel.icon} style={styles.fsLogo} contentFit="contain" />
-                        ) : (
-                          <Ionicons name="tv-outline" size={22} color={colors.textMuted} />
-                        )}
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.fsChTitle} numberOfLines={1}>
-                          {currentChannel?.name}
-                        </Text>
-                        <Text style={styles.fsPortalSub} numberOfLines={1}>
-                          {active?.name} · HLS
-                        </Text>
-                      </View>
-                      {currentChannel && (
-                        <Pressable
-                          hitSlop={10}
-                          onPress={() =>
-                            toggleFavorite({
-                              kind: 'live',
-                              id: currentChannel.id,
-                              name: currentChannel.name,
-                              icon: currentChannel.icon,
-                            })
-                          }
-                        >
-                          <Ionicons
-                            name={isFav ? 'star' : 'star-outline'}
-                            size={24}
-                            color={isFav ? colors.accent : '#fff'}
-                          />
-                        </Pressable>
-                      )}
-                    </View>
-
-                    <View style={styles.fsEpgBox}>
-                      {nowEpg ? (
-                        <>
-                          <View style={styles.fsEpgRow}>
-                            <View style={styles.epgTagNow}>
-                              <Text style={styles.epgTagText}>AGORA</Text>
-                            </View>
-                            <Text style={styles.fsEpgTime}>
-                              {formatTime(nowEpg.start)} - {formatTime(nowEpg.end)}
-                            </Text>
-                            <Text style={styles.fsEpgTitle} numberOfLines={1}>
-                              {nowEpg.title}
-                            </Text>
-                          </View>
-                          <View style={styles.epgBarBg}>
-                            <View style={[styles.epgBarFg, { width: `${epgProgress * 100}%` }]} />
-                          </View>
-                          {nextEpg && (
-                            <View style={styles.fsEpgRow}>
-                              <View style={styles.epgTagNext}>
-                                <Text style={styles.epgTagNextText}>A SEGUIR</Text>
-                              </View>
-                              <Text style={styles.fsEpgTime}>
-                                {formatTime(nextEpg.start)} - {formatTime(nextEpg.end)}
-                              </Text>
-                              <Text style={styles.fsEpgNextTitle} numberOfLines={1}>
-                                {nextEpg.title}
-                              </Text>
-                            </View>
-                          )}
-                        </>
-                      ) : (
-                        <Text style={styles.noEpgText}>Sem informação de programação (EPG)</Text>
-                      )}
-                    </View>
-                  </View>
-                </>
-              )}
+              {/* Fullscreen Clean Overlay (Anexo 1 / Anexo 2) */}
+              {renderCleanOverlay(true)}
             </View>
 
             {/* Bottom Black Bar (Letterbox) with Sponsor Pub Banner — ONLY in fullscreen */}
@@ -879,80 +964,48 @@ export function LiveTvView({
     );
   }
 
-    // ---- Info + EPG Strip below the docked player ----
+  // ---- Info + EPG Strip below the docked player (Anexo 1 / Anexo 2 style) ----
   const infoStrip = currentChannel && (
     <View style={styles.infoStrip}>
-      <View style={styles.infoStripTop}>
-        <View style={styles.chNumPill}>
-          <Text style={styles.chNumPillText}>
-            {String(currentChannel.num ?? 1).padStart(3, '0')}
-          </Text>
-        </View>
+      <View style={styles.infoLogoWrap}>
+        {currentChannel.icon ? (
+          <Image source={currentChannel.icon} style={styles.infoLogoImg} contentFit="contain" />
+        ) : (
+          <Ionicons name="tv-outline" size={24} color={colors.textMuted} />
+        )}
+      </View>
+
+      <View style={styles.infoTextCol}>
         <Text style={styles.infoChName} numberOfLines={1}>
           {currentChannel.name}
         </Text>
-        <Pressable
-          hitSlop={8}
-          onPress={() =>
-            toggleFavorite({
-              kind: 'live',
-              id: currentChannel.id,
-              name: currentChannel.name,
-              icon: currentChannel.icon,
-            })
-          }
-          style={styles.stripActionBtn}
-        >
-          <Ionicons name={isFav ? 'star' : 'star-outline'} size={20} color={isFav ? colors.accent : colors.textMuted} />
-        </Pressable>
-        <Pressable
-          hitSlop={8}
-          onPress={() => setSubView((v) => (v === 'chat' ? 'channels' : 'chat'))}
-          style={[styles.stripExpandBtn, { backgroundColor: subView === 'chat' ? colors.primary : colors.surfaceAlt }]}
-        >
-          <Ionicons name="chatbubbles" size={15} color="#fff" />
-          <Text style={styles.stripExpandText}>{subView === 'chat' ? 'Canais' : 'Chat'}</Text>
-        </Pressable>
-        <Pressable hitSlop={8} onPress={enterFullscreen} style={styles.stripExpandBtn}>
-          <Ionicons name="expand" size={16} color="#fff" />
-          <Text style={styles.stripExpandText}>Ecrã Inteiro</Text>
-        </Pressable>
+        <Text style={styles.infoEpgTitle} numberOfLines={1}>
+          {nowEpg ? nowEpg.title : 'Sem informação'}
+        </Text>
+        <Text style={styles.infoEpgTime} numberOfLines={1}>
+          {nowEpg ? `${formatTime(nowEpg.start)} - ${formatTime(nowEpg.end)}` : 'Em direto'}
+        </Text>
       </View>
 
-      {nowEpg ? (
-        <View style={styles.stripEpgWrap}>
-          <View style={styles.stripEpgLine}>
-            <Text style={styles.stripEpgNowLabel}>AGORA</Text>
-            <Text style={styles.stripEpgTime}>
-              {formatTime(nowEpg.start)} - {formatTime(nowEpg.end)}
-            </Text>
-            <Text style={styles.stripEpgTitle} numberOfLines={1}>
-              {nowEpg.title}
-            </Text>
-          </View>
-          <View style={styles.epgBarBg}>
-            <View style={[styles.epgBarFg, { width: `${epgProgress * 100}%` }]} />
-          </View>
-          {nextEpg && (
-            <View style={styles.stripEpgLine}>
-              <Text style={styles.stripEpgNextLabel}>SEGUINTE</Text>
-              <Text style={styles.stripEpgTime}>{formatTime(nextEpg.start)}</Text>
-              <Text style={styles.stripEpgNextTitle} numberOfLines={1}>
-                {nextEpg.title}
-              </Text>
-            </View>
-          )}
+      <Pressable
+        hitSlop={8}
+        onPress={() => setSubView((v) => (v === 'chat' ? 'channels' : 'chat'))}
+        style={styles.infoTogglePill}
+      >
+        <View style={[styles.infoToggleKnob, subView === 'chat' && styles.infoToggleKnobRight]}>
+          <Ionicons
+            name={subView === 'chat' ? 'chatbubbles-outline' : 'list-outline'}
+            size={18}
+            color="#d1d5db"
+          />
         </View>
-      ) : (
-        <Text style={styles.stripNoEpg}>Toque no vídeo ou no canal ativo para abrir em ecrã inteiro</Text>
-      )}
+      </Pressable>
     </View>
   );
 
-  // ---- Channel Row ----
+  // ---- Channel Row (Anexo 1 / Anexo 2 style) ----
   const renderChannelRow = ({ item }: { item: LiveChannel }) => {
     const isCurrent = item.id === selectedId;
-    const fav = isFavorite('live', item.id);
     return (
       <Pressable
         onPress={() => onSelectChannel(item)}
@@ -963,38 +1016,39 @@ export function LiveTvView({
           pressed && { opacity: 0.85 },
         ]}
       >
-        <View style={[styles.activeAccent, isCurrent && { backgroundColor: colors.primary }]} />
-        <Text style={[styles.chNum, isCurrent && { color: colors.primary, fontWeight: '800' }]}>
-          {String(item.num ?? '').padStart(3, '0')}
-        </Text>
         <View style={styles.chLogoBox}>
           {item.icon ? (
             <Image source={item.icon} style={styles.chLogoImg} contentFit="contain" recyclingKey={item.id} />
           ) : (
-            <Ionicons name="tv-outline" size={20} color={colors.textMuted} />
+            <Ionicons name="tv-outline" size={22} color={colors.textMuted} />
           )}
         </View>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text style={[styles.chName, isCurrent && { color: '#fff', fontWeight: '700' }]} numberOfLines={1}>
+        <View style={{ flex: 1, gap: 5 }}>
+          <Text style={[styles.chName, isCurrent && styles.chNameActive]} numberOfLines={1}>
             {item.name}
           </Text>
-          {isCurrent && nowEpg ? (
-            <Text style={styles.chSubEpg} numberOfLines={1}>
-              ▶ {nowEpg.title}
-            </Text>
-          ) : null}
-        </View>
-        {isCurrent && (
-          <View style={styles.playingPill}>
-            <Ionicons name="radio" size={14} color="#fff" />
+          <View style={styles.chEpgRow}>
+            {isCurrent && nowEpg ? (
+              <>
+                <View style={styles.chMiniProgressBg}>
+                  <View
+                    style={[
+                      styles.chMiniProgressFg,
+                      { width: `${Math.max(10, epgProgress * 100)}%` },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.chSubEpg} numberOfLines={1}>
+                  {nowEpg.title}
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.chSubEpg} numberOfLines={1}>
+                Sem informação
+              </Text>
+            )}
           </View>
-        )}
-        <Pressable
-          hitSlop={10}
-          onPress={() => toggleFavorite({ kind: 'live', id: item.id, name: item.name, icon: item.icon })}
-        >
-          <Ionicons name={fav ? 'star' : 'star-outline'} size={19} color={fav ? colors.accent : colors.textMuted} />
-        </Pressable>
+        </View>
       </Pressable>
     );
   };
@@ -1132,15 +1186,19 @@ const styles = StyleSheet.create({
   dockedPlayerWrap: {
     width: '100%',
     aspectRatio: 16 / 9,
-    maxHeight: 230,
+    maxHeight: 235,
     backgroundColor: '#000',
     position: 'relative',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    overflow: 'hidden',
   },
   widePlayerWrap: {
     width: '100%',
     aspectRatio: 16 / 9,
     backgroundColor: '#000',
     position: 'relative',
+    overflow: 'hidden',
   },
   fsContainer: { flex: 1, backgroundColor: '#000' },
   fsPlayerWrap: { flex: 1, backgroundColor: '#000' },
@@ -1201,83 +1259,184 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   retryBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  dockedBadges: {
-    position: 'absolute',
-    top: 8,
-    left: 10,
-    right: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  // Clean Player Overlay (Anexo 1 / Anexo 2)
+  cleanOverlayBackdrop: {
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
   },
-  liveBadge: {
+  cleanTopBar: {
+    position: 'absolute',
+    top: 12,
+    left: 14,
+    right: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#000b',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    zIndex: 20,
+  },
+  cleanTopRightGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 24,
+  },
+  cleanLockActiveBtn: {
+    padding: 6,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+  },
+  pipIconBox: {
+    width: 22,
+    height: 17,
+    borderRadius: 3,
+    borderWidth: 1.6,
+    borderColor: '#fff',
+    position: 'relative',
+  },
+  pipIconDashTop: {
+    position: 'absolute',
+    left: 3,
+    bottom: 5.5,
+    width: 6,
+    height: 1.5,
+    backgroundColor: '#fff',
+    borderRadius: 1,
+  },
+  pipIconDashBottom: {
+    position: 'absolute',
+    left: 3,
+    bottom: 2.5,
+    width: 6,
+    height: 1.5,
+    backgroundColor: '#fff',
+    borderRadius: 1,
+  },
+  pipIconInnerRect: {
+    position: 'absolute',
+    right: 2.5,
+    bottom: 2.5,
+    width: 6.5,
+    height: 4.5,
+    borderRadius: 1,
+    borderWidth: 1.3,
+    borderColor: '#fff',
+  },
+  cleanSettingsMenu: {
+    position: 'absolute',
+    top: 44,
+    right: 14,
+    backgroundColor: 'rgba(18, 20, 26, 0.94)',
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#ffffff22',
+    borderColor: 'rgba(255, 255, 255, 0.14)',
+    paddingVertical: 6,
+    minWidth: 190,
+    zIndex: 30,
+  },
+  cleanSettingsItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  cleanSettingsText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  cleanCenterRow: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 54,
+    zIndex: 15,
+  },
+  cleanBottomRightBtn: {
+    position: 'absolute',
+    right: 14,
+    bottom: 14,
+    zIndex: 20,
+  },
+  cleanBottomProgressTrack: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+    zIndex: 20,
+  },
+  cleanBottomProgressFill: {
+    height: 3,
+    backgroundColor: '#ffffff',
+    borderRadius: 2,
   },
   liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.primary },
-  liveBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 0.6 },
-  miniControlBtn: {
-    backgroundColor: '#000b',
-    padding: 7,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#ffffff22',
-  },
+  // Info Strip below player (Anexo 1 / Anexo 2)
   infoStrip: {
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 6,
-  },
-  infoStripTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  chNumPill: {
-    backgroundColor: colors.surfaceAlt,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  chNumPillText: { color: colors.primary, fontSize: 12, fontWeight: '800' },
-  infoChName: { flex: 1, color: colors.text, fontSize: 15, fontWeight: '800' },
-  stripActionBtn: { padding: 4 },
-  stripExpandBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: colors.primary,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
+    backgroundColor: '#000000',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 14,
   },
-  stripExpandText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  stripEpgWrap: { gap: 4 },
-  stripEpgLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  stripEpgNowLabel: {
-    color: colors.primary,
-    fontSize: 10,
-    fontWeight: '800',
-    width: 52,
+  infoLogoWrap: {
+    width: 56,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  stripEpgNextLabel: {
-    color: colors.textMuted,
-    fontSize: 10,
+  infoLogoImg: {
+    width: 54,
+    height: 34,
+  },
+  infoTextCol: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 2,
+  },
+  infoChName: {
+    color: '#ffffff',
+    fontSize: 18,
     fontWeight: '700',
-    width: 52,
   },
-  stripEpgTime: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
-  stripEpgTitle: { flex: 1, color: colors.text, fontSize: 12, fontWeight: '600' },
-  stripEpgNextTitle: { flex: 1, color: colors.textMuted, fontSize: 12 },
-  stripNoEpg: { color: colors.textMuted, fontSize: 11 },
+  infoEpgTitle: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  infoEpgTime: {
+    color: '#8e9299',
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 1,
+  },
+  infoTogglePill: {
+    width: 68,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#1c1d21',
+    borderWidth: 1,
+    borderColor: '#2c2e35',
+    padding: 3,
+    justifyContent: 'center',
+  },
+  infoToggleKnob: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#383b44',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoToggleKnobRight: {
+    alignSelf: 'flex-end',
+    backgroundColor: colors.primary,
+  },
   epgBarBg: { height: 3, borderRadius: 2, backgroundColor: '#ffffff1f', overflow: 'hidden' },
   epgBarFg: { height: 3, backgroundColor: colors.primary },
   groupBar: { paddingVertical: 8 },
@@ -1298,34 +1457,41 @@ const styles = StyleSheet.create({
   channelRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingRight: 12,
-    height: 58,
-    backgroundColor: colors.bg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    gap: 14,
+    paddingHorizontal: 12,
+    height: 68,
+    backgroundColor: '#000000',
   },
-  channelRowActive: { backgroundColor: colors.surface },
-  activeAccent: { width: 4, alignSelf: 'stretch', backgroundColor: 'transparent' },
-  chNum: { color: colors.textMuted, width: 32, fontSize: 12, fontWeight: '600', textAlign: 'right' },
+  channelRowActive: { backgroundColor: '#090a0f' },
   chLogoBox: {
-    width: 48,
-    height: 36,
-    borderRadius: 6,
-    backgroundColor: colors.surfaceAlt,
+    width: 66,
+    height: 50,
+    borderRadius: 8,
+    backgroundColor: '#1a1c20',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  chLogoImg: { width: 42, height: 30 },
-  chName: { color: colors.text, fontSize: 14, fontWeight: '600' },
-  chSubEpg: { color: colors.primary, fontSize: 11, fontWeight: '600' },
-  playingPill: {
-    backgroundColor: colors.primary,
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+  chLogoImg: { width: 52, height: 34 },
+  chName: { color: '#ffffff', fontSize: 15, fontWeight: '600' },
+  chNameActive: { color: '#facc15', fontWeight: '700' },
+  chEpgRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
+  chMiniProgressBg: {
+    width: 46,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: '#32353e',
+    overflow: 'hidden',
+  },
+  chMiniProgressFg: {
+    height: 3,
+    backgroundColor: '#ffffff',
+  },
+  chSubEpg: { flex: 1, color: '#8e9299', fontSize: 13, fontWeight: '500' },
   // Wide / Tablet / TV layout
   wideContainer: { flex: 1, flexDirection: 'row', backgroundColor: colors.bg },
   wideGroupsCol: { width: 210, borderRightWidth: 1, borderRightColor: colors.border, backgroundColor: colors.surface },
