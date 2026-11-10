@@ -1937,6 +1937,7 @@
 
     const ROLE_META = {
       owner: { label: 'Dono (Owner)', pawn: 'pawn-orange', color: '#ff9900', badge: '🟠' },
+      bot: { label: 'Bot Oficial', pawn: 'pawn-orange', color: '#10b981', badge: '🤖' },
       admin: { label: 'Moderador (Mod)', pawn: 'pawn-white', color: '#ffffff', badge: '⚪' },
       mod: { label: 'Moderador (Mod)', pawn: 'pawn-white', color: '#ffffff', badge: '⚪' },
       member: { label: 'Membro VIP', pawn: 'pawn-blue', color: '#60a5fa', badge: '🔵' },
@@ -3256,10 +3257,11 @@
 
       if (drawerOnlineCount) drawerOnlineCount.textContent = onlineUsersList.length;
 
-      const friends = onlineUsersList.filter(u => isFriend(u.nick));
-      const staff = onlineUsersList.filter(u => ['owner', 'admin', 'mod'].includes(u.role) && !isFriend(u.nick));
-      const vips = onlineUsersList.filter(u => u.role === 'member' && !isFriend(u.nick));
-      const guests = onlineUsersList.filter(u => (!u.role || u.role === 'guest') && !isFriend(u.nick));
+      const bots = onlineUsersList.filter(u => u.role === 'bot' || u.nick?.toLowerCase() === 'cocasbot');
+      const friends = onlineUsersList.filter(u => isFriend(u.nick) && u.role !== 'bot');
+      const staff = onlineUsersList.filter(u => ['owner', 'admin', 'mod'].includes(u.role) && !isFriend(u.nick) && u.role !== 'bot');
+      const vips = onlineUsersList.filter(u => u.role === 'member' && !isFriend(u.nick) && u.role !== 'bot');
+      const guests = onlineUsersList.filter(u => (!u.role || u.role === 'guest') && !isFriend(u.nick) && u.role !== 'bot');
 
       const appendGroup = (title, users) => {
         if (users.length === 0) return;
@@ -3287,6 +3289,7 @@
         });
       };
 
+      if (bots.length > 0) appendGroup('🤖 Bot Oficial', bots);
       if (friends.length > 0) appendGroup('⭐ Amigos', friends);
       if (staff.length > 0) appendGroup('👑 Staff Cocas', staff);
       if (vips.length > 0) appendGroup('⭐ Membros VIP', vips);

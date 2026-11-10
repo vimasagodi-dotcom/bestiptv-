@@ -25,7 +25,7 @@ const PANEL_API_URLS = [
 ];
 const NICK_STORAGE_KEY = '@cocas/chatNick.v1';
 
-type ChatRole = 'owner' | 'admin' | 'mod' | 'member' | 'guest';
+type ChatRole = 'owner' | 'bot' | 'admin' | 'mod' | 'member' | 'guest';
 
 interface ChatUser {
   nick: string;
@@ -34,6 +34,7 @@ interface ChatUser {
   muted?: boolean;
   room?: string;
   lastSeenAt?: number;
+  isBot?: boolean;
 }
 
 interface ChatMessage {
@@ -73,6 +74,7 @@ async function requestChatApi(payload: Record<string, any>): Promise<any> {
 
 const ROLE_META: Record<ChatRole, { label: string; badge: string; color: string }> = {
   owner: { label: 'Dono (Owner)', badge: '🟠', color: '#ff9900' },
+  bot: { label: 'Bot Oficial', badge: '🤖', color: '#10b981' },
   admin: { label: 'Moderador (Mod)', badge: '⚪', color: '#ffffff' },
   mod: { label: 'Moderador (Mod)', badge: '⚪', color: '#ffffff' },
   member: { label: 'Membro VIP', badge: '🔵', color: '#60a5fa' },

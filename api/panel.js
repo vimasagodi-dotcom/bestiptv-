@@ -515,12 +515,22 @@ module.exports = async function handler(req, res) {
         .filter((t) => t.room === room && t.nick.toLowerCase() !== nick.toLowerCase())
         .map((t) => t.nick);
 
+      // Bot presence: CocasBot is always online 24/7
+      const botUser = {
+        nick: 'CocasBot',
+        role: 'bot',
+        avatar: '🤖',
+        isBot: true,
+        lastSeenAt: nowTs,
+      };
+
       // Online threshold: active in the last 25 seconds
       const ONLINE_THRESHOLD_MS = 25000;
-      const roleOrder = { owner: 0, admin: 1, mod: 2, member: 3, guest: 4 };
-      const sortedUsers = [...db.chatUsers]
-        .filter((u) => !u.banned && u.lastSeenAt && (nowTs - Number(u.lastSeenAt) <= ONLINE_THRESHOLD_MS))
-        .sort((a, b) => (roleOrder[a.role] ?? 4) - (roleOrder[b.role] ?? 4));
+      const roleOrder = { bot: -1, owner: 0, admin: 1, mod: 2, member: 3, guest: 4 };
+      const humanUsers = [...db.chatUsers]
+        .filter((u) => u.nick.toLowerCase() !== 'cocasbot' && !u.banned && u.lastSeenAt && (nowTs - Number(u.lastSeenAt) <= ONLINE_THRESHOLD_MS));
+      
+      const sortedUsers = [botUser, ...humanUsers].sort((a, b) => (roleOrder[a.role] ?? 4) - (roleOrder[b.role] ?? 4));
 
       // Active private rooms where this user is a participant
       let privateRooms = [];
@@ -565,6 +575,29 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ ok: false, error: 'Mensagem vazia.' });
       }
 
+      // Impersonation protection for official bot
+      if (nick.toLowerCase() === 'cocasbot') {
+        return res.status(403).json({ ok: false, error: 'O nickname CocasBot é reservado ao assistente oficial do sistema.' });
+      }
+
+      // 1. Legal & Anti-Piracy filter: block IPTV playlist / credential leaks & pirate lines (public or private rooms)
+      const IPTV_PATTERN = /(?:player_api\.php|get\.php\?|\.m3u8?(?:$|[?&#\s])|username=[^&\s]+&password=[^&\s]+|xtream(?:-codes)?|server_info|user_info|mag\/stb|:\d{2,5}\/(?:live|movie|series)|(?:(?:user|utilizador|usuario|conta)\s*[:=]\s*[^\s]+[\s,]+(?:pass|senha|password|chave)\s*[:=]\s*[^\s]+)|(?:(?:dns|servidor|host|url|link)\s*[:=]\s*http[s]?:\/\/[^\s]+))/i;
+      if (IPTV_PATTERN.test(text)) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Aviso do CocasBot: É expressamente proibido partilhar credenciais de linhas IPTV, listas (.m3u/.m3u8) ou servidores no chat, tanto em salas públicas como em mensagens privadas.',
+        });
+      }
+
+      // 2. Profanity filter: block swear words and offensive slurs in Portuguese (public or private rooms)
+      const PROFANITY_PATTERN = /\b(?:caralh[oa]s?|caralhinho|foda-se|fodasse|foda|foder|fode|fod[ao]es|fud[ei]u|puta[s]?|putedo|merda[s]?|cabr[aã]o|cabr[oõ]es|filh[oa]s?\s+d[ae]\s+puta|fdp|cona[s]?|pila[s]?|paneleir[oa]s?|panasca|cagalh[aã]o|piroca[s]?|bosta[s]?|vai\s+po\s+caralho|vai\s+para\s+o\s+caralho)\b/i;
+      if (PROFANITY_PATTERN.test(text)) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Aviso do CocasBot: Não é permitido o uso de palavrões ou linguagem ofensiva no chat (público ou privado). Vamos manter a comunidade limpa e respeitosa!',
+        });
+      }
+
       let cu = db.chatUsers.find((u) => u.nick.toLowerCase() === nick.toLowerCase());
       if (cu && !claimNick(cu, ownerKey)) {
         return res.status(403).json({ ok: false, code: 'nick_taken', error: NICK_TAKEN_ERR });
@@ -603,15 +636,6 @@ module.exports = async function handler(req, res) {
         return res.status(403).json({ ok: false, error: 'Está temporariamente silenciado (mute) no chat.' });
       }
 
-      // Legal & Anti-Piracy filter: block IPTV playlist / credential leaks & pirate links
-      const IPTV_PATTERN = /(?:player_api\.php|get\.php\?|\.m3u8?(?:$|[?&#])|username=[^&\s]+&password=[^&\s]+|xtream-codes|server_info|user_info|mag\/stb)/i;
-      if (IPTV_PATTERN.test(text)) {
-        return res.status(400).json({
-          ok: false,
-          error: 'Aviso Legal: É expressamente proibido partilhar credenciais de linhas IPTV, listas (.m3u/.m3u8) ou links piratas na comunidade Cocas.',
-        });
-      }
-
       // Anti-spam cooldown (1.2s)
       const nowMsg = Date.now();
       if (cu.lastMsgAt && nowMsg - cu.lastMsgAt < 1200) {
@@ -630,6 +654,36 @@ module.exports = async function handler(req, res) {
         ts: Date.now(),
       };
       db.chatMessages.push(msg);
+
+      // Automated CocasBot reactions and commands (!ajuda, !regras, !app, !suporte, !canais, @CocasBot)
+      const cleanLower = text.trim().toLowerCase();
+      let botResponse = null;
+      if (cleanLower === '!ajuda' || cleanLower === '!help') {
+        botResponse = '🤖 Comandos CocasBot:\n• !regras — Ver as regras da comunidade\n• !app — Descarregar ou atualizar a app Cocas\n• !suporte — Apoio técnico e suporte oficial\n• !canais — Como ver a lista de canais\nNota: Partilha de linhas IPTV e palavrões são estritamente proibidos em público e privado!';
+      } else if (cleanLower === '!regras') {
+        botResponse = '🤖 Regras Oficiais Cocas:\n1. 🚫 Proibido partilhar linhas, listas IPTV ou credenciais (no chat ou em privado);\n2. 🚫 Proibido palavrões, ofensas ou desrespeito;\n3. 💬 Utilize as mensagens privadas com bom senso;\n4. ✅ Respeite todos os utilizadores da comunidade.';
+      } else if (cleanLower === '!app') {
+        botResponse = '🤖 Aplicação Oficial Cocas TV:\nDescarregue a app para Android / Firestick / Smart TV e telemóveis em https://cocas.online/tv';
+      } else if (cleanLower === '!suporte') {
+        botResponse = '🤖 Suporte Cocas:\nPara assistência com a sua conta ou ativação, visite https://cocas.online/contacto.html ou fale com a administração.';
+      } else if (cleanLower === '!canais') {
+        botResponse = '🤖 Guia de Canais:\nClique no botão "📋 Ver Canais" no reprodutor para aceder à lista completa e alternar de emissão.';
+      } else if (cleanLower.includes('@cocasbot')) {
+        botResponse = `🤖 Olá @${cu.nick}! Estou ativo 24/7 a moderar o chat. Escreva !ajuda para ver os comandos disponíveis.`;
+      }
+
+      if (botResponse) {
+        db.chatMessages.push({
+          id: `${Date.now().toString(36)}bot${Math.random().toString(36).slice(2, 6)}`,
+          room,
+          nick: 'CocasBot',
+          role: 'bot',
+          avatar: '🤖',
+          text: botResponse,
+          ts: Date.now() + 25,
+        });
+      }
+
       if (db.chatMessages.length > 150) {
         db.chatMessages = db.chatMessages.slice(-150);
       }
