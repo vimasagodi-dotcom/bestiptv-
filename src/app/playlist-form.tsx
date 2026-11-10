@@ -97,6 +97,7 @@ export default function PlaylistForm() {
   const [url, setUrl] = useState(editing?.url ?? '');
   const [userAgent, setUserAgent] = useState(editing?.userAgent ?? '');
   const [liveFormat, setLiveFormat] = useState<LiveFormat>(editing?.liveFormat ?? 'm3u8');
+  const [legalConsent, setLegalConsent] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const onChangeServer = (val: string) => {
@@ -111,6 +112,14 @@ export default function PlaylistForm() {
   };
 
   const save = async () => {
+    if (!legalConsent) {
+      Alert.alert(
+        'Aviso Legal Obrigatório',
+        'É obrigatório declarar que tens direito legal a aceder ao conteúdo da tua linha.'
+      );
+      return;
+    }
+
     setSaving(true);
     try {
       let p: Playlist;
@@ -296,10 +305,27 @@ export default function PlaylistForm() {
                 label="User-Agent (opcional)"
                 value={userAgent}
                 onChangeText={setUserAgent}
-                placeholder="Ex: IPTVSmartersPlayer"
+                placeholder="Ex: CocasMediaPlayer/1.0"
               />
             </>
           )}
+
+          {/* AVISO LEGAL VISÍVEL & CHECKBOX OBRIGATÓRIA */}
+          <View style={styles.legalNoticeCard}>
+            <Ionicons name="shield-checkmark-outline" size={18} color={colors.accent} />
+            <Text style={styles.legalNoticeCardText}>
+              A Cocas é um reprodutor multimédia. Não fornece, aloja nem vende conteúdos. O utilizador é responsável por usar apenas fontes de que tem direitos legais.
+            </Text>
+          </View>
+
+          <Pressable onPress={() => setLegalConsent((v) => !v)} style={styles.consentRow}>
+            <View style={[styles.checkbox, legalConsent && styles.checkboxChecked]}>
+              {legalConsent && <Ionicons name="checkmark" size={14} color="#fff" />}
+            </View>
+            <Text style={styles.consentText}>
+              Declaro que tenho direito legal a aceder ao conteúdo da minha linha.
+            </Text>
+          </Pressable>
 
           <Button
             title={editing ? 'Guardar Alterações' : 'Entrar / Ligar'}
@@ -362,4 +388,29 @@ const styles = StyleSheet.create({
   section: { color: colors.text, fontSize: 16, fontWeight: '700', marginTop: 8 },
   label: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
   hint: { color: colors.textMuted, fontSize: 12 },
+  legalNoticeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(229, 9, 20, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(229, 9, 20, 0.25)',
+    borderRadius: radius.md,
+    padding: 12,
+    marginTop: 4,
+  },
+  legalNoticeCardText: { flex: 1, color: colors.textMuted, fontSize: 12, lineHeight: 16 },
+  consentRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 4 },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
+  consentText: { flex: 1, color: colors.text, fontSize: 13, lineHeight: 17 },
 });

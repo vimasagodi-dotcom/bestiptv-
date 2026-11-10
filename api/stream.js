@@ -35,11 +35,6 @@ module.exports = async (req, res) => {
       ...(req.headers.range ? { Range: req.headers.range } : {}),
     };
 
-    if (targetUrl.includes('rtp.pt')) {
-      reqHeaders['Referer'] = 'https://www.rtp.pt/play/direto/rtp1';
-      reqHeaders['Origin'] = 'https://www.rtp.pt';
-    }
-
     const upstreamRes = await fetch(targetUrl, {
       headers: reqHeaders,
       signal: controller.signal,

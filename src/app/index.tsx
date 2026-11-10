@@ -195,14 +195,14 @@ export default function Home() {
             <View style={styles.legalNoticeBox}>
               <Ionicons name="shield-checkmark-outline" size={18} color={colors.textMuted} />
               <Text style={styles.legalNoticeText}>
-                Aviso Legal: A Cocas é exclusivamente uma comunidade e leitor multimédia. Não vendemos, não fornecemos nem transmitimos canais de televisão ou conteúdos audiovisuais.
+                Aviso Legal: A Cocas é um reprodutor multimédia. Não fornece, aloja nem vende conteúdos. O utilizador é responsável por usar apenas fontes de que tem direitos legais.
               </Text>
             </View>
           </ScrollView>
         )}
       </View>
 
-      {/* MYTVOnline+ Bottom Tab Bar (hidden in fullscreen video mode) */}
+      {/* Bottom Tab Bar (hidden in fullscreen video mode) */}
       {!hideBars && (
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
           {TABS.map((t) => {

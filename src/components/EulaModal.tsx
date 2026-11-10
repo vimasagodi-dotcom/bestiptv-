@@ -24,7 +24,10 @@ export function EulaModal() {
   const accept = async () => {
     if (!checked) return;
     try {
-      await AsyncStorage.setItem(EULA_STORAGE_KEY, 'true');
+      await AsyncStorage.setItem(
+        EULA_STORAGE_KEY,
+        JSON.stringify({ accepted: true, consentTimestamp: Date.now() })
+      );
     } catch {
       // ignore
     }
@@ -50,7 +53,7 @@ export function EulaModal() {
           <View style={styles.warningBox}>
             <Ionicons name="information-circle" size={22} color={colors.accent} />
             <Text style={styles.warningText}>
-              AVISO IMPORTANTE: A Cocas NÃO vende, NÃO fornece, NÃO hospeda nem distribui canais de televisão ou conteúdos audiovisuais.
+              AVISO LEGAL: A Cocas é exclusivamente um reprodutor multimédia. Não fornece, aloja nem vende conteúdos. O utilizador é responsável por usar apenas fontes de que tem direitos legais.
             </Text>
           </View>
 
@@ -83,7 +86,7 @@ export function EulaModal() {
               {checked && <Ionicons name="checkmark" size={16} color="#fff" />}
             </View>
             <Text style={styles.checkLabel}>
-              Compreendo que a <Text style={styles.bold}>Cocas não vende TV</Text> (somos apenas uma comunidade) e aceito os Termos de Utilização (EULA) e Regras.
+              Declaro que tenho direito legal a aceder ao conteúdo da minha linha, reconheço que a Cocas é apenas um reprodutor multimédia e aceito os Termos de Utilização e a Política de Privacidade.
             </Text>
           </Pressable>
 

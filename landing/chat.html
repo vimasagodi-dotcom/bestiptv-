@@ -679,8 +679,8 @@
     <!-- TOP BAR (XAT STYLE) -->
     <div class="chat-top-bar">
       <div class="chat-brand-badge">
-        <span class="pawn pawn-orange" title="Cocas Chat Oficial"></span>
-        <span class="chat-title-text">Cocas_Oficial</span>
+        <span class="pawn pawn-orange" title="Comunidade Cocas"></span>
+        <span class="chat-title-text">Comunidade Cocas</span>
         <span class="chat-room-badge" id="currentRoomTag">#Geral</span>
       </div>
       <div class="chat-meta-bar">
@@ -695,6 +695,11 @@
         </div>
         <button type="button" class="btn-minimize-chat" id="btnChatMinimize" title="Minimizar / Expandir Chat" tabindex="0">_</button>
       </div>
+    </div>
+
+    <!-- REGRAS DA COMUNIDADE (CONFORMIDADE LEGAL & MODERAÇÃO) -->
+    <div style="background: rgba(239,68,68,0.12); border-bottom: 1px solid rgba(239,68,68,0.25); padding: 5px 12px; font-size: 11px; color: #fca5a5; display:flex; align-items:center; justify-content:space-between; gap:6px;">
+      <span>⚖️ <strong>Regras do Chat:</strong> Proibida a partilha de listas, linhas IPTV, vendas ou links protegidos.</span>
     </div>
 
     <!-- CORPO DO CHAT: MENSAGENS (ESQUERDA) + PEÕES ONLINE (DIREITA) -->
@@ -1513,6 +1518,13 @@
       const activeUser = getLoggedUsername();
       if (!activeUser) {
         alert('Indica o teu nickname para poderes enviar mensagens!');
+        return;
+      }
+
+      // Legal & Compliance filter: Block IPTV list leaks & piracy URLs
+      const IPTV_PATTERN = /(?:player_api\.php|get\.php\?|\.m3u8?(?:$|[?&#])|username=[^&\s]+&password=[^&\s]+|xtream-codes|server_info|user_info|mag\/stb)/i;
+      if (IPTV_PATTERN.test(text)) {
+        alert('Aviso Legal: É estritamente proibido partilhar credenciais de linhas IPTV, listas (.m3u/.m3u8) ou links na comunidade Cocas.');
         return;
       }
 

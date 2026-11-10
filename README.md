@@ -1,6 +1,6 @@
 # KikoIPTV
 
-Leitor de listas IPTV para **iOS e Android** (estilo MyTVOnline), feito com Expo / React Native.
+Leitor multimédia de listas para **iOS, Android e Web**, feito com Expo / React Native.
 
 ## Funcionalidades
 

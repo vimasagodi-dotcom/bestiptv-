@@ -35,7 +35,7 @@ export class XtreamProvider implements ContentProvider {
     this.pass = (playlist.password ?? '').trim();
     this.liveExt = playlist.liveFormat ?? 'm3u8';
     this.headers = {
-      'User-Agent': playlist.userAgent?.trim() || 'IPTVSmartersPlayer',
+      'User-Agent': playlist.userAgent?.trim() || 'CocasMediaPlayer/1.0',
       Accept: '*/*',
     };
   }

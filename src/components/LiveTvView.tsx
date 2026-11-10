@@ -343,7 +343,7 @@ export function LiveTvView({
 
   const onSelectChannel = (ch: LiveChannel) => {
     if (ch.id === selectedId) {
-      // Tapping the already playing channel toggles fullscreen (MYTVOnline+ behavior)
+      // Tapping the already playing channel toggles fullscreen
       enterFullscreen();
     } else {
       triggerChannelSwitchAd();
@@ -353,7 +353,7 @@ export function LiveTvView({
 
   if (loading) return <Loading label="A sincronizar portal e canais..." />;
   if (error) return <ErrorView message={error} onRetry={retry} />;
-  if (!data?.items.length) return <EmptyView icon="tv-outline" message="Nenhum canal em direto disponível nesta lista." />;
+  if (!data?.items.length) return <EmptyView icon="tv-outline" message="Adiciona a tua própria linha para começar" />;
 
   const isFav = currentChannel ? isFavorite('live', currentChannel.id) : false;
   const showSpinner = status === 'loading' || status === 'idle' || retrying;
@@ -798,7 +798,7 @@ export function LiveTvView({
           )}
         </View>
 
-        {/* Left Channel & Category Drawer in Fullscreen (MYTVOnline+ style) */}
+        {/* Left Channel & Category Drawer in Fullscreen */}
         {drawerOpen && !locked && (
           <View
             style={[
@@ -949,7 +949,7 @@ export function LiveTvView({
     </View>
   );
 
-  // ---- Channel Row (MYTVOnline+ style) ----
+  // ---- Channel Row ----
   const renderChannelRow = ({ item }: { item: LiveChannel }) => {
     const isCurrent = item.id === selectedId;
     const fav = isFavorite('live', item.id);
@@ -1055,7 +1055,7 @@ export function LiveTvView({
     );
   }
 
-  // ---- Portrait Mobile MYTVOnline+ Layout ----
+  // ---- Portrait Mobile Layout ----
   return (
     <View style={styles.mobileContainer}>
       {/* Top Docked 16:9 Video Player */}

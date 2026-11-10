@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contacto & Notificações · Cocas Media Player</title>
+  <meta name="description" content="Contacto com os responsáveis da Cocas e formulário de notificação de conteúdo ilícito (Notice and Takedown / DSA).">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090A0F;
+      --surface: #10121A;
+      --surface-alt: #171A26;
+      --border: #222638;
+      --primary: #E50914;
+      --text: #F8FAFC;
+      --text-muted: #94A3B8;
+      --success: #22C55E;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.7;
+      padding: 0;
+      margin: 0;
+    }
+    header {
+      background: rgba(16, 18, 26, 0.9);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      position: sticky;
+      top: 0;
+      backdrop-filter: blur(12px);
+      z-index: 100;
+    }
+    .header-inner {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: #fff;
+      font-weight: 800;
+      font-size: 18px;
+    }
+    .logo-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 14px;
+    }
+    .btn-back {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+    .btn-back:hover {
+      color: #fff;
+      border-color: #475569;
+    }
+    .legal-content {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 24px 60px;
+    }
+    .legal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      margin-bottom: 24px;
+    }
+    h1 {
+      font-size: 30px;
+      font-weight: 800;
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+    }
+    .legal-date {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-bottom: 28px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 28px 0 12px;
+      color: #fff;
+    }
+    p {
+      color: #CBD5E1;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    ul {
+      margin-left: 22px;
+      margin-bottom: 18px;
+      color: #CBD5E1;
+      font-size: 14px;
+    }
+    li {
+      margin-bottom: 8px;
+    }
+    .placeholder-badge {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #FCD34D;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #E2E8F0;
+      margin-bottom: 6px;
+    }
+    input, textarea {
+      width: 100%;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 14px;
+      color: #fff;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus {
+      border-color: var(--primary);
+    }
+    textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+    .btn-submit {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 13px 24px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn-submit:hover {
+      background: #c80812;
+    }
+    .btn-submit:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .msg-feedback {
+      padding: 14px 18px;
+      border-radius: 10px;
+      margin-top: 18px;
+      display: none;
+      font-size: 14px;
+    }
+    .msg-success {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: #86EFAC;
+    }
+    .msg-error {
+      background: rgba(229, 9, 20, 0.1);
+      border: 1px solid rgba(229, 9, 20, 0.3);
+      color: #FCA5A5;
+    }
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 24px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+    footer a {
+      color: var(--text-muted);
+      text-decoration: underline;
+      margin: 0 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-inner">
+      <a href="/" class="logo">
+        <div class="logo-badge">▶</div>
+        Cocas<span>Player</span>
+      </a>
+      <a href="/" class="btn-back">← Voltar ao Leitor</a>
+    </div>
+  </header>
+
+  <main class="legal-content">
+    <div class="legal-card">
+      <h1>Contacto do Responsável & Notificação de Conteúdo</h1>
+      <div class="legal-date">Ponto de contacto único · Regulamento dos Serviços Digitais (DSA - Art. 11.º e 12.º)</div>
+
+      <h2>1. Dados do Responsável</h2>
+      <p>Para efeitos do Regulamento Geral sobre a Proteção de Dados (RGPD) e do Regulamento dos Serviços Digitais (UE 2022/2065), o responsável pelo serviço pode ser contactado através dos seguintes canais:</p>
+      <ul>
+        <li><strong>Nome / Responsável:</strong> <span class="placeholder-badge">[NOME DO RESPONSÁVEL]</span></li>
+        <li><strong>Email Oficial:</strong> <span class="placeholder-badge">[EMAIL]</span></li>
+        <li><strong>Morada / NIF:</strong> <span class="placeholder-badge">[MORADA/NIF]</span></li>
+        <li><strong>Línguas de contacto:</strong> Português (pt-PT) e Inglês (en).</li>
+      </ul>
+
+      <h2>2. Formulário de Notificação de Conteúdo Ilícito (Notice & Takedown)</h2>
+      <p>Se és titular de direitos de autor, representante legal ou utilizador e identificaste algum conteúdo alegadamente ilícito, credenciais indevidamente partilhadas ou violação de direitos no chat da nossa comunidade, submete a tua notificação através do formulário abaixo. A nossa equipa analisará o pedido com a maior brevidade possível.</p>
+
+      <form id="takedownForm">
+        <div class="form-group">
+          <label for="claimantName">Nome Completo do Titular ou Representante Legal *</label>
+          <input type="text" id="claimantName" required placeholder="Ex: Dr. João Silva / Associação XYZ">
+        </div>
+
+        <div class="form-group">
+          <label for="claimantEmail">Endereço de Email para Resposta Oficial *</label>
+          <input type="email" id="claimantEmail" required placeholder="Ex: legal@empresa.com">
+        </div>
+
+        <div class="form-group">
+          <label for="contentUrl">Localização Exata do Conteúdo (URL, Sala de Chat ou Nickname) *</label>
+          <input type="text" id="contentUrl" required placeholder="Ex: Sala #Geral / Mensagem do utilizador 'exemplo' às 14:30">
+        </div>
+
+        <div class="form-group">
+          <label for="legalBasis">Fundamento Jurídico / Tipo de Infração *</label>
+          <input type="text" id="legalBasis" required placeholder="Ex: Violação de Direitos de Autor / Partilha de Lista / Difamação">
+        </div>
+
+        <div class="form-group">
+          <label for="description">Descrição Pormenorizada dos Factos *</label>
+          <textarea id="description" required placeholder="Descreve detalhadamente o conteúdo em causa e o motivo pelo qual deve ser removido..."></textarea>
+        </div>
+
+        <div class="form-group" style="display:flex; align-items:flex-start; gap:8px;">
+          <input type="checkbox" id="goodFaith" required style="width:auto; margin-top:4px;">
+          <label for="goodFaith" style="font-weight:400; font-size:12px; color:var(--text-muted); cursor:pointer;">
+            Declaro sob compromisso de honra que acredito de boa-fé que o conteúdo identificado não está autorizado pelo titular dos direitos ou pela lei, e que as informações prestadas são exatas e verdadeiras.
+          </label>
+        </div>
+
+        <button type="submit" class="btn-submit" id="btnSubmitNotice">
+          📨 Enviar Notificação Formal
+        </button>
+
+        <div id="feedbackMsg" class="msg-feedback"></div>
+      </form>
+    </div>
+  </main>
+
+  <footer>
+    <div style="max-width:900px; margin:0 auto;">
+      <a href="/termos">Termos de Uso</a>
+      <a href="/privacidade">Política de Privacidade</a>
+      <a href="/cookies">Política de Cookies</a>
+      <a href="/contacto">Contacto & Notificações</a>
+      <p style="margin-top:12px;">© Comunidade Cocas · Leitor Multimédia Neutro.</p>
+    </div>
+  </footer>
+
+  <script>
+    const takedownForm = document.getElementById('takedownForm');
+    const btnSubmitNotice = document.getElementById('btnSubmitNotice');
+    const feedbackMsg = document.getElementById('feedbackMsg');
+
+    takedownForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      feedbackMsg.style.display = 'none';
+
+      const payload = {
+        action: 'notice_takedown',
+        name: document.getElementById('claimantName').value.trim(),
+        email: document.getElementById('claimantEmail').value.trim(),
+        contentUrl: document.getElementById('contentUrl').value.trim(),
+        legalBasis: document.getElementById('legalBasis').value.trim(),
+        description: document.getElementById('description').value.trim()
+      };
+
+      btnSubmitNotice.textContent = 'A enviar notificação...';
+      btnSubmitNotice.disabled = true;
+
+      try {
+        const res = await fetch('/api/panel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.ok) {
+          feedbackMsg.className = 'msg-feedback msg-success';
+          feedbackMsg.textContent = '✓ Notificação formal recebida com sucesso. Foi registada nos nossos sistemas de moderação e procederemos à verificação célere.';
+          feedbackMsg.style.display = 'block';
+          takedownForm.reset();
+        } else {
+          feedbackMsg.className = 'msg-feedback msg-error';
+          feedbackMsg.textContent = data.error || 'Não foi possível submeter a notificação. Tente novamente.';
+          feedbackMsg.style.display = 'block';
+        }
+      } catch (err) {
+        feedbackMsg.className = 'msg-feedback msg-error';
+        feedbackMsg.textContent = 'Erro de comunicação ao contactar o servidor.';
+        feedbackMsg.style.display = 'block';
+      } finally {
+        btnSubmitNotice.textContent = '📨 Enviar Notificação Formal';
+        btnSubmitNotice.disabled = false;
+      }
+    });
+  </script>
+
+</body>
+</html>

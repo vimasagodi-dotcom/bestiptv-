@@ -1,4 +1,4 @@
-// Configuração Oficial Firebase — Projeto: cocas-iptv
+// Configuração Firebase — Projeto: cocas-iptv
 export const firebaseConfig = {
   apiKey: "AIzaSyBlKw07SpE40G38CaZ6viJNFpCVcwHo3Gw",
   authDomain: "cocas-iptv.firebaseapp.com",

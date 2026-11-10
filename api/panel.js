@@ -4,7 +4,7 @@ const REPO = 'vimasagodi-dotcom/bestiptv-';
 const BRANCH = 'panel-data';
 const FILE_PATH = 'panel-db.enc';
 
-// Configuração Oficial Firebase — Projeto: cocas-iptv
+// Configuração Firebase — Projeto: cocas-iptv
 const FIREBASE_CONFIG = {
   apiKey: process.env.FIREBASE_API_KEY || 'AIzaSyBlKw07SpE40G38CaZ6viJNFpCVcwHo3Gw',
   authDomain: 'cocas-iptv.firebaseapp.com',
@@ -35,19 +35,78 @@ const DEFAULT_AD_CONFIG = {
   subtitle: 'Remova toda a publicidade ao mudar de canal e tenha acesso VIP ao Chat da Comunidade.',
   plansText: '1 Ano: 5€ · 2 Anos: 9€ · 3 Anos: 13€ · 4 Anos: 16€ · 5 Anos: 19€',
   imageUrl: '',
-  // Banner publicidade à medida em ecrã inteiro (estilo Sport TV / DaPortas)
   bannerEnabled: true,
   bannerText: 'DaPortas · Portas, Roupeiros e Soluções por Medida',
   bannerSubtext: 'Visite daportas.pt · Qualidade e Design',
   bannerImageUrl: '',
   bannerLinkUrl: '',
-  // Ficheiro APK activo para download em cocas.online/tv e cocas.online/cocas.apk
   apkDownloadUrl: 'https://expo.dev/artifacts/eas/SZp1mYng3LMok3awjQyWVvyqq3eCt9Z_zaPK3Fv2fHM.apk',
 };
 
 function getKey() {
   const secret = process.env.PANEL_SECRET_KEY || 'default-kiko-secret-key-32-chars!!';
   return crypto.createHash('sha256').update(String(secret)).digest();
+}
+
+// AES-256-GCM line credentials encryption at rest (RGPD & Data Protection Compliance)
+const LINE_ENCRYPTION_SECRET = process.env.LINE_ENCRYPTION_KEY || process.env.PANEL_VAULT_KEY || process.env.PANEL_SECRET_KEY || 'cocas_media_player_legal_aes256_key_2026';
+const LINE_KEY = crypto.createHash('sha256').update(String(LINE_ENCRYPTION_SECRET)).digest();
+
+function encryptLineCredential(val) {
+  if (!val) return '';
+  const str = String(val).trim();
+  if (str.startsWith('enc_v1:')) return str;
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', LINE_KEY, iv);
+  const enc = Buffer.concat([cipher.update(str, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `enc_v1:${iv.toString('hex')}:${tag.toString('hex')}:${enc.toString('hex')}`;
+}
+
+function decryptLineCredential(val) {
+  if (!val) return '';
+  const str = String(val).trim();
+  if (!str.startsWith('enc_v1:')) return str;
+  try {
+    const parts = str.split(':');
+    if (parts.length !== 4) return str;
+    const iv = Buffer.from(parts[1], 'hex');
+    const tag = Buffer.from(parts[2], 'hex');
+    const enc = Buffer.from(parts[3], 'hex');
+    const decipher = crypto.createDecipheriv('aes-256-gcm', LINE_KEY, iv);
+    decipher.setAuthTag(tag);
+    return Buffer.concat([decipher.update(enc), decipher.final()]).toString('utf8');
+  } catch {
+    return '';
+  }
+}
+
+// Strong PBKDF2 Password Hashing with Salt
+function hashPassword(plain) {
+  if (!plain) return '';
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.pbkdf2Sync(String(plain), salt, 100000, 64, 'sha512').toString('hex');
+  return `pbkdf2$${salt}$${hash}`;
+}
+
+function verifyPassword(plain, stored) {
+  if (!plain || !stored) return false;
+  const pStr = String(plain);
+  const sStr = String(stored);
+  if (sStr.startsWith('pbkdf2$')) {
+    const parts = sStr.split('$');
+    if (parts.length !== 3) return false;
+    const salt = parts[1];
+    const expectedHash = parts[2];
+    const calculatedHash = crypto.pbkdf2Sync(pStr, salt, 100000, 64, 'sha512').toString('hex');
+    try {
+      return crypto.timingSafeEqual(Buffer.from(calculatedHash, 'hex'), Buffer.from(expectedHash, 'hex'));
+    } catch {
+      return false;
+    }
+  }
+  // Legacy plain-text backwards compatibility
+  return pStr === sStr || pStr.toLowerCase() === sStr.toLowerCase();
 }
 
 function encrypt(obj) {
@@ -94,11 +153,14 @@ function ensureDbShape(db) {
       room: 'geral',
       nick: 'CocasBot',
       role: 'owner',
-      text: 'Bem-vindo ao Chat Oficial da Comunidade Cocas! Escolha o seu nickname e participe.',
+      text: 'Bem-vindo ao Chat da Comunidade Cocas! Lembra-te: é estritamente proibido partilhar listas ou links de terceiros.',
       ts: Date.now(),
     },
   ];
   db.chatTopic = db.chatTopic || '🔥 Bem-vindo à Comunidade Cocas! Respeite os membros e moderadores.';
+  db.chatReports = Array.isArray(db.chatReports) ? db.chatReports : [];
+  db.modLogs = Array.isArray(db.modLogs) ? db.modLogs : [];
+  db.takedownNotices = Array.isArray(db.takedownNotices) ? db.takedownNotices : [];
   db.adConfig = { ...DEFAULT_AD_CONFIG, ...(db.adConfig || {}) };
   return db;
 }
@@ -299,7 +361,7 @@ async function fetchXtreamLineInfo(server, username, password, timeoutMs = 4500)
   try {
     const apiUrl = `${base}/player_api.php?username=${encodeURIComponent(usr)}&password=${encodeURIComponent(pwd)}`;
     const res = await fetch(apiUrl, {
-      headers: { 'User-Agent': 'IPTVSmartersPlayer', Accept: '*/*' },
+      headers: { 'User-Agent': 'CocasMediaPlayer/1.0', Accept: '*/*' },
       signal: controller.signal,
     });
     if (!res.ok) return null;
@@ -535,6 +597,15 @@ module.exports = async function handler(req, res) {
         return res.status(403).json({ ok: false, error: 'Está temporariamente silenciado (mute) no chat.' });
       }
 
+      // Legal & Anti-Piracy filter: block IPTV playlist / credential leaks & pirate links
+      const IPTV_PATTERN = /(?:player_api\.php|get\.php\?|\.m3u8?(?:$|[?&#])|username=[^&\s]+&password=[^&\s]+|xtream-codes|server_info|user_info|mag\/stb)/i;
+      if (IPTV_PATTERN.test(text)) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Aviso Legal: É expressamente proibido partilhar credenciais de linhas IPTV, listas (.m3u/.m3u8) ou links piratas na comunidade Cocas.',
+        });
+      }
+
       // Anti-spam cooldown (1.2s)
       const nowMsg = Date.now();
       if (cu.lastMsgAt && nowMsg - cu.lastMsgAt < 1200) {
@@ -591,37 +662,84 @@ module.exports = async function handler(req, res) {
           }
         }
       }
+
+      // Record mod audit log (DSA & Moderation Compliance)
+      db.modLogs = Array.isArray(db.modLogs) ? db.modLogs : [];
+      db.modLogs.push({
+        id: `mod_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        actorNick: actor.nick,
+        actorRole: actor.role,
+        targetNick: targetNick || null,
+        modOp,
+        msgId: msgId || null,
+        ts: Date.now(),
+      });
+      if (db.modLogs.length > 200) db.modLogs = db.modLogs.slice(-200);
+
       await saveDb(db, sha);
       return res.status(200).json({ ok: true });
     }
 
-    // 1. Client login from Cocas App
+    // Report illicit content / spam message in chat
+    if (action === 'chat_report_msg') {
+      const reporterNick = String(body.reporterNick || '').trim();
+      const msgId = String(body.msgId || '').trim();
+      const reason = String(body.reason || 'Conteúdo ilícito ou violação dos termos').trim();
+      const msg = (db.chatMessages || []).find((m) => m.id === msgId);
+      db.chatReports = Array.isArray(db.chatReports) ? db.chatReports : [];
+      db.chatReports.push({
+        id: `rep_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        reporterNick: reporterNick || 'Anónimo',
+        msgId,
+        reportedNick: msg ? msg.nick : 'Desconhecido',
+        reportedText: msg ? msg.text : '',
+        reason,
+        status: 'pendente',
+        ts: Date.now(),
+      });
+      if (db.chatReports.length > 200) db.chatReports = db.chatReports.slice(-200);
+      await saveDb(db, sha).catch(() => {});
+      return res.status(200).json({ ok: true, message: 'Denúncia registada. A equipa de moderação irá avaliar com brevidade.' });
+    }
+
+    // DSA Notice & Takedown Form submission
+    if (action === 'notice_takedown') {
+      const name = String(body.name || '').trim();
+      const email = String(body.email || '').trim();
+      const contentUrl = String(body.contentUrl || '').trim();
+      const description = String(body.description || '').trim();
+      const legalBasis = String(body.legalBasis || '').trim();
+      if (!name || !email || !description) {
+        return res.status(400).json({ ok: false, error: 'Por favor preencha nome, email e descrição da notificação.' });
+      }
+      db.takedownNotices = Array.isArray(db.takedownNotices) ? db.takedownNotices : [];
+      db.takedownNotices.push({
+        id: `dsa_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        name,
+        email,
+        contentUrl,
+        description,
+        legalBasis,
+        status: 'recebido',
+        ts: Date.now(),
+      });
+      if (db.takedownNotices.length > 200) db.takedownNotices = db.takedownNotices.slice(-200);
+      await saveDb(db, sha).catch(() => {});
+      return res.status(200).json({ ok: true, message: 'Notificação recebida com sucesso. A equipa responderá com celeridade.' });
+    }
+
+    // 1. Client login from Cocas App & Web
     if (action === 'client_login') {
       const usr = String(body.username || '').trim().toLowerCase();
       const pwd = String(body.password || '').trim();
-      const pwdLower = pwd.toLowerCase();
       if (!usr || !pwd) {
         return res.status(400).json({ ok: false, error: 'Introduza o utilizador e a palavra-passe.' });
       }
       const foundIdx = (db.users || []).findIndex((u) => {
         const uUsr = String(u.username || '').trim().toLowerCase();
-        const uXtUsr = String(u.xtreamUser || '').trim().toLowerCase();
-        const uName = String(u.name || '').trim().toLowerCase();
-        const uPwd = String(u.password || '').trim();
-        const uXtPwd = String(u.xtreamPass || '').trim();
-
-        const userMatch =
-          uUsr === usr ||
-          (uXtUsr && uXtUsr === usr) ||
-          (uName && uName === usr) ||
-          (uUsr.length >= 6 && usr.length >= 6 && (uUsr.startsWith(usr) || usr.startsWith(uUsr)));
-        const passMatch =
-          uPwd === pwd ||
-          uPwd.toLowerCase() === pwdLower ||
-          (uXtPwd && (uXtPwd === pwd || uXtPwd.toLowerCase() === pwdLower)) ||
-          (uPwd.length >= 6 && pwd.length >= 6 && (uPwd.toLowerCase().startsWith(pwdLower) || pwdLower.startsWith(uPwd.toLowerCase()))) ||
-          (uXtPwd.length >= 6 && pwd.length >= 6 && (uXtPwd.toLowerCase().startsWith(pwdLower) || pwdLower.startsWith(uXtPwd.toLowerCase())));
-        return userMatch && passMatch;
+        const uEmail = String(u.email || '').trim().toLowerCase();
+        const userMatch = uUsr === usr || (uEmail && uEmail === usr);
+        return userMatch && verifyPassword(pwd, u.password);
       });
       if (foundIdx < 0) {
         return res.status(401).json({ ok: false, error: 'Utilizador ou palavra-passe incorretos.' });
@@ -637,16 +755,26 @@ module.exports = async function handler(req, res) {
         });
       }
 
+      // Upgrade plain password to PBKDF2 hash on login
+      if (!String(found.password).startsWith('pbkdf2$')) {
+        found.password = hashPassword(pwd);
+      }
+
       found.lastSeenAt = Date.now();
       if (body.device) found.device = String(body.device);
       await saveDb(db, sha).catch(() => {});
 
-      const xtFromM3u = parseXtreamUrl(found.m3uUrl || found.server);
-      const hasXtreamFields = Boolean(found.server && found.xtreamUser && found.xtreamPass);
+      const decM3u = decryptLineCredential(found.m3uUrl);
+      const decServer = decryptLineCredential(found.server);
+      const decXtUser = decryptLineCredential(found.xtreamUser);
+      const decXtPass = decryptLineCredential(found.xtreamPass);
+
+      const xtFromM3u = parseXtreamUrl(decM3u || decServer);
+      const hasXtreamFields = Boolean(decServer && decXtUser && decXtPass);
       if (found.playlistType === 'xtream' || xtFromM3u || hasXtreamFields) {
-        const server = xtFromM3u ? xtFromM3u.server : normalizeServerUrl(found.server);
-        const xtreamUser = xtFromM3u ? xtFromM3u.username : String(found.xtreamUser || '').trim();
-        const xtreamPass = xtFromM3u ? xtFromM3u.password : String(found.xtreamPass || '').trim();
+        const server = xtFromM3u ? xtFromM3u.server : normalizeServerUrl(decServer);
+        const xtreamUser = xtFromM3u ? xtFromM3u.username : String(decXtUser || '').trim();
+        const xtreamPass = xtFromM3u ? xtFromM3u.password : String(decXtPass || '').trim();
         return res.status(200).json({
           ok: true,
           playlist: {
@@ -669,7 +797,7 @@ module.exports = async function handler(req, res) {
           playlist: {
             name: found.name || `Cocas (${found.username})`,
             type: 'm3u',
-            url: String(found.m3uUrl || '').trim(),
+            url: String(decM3u || '').trim(),
             liveFormat: found.liveFormat || 'm3u8',
             panelUsername: found.username,
             appExpDate: found.appExpDate || null,
@@ -681,20 +809,24 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // 1b. Client Registration from Web (obligatory user account creation)
+    // 1b. Client Registration from Web (obligatory user account creation + legal consent)
     if (action === 'client_register') {
-      const name = String(body.name || '').trim();
-      const email = String(body.email || '').trim().toLowerCase();
       const rawUser = String(body.username || '').trim().toLowerCase().replace(/\s+/g, '_');
+      const name = String(body.name || '').trim() || rawUser; // RGPD Art. 5: Name is optional, defaults to username
+      const email = String(body.email || '').trim().toLowerCase();
       const password = String(body.password || '').trim();
       const lineType = String(body.lineType || 'xtream').toLowerCase();
       const server = String(body.server || '').trim();
       const xtreamUser = String(body.xtreamUser || '').trim();
       const xtreamPass = String(body.xtreamPass || '').trim();
       const m3uUrl = String(body.m3uUrl || '').trim();
+      const legalConsent = Boolean(body.legalConsent);
 
-      if (!name || name.length < 2) {
-        return res.status(200).json({ ok: false, error: 'Por favor introduz o teu nome completo.' });
+      if (!legalConsent) {
+        return res.status(200).json({
+          ok: false,
+          error: 'É obrigatório declarar que tens direito legal a aceder à tua linha e aceitar os Termos e a Política de Privacidade.',
+        });
       }
       if (!email || !email.includes('@') || !email.includes('.')) {
         return res.status(200).json({ ok: false, error: 'Por favor introduz um endereço de email válido.' });
@@ -748,16 +880,19 @@ module.exports = async function handler(req, res) {
         name,
         email,
         username: rawUser,
-        password,
+        password: hashPassword(password),
         playlistType: lineType === 'xtream' ? 'xtream' : 'm3u',
-        server: lineType === 'xtream' ? normalizeServerUrl(server) : '',
-        xtreamUser: lineType === 'xtream' ? xtreamUser : '',
-        xtreamPass: lineType === 'xtream' ? xtreamPass : '',
-        m3uUrl: lineType === 'm3u' ? m3uUrl : '',
+        server: lineType === 'xtream' ? encryptLineCredential(normalizeServerUrl(server)) : '',
+        xtreamUser: lineType === 'xtream' ? encryptLineCredential(xtreamUser) : '',
+        xtreamPass: lineType === 'xtream' ? encryptLineCredential(xtreamPass) : '',
+        m3uUrl: lineType === 'm3u' ? encryptLineCredential(m3uUrl) : '',
         liveFormat: 'm3u8',
         isSelfRegistered: true,
         isPrivateLine: true, // Administrator cannot view customer's private line
         active: true,
+        legalConsent: true,
+        legalConsentAt: Date.now(),
+        termsAcceptedAt: Date.now(),
         createdAt: Date.now(),
         lastSeenAt: Date.now(),
       };
@@ -789,17 +924,17 @@ module.exports = async function handler(req, res) {
         playlist: {
           name: newUser.name,
           type: newUser.playlistType,
-          server: newUser.server,
-          username: newUser.xtreamUser,
-          password: newUser.xtreamPass,
-          m3uUrl: newUser.m3uUrl,
+          server: lineType === 'xtream' ? normalizeServerUrl(server) : '',
+          username: lineType === 'xtream' ? xtreamUser : '',
+          password: lineType === 'xtream' ? xtreamPass : '',
+          m3uUrl: lineType === 'm3u' ? m3uUrl : '',
           liveFormat: 'm3u8',
           panelUsername: newUser.username,
         },
       });
     }
 
-    // 1c. Member updates their own line details
+    // 1c. Member updates their own line details (with consent & AES-256 encryption)
     if (action === 'update_my_line') {
       const usr = String(body.username || '').trim().toLowerCase();
       const pwd = String(body.password || '').trim();
@@ -808,9 +943,17 @@ module.exports = async function handler(req, res) {
       const xtreamUser = String(body.xtreamUser || '').trim();
       const xtreamPass = String(body.xtreamPass || '').trim();
       const m3uUrl = String(body.m3uUrl || '').trim();
+      const legalConsent = Boolean(body.legalConsent);
+
+      if (!legalConsent) {
+        return res.status(200).json({
+          ok: false,
+          error: 'É obrigatório declarar que tens direito legal a aceder ao conteúdo da tua linha.',
+        });
+      }
 
       const user = (db.users || []).find(
-        (u) => String(u.username || '').toLowerCase() === usr && u.password === pwd
+        (u) => String(u.username || '').toLowerCase() === usr && verifyPassword(pwd, u.password)
       );
       if (!user) {
         return res.status(401).json({ ok: false, error: 'Credenciais inválidas.' });
@@ -818,13 +961,18 @@ module.exports = async function handler(req, res) {
 
       user.playlistType = lineType === 'xtream' ? 'xtream' : 'm3u';
       if (lineType === 'xtream') {
-        user.server = normalizeServerUrl(server);
-        user.xtreamUser = xtreamUser;
-        user.xtreamPass = xtreamPass;
+        user.server = encryptLineCredential(normalizeServerUrl(server));
+        user.xtreamUser = encryptLineCredential(xtreamUser);
+        user.xtreamPass = encryptLineCredential(xtreamPass);
+        user.m3uUrl = '';
       } else {
-        user.m3uUrl = m3uUrl;
+        user.m3uUrl = encryptLineCredential(m3uUrl);
+        user.server = '';
+        user.xtreamUser = '';
+        user.xtreamPass = '';
       }
       user.isPrivateLine = true;
+      user.lineConsentAt = Date.now();
       user.lastSeenAt = Date.now();
 
       await saveDb(db, sha).catch(() => {});
@@ -834,22 +982,98 @@ module.exports = async function handler(req, res) {
         playlist: {
           name: user.name,
           type: user.playlistType,
-          server: user.server,
-          username: user.xtreamUser,
-          password: user.xtreamPass,
-          m3uUrl: user.m3uUrl,
+          server: lineType === 'xtream' ? normalizeServerUrl(server) : '',
+          username: lineType === 'xtream' ? xtreamUser : '',
+          password: lineType === 'xtream' ? xtreamPass : '',
+          m3uUrl: lineType === 'm3u' ? m3uUrl : '',
           liveFormat: 'm3u8',
           panelUsername: user.username,
         },
       });
     }
 
+    // GDPR Data Portability: export_my_data
+    if (action === 'export_my_data') {
+      const usr = String(body.username || '').trim().toLowerCase();
+      const pwd = String(body.password || '').trim();
+      const user = (db.users || []).find(
+        (u) => String(u.username || '').toLowerCase() === usr && verifyPassword(pwd, u.password)
+      );
+      if (!user) {
+        return res.status(401).json({ ok: false, error: 'Credenciais inválidas.' });
+      }
+
+      const userMessages = (db.chatMessages || []).filter(
+        (m) => String(m.nick || '').toLowerCase() === usr
+      );
+
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        service: 'Cocas Media Player (www.cocas.online)',
+        compliance: 'RGPD / Regulamento Geral sobre a Proteção de Dados (UE 2016/679)',
+        account: {
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          email: user.email,
+          createdAt: user.createdAt ? new Date(user.createdAt).toISOString() : null,
+          lastSeenAt: user.lastSeenAt ? new Date(user.lastSeenAt).toISOString() : null,
+          legalConsent: Boolean(user.legalConsent),
+          legalConsentAt: user.legalConsentAt ? new Date(user.legalConsentAt).toISOString() : null,
+          termsAcceptedAt: user.termsAcceptedAt ? new Date(user.termsAcceptedAt).toISOString() : null,
+        },
+        lineConfiguration: {
+          type: user.playlistType,
+          server: decryptLineCredential(user.server),
+          xtreamUser: decryptLineCredential(user.xtreamUser),
+          m3uUrl: decryptLineCredential(user.m3uUrl),
+        },
+        chatActivity: {
+          messagesCount: userMessages.length,
+          messages: userMessages.map((m) => ({
+            id: m.id,
+            room: m.room,
+            text: m.text,
+            timestamp: new Date(m.ts).toISOString(),
+          })),
+        },
+      };
+
+      return res.status(200).json({ ok: true, data: exportData });
+    }
+
+    // GDPR Right to Erasure: delete_my_account
+    if (action === 'delete_my_account') {
+      const usr = String(body.username || '').trim().toLowerCase();
+      const pwd = String(body.password || '').trim();
+      const userIndex = (db.users || []).findIndex(
+        (u) => String(u.username || '').toLowerCase() === usr && verifyPassword(pwd, u.password)
+      );
+      if (userIndex < 0) {
+        return res.status(401).json({ ok: false, error: 'Credenciais inválidas. Não foi possível apagar a conta.' });
+      }
+
+      // 1. Remove user
+      db.users.splice(userIndex, 1);
+      // 2. Remove chat user profile
+      db.chatUsers = (db.chatUsers || []).filter(
+        (u) => String(u.nick || '').toLowerCase() !== usr
+      );
+      // 3. Remove all chat messages authored by user
+      db.chatMessages = (db.chatMessages || []).filter(
+        (m) => String(m.nick || '').toLowerCase() !== usr
+      );
+
+      await saveDb(db, sha);
+      return res.status(200).json({ ok: true, message: 'A sua conta, linhas associadas e mensagens foram apagadas permanentemente.' });
+    }
+
     // Fetch channels for Web Player (supports Xtream Codes and M3U playlists, bypassing browser CORS & Mixed-Content)
     if (action === 'get_web_channels') {
-      let srv = normalizeServerUrl(body.server);
-      let usr = String(body.username || '').trim();
-      let pwd = String(body.password || '').trim();
-      const m3uUrl = String(body.m3uUrl || '').trim();
+      let srv = normalizeServerUrl(decryptLineCredential(body.server));
+      let usr = decryptLineCredential(body.username);
+      let pwd = decryptLineCredential(body.password);
+      const m3uUrl = decryptLineCredential(body.m3uUrl);
 
       if (m3uUrl) {
         const parsed = parseXtreamUrl(m3uUrl);
@@ -866,7 +1090,7 @@ module.exports = async function handler(req, res) {
           const timer = setTimeout(() => controller.abort(), 7000);
           const url = `${srv}/player_api.php?username=${encodeURIComponent(usr)}&password=${encodeURIComponent(pwd)}&action=get_live_streams`;
           const r = await fetch(url, {
-            headers: { 'User-Agent': 'IPTVSmartersPro/1.0' },
+            headers: { 'User-Agent': 'CocasMediaPlayer/1.0' },
             signal: controller.signal,
           });
           clearTimeout(timer);
@@ -894,7 +1118,7 @@ module.exports = async function handler(req, res) {
           const controller = new AbortController();
           const timer = setTimeout(() => controller.abort(), 7000);
           const r = await fetch(m3uUrl, {
-            headers: { 'User-Agent': 'IPTVSmartersPro/1.0' },
+            headers: { 'User-Agent': 'CocasMediaPlayer/1.0' },
             signal: controller.signal,
           });
           clearTimeout(timer);
