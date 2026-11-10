@@ -511,9 +511,11 @@ module.exports = async function handler(req, res) {
         .filter((t) => t.room === room && t.nick.toLowerCase() !== nick.toLowerCase())
         .map((t) => t.nick);
 
+      // Online threshold: active in the last 25 seconds
+      const ONLINE_THRESHOLD_MS = 25000;
       const roleOrder = { owner: 0, admin: 1, mod: 2, member: 3, guest: 4 };
       const sortedUsers = [...db.chatUsers]
-        .filter((u) => !u.banned)
+        .filter((u) => !u.banned && u.lastSeenAt && (nowTs - Number(u.lastSeenAt) <= ONLINE_THRESHOLD_MS))
         .sort((a, b) => (roleOrder[a.role] ?? 4) - (roleOrder[b.role] ?? 4));
 
       // Active private rooms where this user is a participant
@@ -633,7 +635,7 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ ok: true, messages, myProfile: cu });
     }
 
-    // In-chat moderation by Chat Owners/Admins/Mods
+    // In-chat moderation by Chat Owners/Admins/Mods or message author
     if (action === 'chat_mod_action') {
       const actorNick = String(body.actorNick || '').trim();
       const targetNick = String(body.targetNick || '').trim();
@@ -642,23 +644,33 @@ module.exports = async function handler(req, res) {
 
       const actor = db.chatUsers.find((u) => u.nick.toLowerCase() === actorNick.toLowerCase());
       const actorOwnerKey = String(body.ownerKey || '').trim();
-      if (
-        !actor ||
-        !['owner', 'admin', 'mod'].includes(actor.role) ||
-        (actor.ownerKey && actor.ownerKey !== actorOwnerKey)
-      ) {
-        return res.status(403).json({ ok: false, error: 'Sem permissões de moderação no chat.' });
-      }
 
+      // Deleting a message: Allowed for moderator/admin/owner OR if the message belongs to actorNick
       if (modOp === 'delete_msg' && msgId) {
+        const targetMsg = (db.chatMessages || []).find((m) => m.id === msgId);
+        const isAuthor = targetMsg && targetMsg.nick.toLowerCase() === actorNick.toLowerCase();
+        const isMod = actor && ['owner', 'admin', 'mod'].includes(actor.role);
+        if (!isAuthor && !isMod) {
+          return res.status(403).json({ ok: false, error: 'Sem permissões para apagar esta mensagem.' });
+        }
         db.chatMessages = db.chatMessages.filter((m) => m.id !== msgId);
-      } else if (targetNick) {
-        const target = db.chatUsers.find((u) => u.nick.toLowerCase() === targetNick.toLowerCase());
-        if (target && target.role !== 'owner') {
-          if (modOp === 'mute') target.muted = !target.muted;
-          if (modOp === 'ban' && ['owner', 'admin'].includes(actor.role)) target.banned = !target.banned;
-          if (modOp === 'kick' && ['owner', 'admin', 'mod'].includes(actor.role)) {
-            db.chatUsers = db.chatUsers.filter((u) => u.nick.toLowerCase() !== targetNick.toLowerCase());
+      } else {
+        if (
+          !actor ||
+          !['owner', 'admin', 'mod'].includes(actor.role) ||
+          (actor.ownerKey && actor.ownerKey !== actorOwnerKey)
+        ) {
+          return res.status(403).json({ ok: false, error: 'Sem permissões de moderação no chat.' });
+        }
+
+        if (targetNick) {
+          const target = db.chatUsers.find((u) => u.nick.toLowerCase() === targetNick.toLowerCase());
+          if (target && target.role !== 'owner') {
+            if (modOp === 'mute') target.muted = !target.muted;
+            if (modOp === 'ban' && ['owner', 'admin'].includes(actor.role)) target.banned = !target.banned;
+            if (modOp === 'kick' && ['owner', 'admin', 'mod'].includes(actor.role)) {
+              db.chatUsers = db.chatUsers.filter((u) => u.nick.toLowerCase() !== targetNick.toLowerCase());
+            }
           }
         }
       }

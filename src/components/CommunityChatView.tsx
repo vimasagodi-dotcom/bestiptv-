@@ -306,15 +306,59 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
     Alert.alert(`Membro: ${target.nick}`, 'Escolha a opção pretendida:', options);
   };
 
+  const handleMessageLongPress = (item: ChatMessage) => {
+    if (!savedNick) return;
+    const isMe = item.nick.toLowerCase() === savedNick.toLowerCase();
+    
+    if (isMe) {
+      Alert.alert('Minha Mensagem', 'Deseja apagar esta mensagem?', [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: '🗑️ Apagar Mensagem',
+          style: 'destructive',
+          onPress: async () => {
+            // Optimistically remove from state immediately
+            setMessages((prev) => prev.filter((m) => m.id !== item.id));
+            await requestChatApi({
+              action: 'chat_mod_action',
+              actorNick: savedNick,
+              ownerKey,
+              targetNick: item.nick,
+              modOp: 'delete_msg',
+              msgId: item.id,
+            });
+            fetchChatState(true);
+          },
+        },
+      ]);
+      return;
+    }
+
+    if (canModerate) {
+      handleModAction(item.nick, item.id);
+    } else {
+      // Regular user clicking another user's message -> option to open private chat
+      Alert.alert(`Mensagem de ${item.nick}`, item.text, [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: `💬 Falar em Privado com ${item.nick}`,
+          onPress: () => openPrivateRoom(item.nick),
+        },
+      ]);
+    }
+  };
+
   const handleModAction = (targetNick: string, msgId?: string) => {
-    if (!canModerate || !savedNick) return;
+    if (!savedNick) return;
     Alert.alert(`Moderação: ${targetNick}`, 'Escolha a ação de moderador/admin:', [
       { text: 'Cancelar', style: 'cancel' },
       ...(msgId
         ? [
             {
               text: '🗑️ Apagar Mensagem',
+              style: 'destructive' as const,
               onPress: async () => {
+                setMessages((prev) => prev.filter((m) => m.id !== msgId));
                 await requestChatApi({
                   action: 'chat_mod_action',
                   actorNick: savedNick,
@@ -546,7 +590,7 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
                 const hasMention = Boolean(savedNick && !isMe && item.text.toLowerCase().includes(`@${savedNick.toLowerCase()}`));
                 return (
                   <Pressable
-                    onLongPress={() => canModerate && handleModAction(item.nick, item.id)}
+                    onLongPress={() => handleMessageLongPress(item)}
                     style={[styles.msgRow, isMe && styles.msgRowMe, hasMention && { borderColor: colors.accent, borderWidth: 1 }]}
                   >
                     <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
