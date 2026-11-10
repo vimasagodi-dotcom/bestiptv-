@@ -1648,19 +1648,6 @@
             <div style="background: rgba(239,68,68,0.12); border-bottom: 1px solid rgba(239,68,68,0.25); padding: 5px 12px; font-size: 11px; color: #fca5a5;">
               ⚖️ <strong>Regras do Chat:</strong> Proibida a partilha de listas, linhas IPTV, vendas ou links protegidos.
             </div>
-              <div class="chat-meta-bar">
-                <button type="button" class="xat-top-btn" id="btnToggleSound" title="Ligar/Desligar Sons" tabindex="0">🔊 Sons</button>
-                <div class="chat-online-pill" id="chatOnlinePill" title="Ver utilizadores online e amigos" tabindex="0">
-                  <span class="pawn pawn-green" style="transform: scale(0.85);"></span>
-                  <span id="onlineCount">1</span>
-                </div>
-                <div class="my-nick-badge" id="myNickDisplay" title="Alterar o teu avatar" tabindex="0">
-                  <span class="my-avatar-mini" id="myAvatarMini">👤</span>
-                  <span id="myNickLabel">Visitante</span>
-                </div>
-                <button type="button" class="btn-minimize-chat" id="btnChatMinimize" title="Minimizar / Expandir Chat" tabindex="0">_</button>
-              </div>
-            </div>
 
             <!-- CORPO DO CHAT: MENSAGENS (ESQUERDA) + PEÕES ONLINE (DIREITA) -->
             <div class="chat-main-body">
@@ -2816,7 +2803,6 @@
 
     // Elements
     const chatPane = document.getElementById('chatPane');
-    const chatStream = document.getElementById('chatStream');
     const chatTypingBar = document.getElementById('chatTypingBar');
     const chatTypingText = document.getElementById('chatTypingText');
     const chatEmojiBtn = document.getElementById('chatEmojiBtn');
@@ -2828,9 +2814,6 @@
     const btnChatMinimize = document.getElementById('btnChatMinimize');
     const btnToggleSound = document.getElementById('btnToggleSound');
     const currentRoomTag = document.getElementById('currentRoomTag');
-    const chatRoomsNav = document.getElementById('chatRoomsNav');
-    const chatInput = document.getElementById('chatInput');
-    const chatSendBtn = document.getElementById('chatSendBtn');
 
     // User Card Modal Elements
     const chatUserModalOverlay = document.getElementById('chatUserModalOverlay');
@@ -2853,7 +2836,6 @@
     const btnCloseAvatarModal = document.getElementById('btnCloseAvatarModal');
     const myNickDisplay = document.getElementById('myNickDisplay');
     const myAvatarMini = document.getElementById('myAvatarMini');
-    const myNickLabel = document.getElementById('myNickLabel');
 
     // Storage helpers
     function getFriendsList() {
@@ -3477,42 +3459,6 @@
       }
       lastMsgSentAt = now;
 
-      chatSendBtn.disabled = true;
-      setTimeout(() => { chatSendBtn.disabled = false; }, 1200);
-
-      chatInput.value = '';
-
-      try {
-        const payload = {
-          action: 'chat_send',
-          room: currentRoom,
-          nick: activeUser,
-          panelUsername: activeUser,
-          avatar: currentAvatar,
-          text: text
-        };
-        const res = await fetch('/api/panel', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (data && data.ok && Array.isArray(data.messages)) {
-          renderChatMessages(data.messages);
-        } else if (data?.error) {
-          alert(data.error);
-        }
-      } catch (err) {}
-    }
-
-      // Anti-spam cooldown (1.2s)
-      const now = Date.now();
-      if (now - lastMsgSentAt < 1200) {
-        return;
-      }
-      lastMsgSentAt = now;
-
-      // Temporary disable send button
       chatSendBtn.disabled = true;
       setTimeout(() => { chatSendBtn.disabled = false; }, 1200);
 
