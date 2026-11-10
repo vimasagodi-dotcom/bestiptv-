@@ -706,7 +706,7 @@ export function LiveTvView({
               Remova toda a publicidade ao mudar de canal e receba estatuto VIP no Chat da Comunidade:
             </Text>
             <Text style={styles.adPlans}>
-              1 Ano: 5€ · 2 Anos: 9€ · 3 Anos: 13€ · 4 Anos: 16€ · 5 Anos: 19€
+              {adConfig?.plansText || '6 Meses: 6€ · 12 Meses: 10€'}
             </Text>
           </View>
         </View>

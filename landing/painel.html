@@ -301,7 +301,7 @@
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
           <div>
             <h2 id="formTitle">➕ Inserir / Editar Utilizador e Linha</h2>
-            <p class="sub">Defina o Utilizador, Password, Plano de Validade (1 a 5 anos) e a linha IPTV.</p>
+            <p class="sub">Defina o Utilizador, Password, Plano de Validade (6 meses ou 12 meses) e a linha IPTV.</p>
           </div>
           <button class="btn btn-secondary" onclick="resetForm()">Limpar / Novo</button>
         </div>
@@ -331,29 +331,17 @@
           </div>
         </div>
 
-        <!-- PLANOS DE VALIDADE (1 A 5 ANOS + OPÇÃO OFERTA) -->
+        <!-- PLANOS DE VALIDADE (6 MESES OU 12 MESES + OPÇÃO OFERTA) -->
         <div class="field" style="margin-top: 20px;">
-          <label>Plano de Validade do Login Cocas (1 a 5 Anos ou Oferta Grátis)</label>
+          <label>Plano de Validade do Login Cocas (6 Meses, 12 Meses ou Oferta Grátis)</label>
           <div class="plan-grid">
-            <div class="plan-card active" id="plan-1" onclick="selectPlan(1)">
-              <div class="plan-years">1 Ano</div>
-              <div class="plan-price" id="price-1">5 €</div>
+            <div class="plan-card active" id="plan-6m" onclick="selectPlan('6m')">
+              <div class="plan-years">6 Meses</div>
+              <div class="plan-price" id="price-6m">6 €</div>
             </div>
-            <div class="plan-card" id="plan-2" onclick="selectPlan(2)">
-              <div class="plan-years">2 Anos</div>
-              <div class="plan-price" id="price-2">9 €</div>
-            </div>
-            <div class="plan-card" id="plan-3" onclick="selectPlan(3)">
-              <div class="plan-years">3 Anos</div>
-              <div class="plan-price" id="price-3">13 €</div>
-            </div>
-            <div class="plan-card" id="plan-4" onclick="selectPlan(4)">
-              <div class="plan-years">4 Anos</div>
-              <div class="plan-price" id="price-4">16 €</div>
-            </div>
-            <div class="plan-card" id="plan-5" onclick="selectPlan(5)">
-              <div class="plan-years">5 Anos</div>
-              <div class="plan-price" id="price-5">19 €</div>
+            <div class="plan-card" id="plan-12m" onclick="selectPlan('12m')">
+              <div class="plan-years">12 Meses</div>
+              <div class="plan-price" id="price-12m">10 €</div>
             </div>
             <div class="plan-card" id="plan-offer" onclick="toggleOffer()">
               <div class="plan-years">🎁 Oferta</div>
@@ -514,10 +502,10 @@
   </div>
 
   <script>
-    const PLAN_PRICES = { 1: 5, 2: 9, 3: 13, 4: 16, 5: 19 };
+    const PLAN_PRICES = { '6m': 6, '12m': 10 };
     let adminPassword = sessionStorage.getItem('kiko_admin_pass') || '';
     let sourceType = 'm3u';
-    let selectedPlanYears = 1;
+    let selectedPlanKey = '12m';
     let selectedIsOffer = false;
     let currentUsers = [];
     let inspectTimer = null;
@@ -543,12 +531,12 @@
     }
 
     function updatePlanUi() {
-      [1, 2, 3, 4, 5].forEach(y => {
-        const el = document.getElementById('plan-' + y);
-        const priceEl = document.getElementById('price-' + y);
-        if (el) el.className = 'plan-card' + (y === selectedPlanYears ? ' active' : '');
+      ['6m', '12m'].forEach(k => {
+        const el = document.getElementById('plan-' + k);
+        const priceEl = document.getElementById('price-' + k);
+        if (el) el.className = 'plan-card' + (k === selectedPlanKey ? ' active' : '');
         if (priceEl) {
-          priceEl.textContent = selectedIsOffer ? '0 € (Oferta)' : (PLAN_PRICES[y] + ' €');
+          priceEl.textContent = selectedIsOffer ? '0 € (Oferta)' : (PLAN_PRICES[k] + ' €');
           priceEl.style.color = selectedIsOffer ? 'var(--success)' : 'var(--warning)';
         }
       });
@@ -556,22 +544,27 @@
       if (offerEl) {
         offerEl.className = 'plan-card' + (selectedIsOffer ? ' offer-active' : '');
       }
-      const price = selectedIsOffer ? 0 : (PLAN_PRICES[selectedPlanYears] || 5);
+      const price = selectedIsOffer ? 0 : (PLAN_PRICES[selectedPlanKey] || 10);
       const exp = new Date();
-      exp.setFullYear(exp.getFullYear() + selectedPlanYears);
+      if (selectedPlanKey === '6m') {
+        exp.setMonth(exp.getMonth() + 6);
+      } else {
+        exp.setFullYear(exp.getFullYear() + 1);
+      }
+      const label = selectedPlanKey === '6m' ? '6 Meses' : '12 Meses';
       if (selectedIsOffer) {
         document.getElementById('planSummaryText').innerHTML =
           `🎁 <strong style="color:var(--success);">MODO OFERTA ATIVO (0 € — Grátis):</strong> ` +
-          `Este login será válido por <strong>${selectedPlanYears} ${selectedPlanYears === 1 ? 'Ano' : 'Anos'}</strong> sem qualquer custo · Expira em: <strong>${fmtDate(exp.getTime())}</strong>`;
+          `Este login será válido por <strong>${label}</strong> sem qualquer custo · Expira em: <strong>${fmtDate(exp.getTime())}</strong>`;
       } else {
         document.getElementById('planSummaryText').innerHTML =
-          `✅ Este login será válido por <strong>${selectedPlanYears} ${selectedPlanYears === 1 ? 'Ano' : 'Anos'}</strong> ` +
+          `✅ Este login será válido por <strong>${label}</strong> ` +
           `(Custo: <strong style="color:var(--warning);">${price} €</strong>) · Expira em: <strong>${fmtDate(exp.getTime())}</strong>`;
       }
     }
 
-    function selectPlan(years) {
-      selectedPlanYears = Number(years) || 1;
+    function selectPlan(key) {
+      selectedPlanKey = (key === '6m' || key === 6 || key === 0.5) ? '6m' : '12m';
       updatePlanUi();
     }
 
@@ -580,7 +573,7 @@
       updatePlanUi();
     }
 
-    selectPlan(1);
+    selectPlan('12m');
 
     function showAlert(msg, ok = false) {
       const el = document.getElementById('alertBox');
@@ -909,7 +902,7 @@
       document.getElementById('uXtreamPass').value = '';
       document.getElementById('lineDetectedBox').style.display = 'none';
       selectedIsOffer = false;
-      selectPlan(1);
+      selectPlan('12m');
       document.getElementById('formTitle').textContent = '➕ Inserir / Editar Utilizador e Linha';
     }
 
@@ -928,7 +921,7 @@
       document.getElementById('uXtreamPass').value = u.xtreamPass || '';
       document.getElementById('uFormat').value = u.liveFormat || 'm3u8';
       selectedIsOffer = Boolean(u.isOffer || u.planPrice === 0);
-      selectPlan(u.planYears || 1);
+      selectPlan(u.planKey || (u.planYears === 0.5 ? '6m' : '12m'));
       setSourceType(u.playlistType === 'xtream' && !u.m3uUrl ? 'xtream' : 'm3u');
       document.getElementById('formTitle').textContent = '✏️ A Editar Utilizador e Linha: ' + u.username;
       if (u.lineExpDate) {
@@ -951,9 +944,10 @@
           password: document.getElementById('uPassword').value.trim(),
           name: document.getElementById('uName').value.trim(),
           active: document.getElementById('uActive').value === 'true',
-          planYears: selectedPlanYears,
+          planKey: selectedPlanKey,
+          planYears: selectedPlanKey === '6m' ? 0.5 : 1,
           isOffer: selectedIsOffer,
-          planPrice: selectedIsOffer ? 0 : (PLAN_PRICES[selectedPlanYears] || 5),
+          planPrice: selectedIsOffer ? 0 : (PLAN_PRICES[selectedPlanKey] || 10),
           renewFromNow: true,
           lineExpDate: detExp ? Number(detExp) : undefined,
           playlistType: sourceType,

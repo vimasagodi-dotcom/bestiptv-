@@ -21,11 +21,9 @@ const FIRESTORE_PUBLIC_DOC_URL =
   `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/cocas_chat/public_state?key=${FIREBASE_CONFIG.apiKey}`;
 
 const PLANS = {
-  1: { years: 1, price: 5, label: '1 Ano — 5 €' },
-  2: { years: 2, price: 9, label: '2 Anos — 9 €' },
-  3: { years: 3, price: 13, label: '3 Anos — 13 €' },
-  4: { years: 4, price: 16, label: '4 Anos — 16 €' },
-  5: { years: 5, price: 19, label: '5 Anos — 19 €' },
+  '6m': { key: '6m', months: 6, years: 0.5, price: 6, label: '6 Meses — 6 €' },
+  '12m': { key: '12m', months: 12, years: 1, price: 10, label: '12 Meses — 10 €' },
+  1: { key: '12m', months: 12, years: 1, price: 10, label: '12 Meses — 10 €' },
 };
 
 const DEFAULT_AD_CONFIG = {
@@ -33,7 +31,7 @@ const DEFAULT_AD_CONFIG = {
   durationSec: 5,
   title: 'Torne-se Membro VIP da Comunidade Cocas!',
   subtitle: 'Remova toda a publicidade ao mudar de canal e tenha acesso VIP ao Chat da Comunidade.',
-  plansText: '1 Ano: 5€ · 2 Anos: 9€ · 3 Anos: 13€ · 4 Anos: 16€ · 5 Anos: 19€',
+  plansText: '6 Meses: 6€ · 12 Meses: 10€',
   imageUrl: '',
   bannerEnabled: true,
   bannerText: 'DaPortas · Portas, Roupeiros e Soluções por Medida',
@@ -386,6 +384,12 @@ async function fetchXtreamLineInfo(server, username, password, timeoutMs = 4500)
   } finally {
     clearTimeout(timer);
   }
+}
+
+function addMonthsMs(baseMs, months) {
+  const d = new Date(baseMs);
+  d.setMonth(d.getMonth() + Number(months));
+  return d.getTime();
 }
 
 function addYearsMs(baseMs, years) {
@@ -1335,12 +1339,13 @@ module.exports = async function handler(req, res) {
       }
 
       const isOffer = Boolean(u.isOffer || u.planPrice === 0 || String(u.planPrice) === '0');
-      const planYears = [1, 2, 3, 4, 5].includes(Number(u.planYears)) ? Number(u.planYears) : (existing?.planYears || 1);
-      const planInfo = PLANS[planYears] || PLANS[1];
+      const rawPlanKey = String(u.planKey || u.planYears || '12m');
+      const planKey = (rawPlanKey === '6m' || rawPlanKey === '6' || Number(rawPlanKey) === 0.5) ? '6m' : '12m';
+      const planInfo = PLANS[planKey] || PLANS['12m'];
       const planPrice = isOffer ? 0 : planInfo.price;
       const createdAt = existing?.createdAt || Date.now();
       const baseDate = u.renewFromNow ? Date.now() : createdAt;
-      const appExpDate = u.appExpDate ? Number(u.appExpDate) : addYearsMs(baseDate, planInfo.years);
+      const appExpDate = u.appExpDate ? Number(u.appExpDate) : addMonthsMs(baseDate, planInfo.months || 12);
 
       let lineExpDate = u.lineExpDate ?? existing?.lineExpDate ?? null;
       let lineStatus = existing?.lineStatus ?? 'Active';
