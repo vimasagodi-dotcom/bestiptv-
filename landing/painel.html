@@ -6,21 +6,11 @@
   <title>Painel de Controlo Admin - Cocas IPTV</title>
   <!-- PostHog Analytics -->
   <script>
-    (function() {
-      var s = document.createElement('script');
-      s.type = 'text/javascript';
-      s.async = true;
-      s.src = 'https://us-assets.i.posthog.com/static/array.js';
-      s.onload = function() {
-        if (window.posthog && typeof window.posthog.init === 'function') {
-          window.posthog.init('phc_pk34ZrgaJXt8goiuPjJbVeqVpewQjMJFU42nbE2eSE8o', {
-            api_host: 'https://us.i.posthog.com',
-            person_profiles: 'always'
-          });
-        }
-      };
-      document.head.appendChild(s);
-    })();
+    !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register identify reset on sessionRecordingStarted".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+    posthog.init('phc_pk34ZrgaJXt8goiuPjJbVeqVpewQjMJFU42nbE2eSE8o', {
+      api_host: 'https://us.i.posthog.com',
+      person_profiles: 'always'
+    });
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -296,6 +286,33 @@
         <a href="https://console.firebase.google.com/project/cocas-iptv/firestore" target="_blank" class="btn btn-secondary" style="padding:7px 12px;font-size:12px;">
           Abrir Consola Firebase ↗
         </a>
+      </div>
+
+      <!-- PostHog Analytics & Telemetria Card -->
+      <div id="posthogBanner" class="card" style="padding:16px 20px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;border: 1px solid rgba(139, 92, 246, 0.4); background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(59, 130, 246, 0.05) 100%);">
+        <div style="display:flex;align-items:center;gap:12px;font-size:13px;">
+          <div style="width:40px;height:40px;border-radius:10px;background:rgba(245,158,11,0.15);display:flex;align-items:center;justify-content:center;font-size:22px;">🦔</div>
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <strong style="font-size:15px;color:#fff;">PostHog Analytics & Gravação de Sessões</strong>
+              <span class="pill pill-online" style="font-size:10px;padding:2px 8px;">🟢 Conectado</span>
+            </div>
+            <div style="color:var(--text-muted);font-size:12px;margin-top:3px;">
+              Projeto: <code>Default project</code> · Região: <code>us.i.posthog.com</code> · Rastreio de cliques, utilizadores e gravações ativo.
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <a href="https://us.posthog.com/project/phc_pk34ZrgaJXt8goiuPjJbVeqVpewQjMJFU42nbE2eSE8o/dashboard" target="_blank" class="btn btn-primary" style="background:#8b5cf6;border-color:#7c3aed;font-size:12px;padding:8px 14px;">
+            📊 Abrir Dashboard PostHog ↗
+          </a>
+          <a href="https://us.posthog.com/project/phc_pk34ZrgaJXt8goiuPjJbVeqVpewQjMJFU42nbE2eSE8o/replay" target="_blank" class="btn btn-secondary" style="font-size:12px;padding:8px 14px;">
+            🎥 Ver Gravações (Replay) ↗
+          </a>
+          <a href="https://us.posthog.com/project/phc_pk34ZrgaJXt8goiuPjJbVeqVpewQjMJFU42nbE2eSE8o/events" target="_blank" class="btn btn-secondary" style="font-size:12px;padding:8px 14px;">
+            ⚡ Eventos em Tempo Real ↗
+          </a>
+        </div>
       </div>
 
       <!-- STATS -->
