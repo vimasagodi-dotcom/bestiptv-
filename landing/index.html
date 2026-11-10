@@ -2026,6 +2026,69 @@
       return authData?.playlist?.panelUsername || authData?.playlist?.username || '';
     }
 
+    function getChatIdentity() {
+      const activeUser = getLoggedUsername();
+      if (activeUser) {
+        const customNick = localStorage.getItem('@cocas_chat_nick_' + activeUser.toLowerCase());
+        return {
+          nick: customNick || activeUser,
+          ownerKey: `panel:${activeUser.toLowerCase()}`,
+          isAccount: true,
+          panelUsername: activeUser
+        };
+      }
+      let guestNick = localStorage.getItem('@cocas_chat_guest_nick');
+      let guestKey = localStorage.getItem('@cocas_chat_guest_key');
+      if (!guestNick || !guestKey) {
+        const rnd = Math.floor(1000 + Math.random() * 9000);
+        guestNick = `Visitante_${rnd}`;
+        guestKey = `guest_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        localStorage.setItem('@cocas_chat_guest_nick', guestNick);
+        localStorage.setItem('@cocas_chat_guest_key', guestKey);
+      }
+      return {
+        nick: guestNick,
+        ownerKey: guestKey,
+        isAccount: false,
+        panelUsername: ''
+      };
+    }
+
+    async function promptChangeNick() {
+      const ident = getChatIdentity();
+      if (!ident.isAccount) {
+        alert('Apenas clientes com conta ou linha ativa Cocas podem alterar o nome de utilizador no chat. Como visitante, pode conversar livremente com o seu nome atribuído.');
+        return;
+      }
+      const newNick = prompt('Digite o seu novo nome no chat (2 a 20 caracteres):', ident.nick);
+      if (!newNick || newNick.trim() === ident.nick) return;
+      const clean = newNick.trim().replace(/\s+/g, '_').slice(0, 20);
+      try {
+        const res = await fetch('/api/panel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'chat_change_nick',
+            oldNick: ident.nick,
+            newNick: clean,
+            ownerKey: ident.ownerKey,
+            panelUsername: ident.panelUsername,
+          })
+        });
+        const data = await res.json();
+        if (!data || !data.ok) {
+          alert(data?.error || 'Este nome já está a ser utilizado por outro membro no chat.');
+          return;
+        }
+        localStorage.setItem('@cocas_chat_nick_' + ident.panelUsername.toLowerCase(), data.nick);
+        if (myNickLabel) myNickLabel.textContent = data.nick;
+        fetchChatMessages(false);
+        alert(`O seu nome no chat foi alterado para: ${data.nick}`);
+      } catch (e) {
+        alert('Erro ao alterar o nome.');
+      }
+    }
+
     function clearAuthInputs() {
       if (loginUser) loginUser.value = '';
       if (loginPass) loginPass.value = '';
@@ -2042,11 +2105,12 @@
     }
 
     function init() {
-      const activeUser = getLoggedUsername();
-      if (activeUser) {
-        myNickLabel.textContent = activeUser;
-      } else {
-        myNickLabel.textContent = 'Visitante';
+      const ident = getChatIdentity();
+      if (myNickLabel) {
+        myNickLabel.textContent = ident.nick;
+        myNickLabel.style.cursor = 'pointer';
+        myNickLabel.title = ident.isAccount ? 'Clique para alterar o seu nome no chat' : 'Visitante (apenas membros com conta podem alterar)';
+        myNickLabel.onclick = () => promptChangeNick();
       }
 
       if (authData && authData.playlist) {
@@ -3299,12 +3363,13 @@
     // --- CHAT FETCH & RENDER ---
     async function fetchChatMessages(silent = false) {
       try {
-        const userNick = getLoggedUsername() || 'Visitante_Web';
+        const ident = getChatIdentity();
         const payload = {
           action: 'chat_state',
           room: currentRoom,
-          nick: userNick,
-          panelUsername: userNick,
+          nick: ident.nick,
+          ownerKey: ident.ownerKey,
+          panelUsername: ident.panelUsername,
           avatar: currentAvatar
         };
         const res = await fetch('/api/panel', {
@@ -3442,11 +3507,7 @@
       const text = chatInput.value.trim();
       if (!text) return;
 
-      const activeUser = getLoggedUsername();
-      if (!activeUser) {
-        alert('Cria uma conta ou inicia sessão na caixa ao lado para poderes participar no chat!');
-        return;
-      }
+      const ident = getChatIdentity();
 
       // Legal compliance: Prohibit IPTV playlist URLs and credential leaks
       const IPTV_PATTERN = /(?:player_api\.php|get\.php\?|\.m3u8?(?:$|[?&#])|username=[^&\s]+&password=[^&\s]+|xtream-codes|server_info|user_info|mag\/stb)/i;
@@ -3471,8 +3532,9 @@
         const payload = {
           action: 'chat_send',
           room: currentRoom,
-          nick: activeUser,
-          panelUsername: activeUser,
+          nick: ident.nick,
+          ownerKey: ident.ownerKey,
+          panelUsername: ident.panelUsername,
           avatar: currentAvatar,
           text: text
         };

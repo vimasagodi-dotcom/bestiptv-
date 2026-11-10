@@ -6,6 +6,7 @@ import {
   Alert,
   FlatList,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -112,34 +113,72 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
   const listRef = useRef<any>(null);
   const lastSendRef = useRef<number>(0);
 
+  const [editNickModalVisible, setEditNickModalVisible] = useState(false);
+  const [editNickInput, setEditNickInput] = useState('');
+  const [savingNick, setSavingNick] = useState(false);
+
+  const hasAccountLine = Boolean(active?.panelUsername || active?.username);
+
   // Each account (Cocas login or own line) has its OWN chat identity.
-  // Switching account never reuses the previous account's nickname/role.
+  // Guests get a stable guest identifier so their unique visitor name is preserved.
+  const [guestKey, setGuestKey] = useState<string>('guest_init');
+  useEffect(() => {
+    if (!hasAccountLine) {
+      AsyncStorage.getItem('@cocas/chatGuestKey.v1').then((val) => {
+        if (val) {
+          setGuestKey(val);
+        } else {
+          const gen = `guest_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+          AsyncStorage.setItem('@cocas/chatGuestKey.v1', gen).catch(() => {});
+          setGuestKey(gen);
+        }
+      }).catch(() => {});
+    }
+  }, [hasAccountLine]);
+
   const ownerKey = active?.panelUsername
     ? `panel:${active.panelUsername.trim().toLowerCase()}`
     : active?.username
     ? `line:${String(active.server || '').trim().toLowerCase()}|${active.username.trim().toLowerCase()}`
-    : active?.url
-    ? `m3u:${active.url.trim().toLowerCase()}`
-    : active?.id
-    ? `pl:${active.id}`
-    : 'anon';
+    : guestKey;
   const nickStorageKey = `${NICK_STORAGE_KEY}:${ownerKey}`;
 
   useEffect(() => {
+    let cancelled = false;
+    const initNick = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(nickStorageKey);
+        if (stored && !cancelled) {
+          setSavedNick(stored);
+          return;
+        }
+
+        let initial = '';
+        if (hasAccountLine) {
+          initial = String(active?.panelUsername || active?.username || '').trim().replace(/\s+/g, '_').slice(0, 20);
+        } else {
+          // Visitor without account: auto-assign unique visitor name
+          const rnd = Math.floor(1000 + Math.random() * 9000);
+          initial = `Visitante_${rnd}`;
+        }
+
+        if (initial && !cancelled) {
+          await AsyncStorage.setItem(nickStorageKey, initial);
+          setSavedNick(initial);
+        }
+      } catch {
+        if (!cancelled) setSavedNick(`Visitante_${Math.floor(1000 + Math.random() * 9000)}`);
+      }
+    };
+
     setSavedNick(null);
     setMyProfile(null);
     setMessages([]);
-    setNickInput('');
     setPrivateRooms([]);
-    AsyncStorage.getItem(nickStorageKey)
-      .then((val) => {
-        if (val) {
-          setSavedNick(val);
-          setNickInput(val);
-        }
-      })
-      .catch(() => {});
-  }, [nickStorageKey]);
+    initNick();
+
+    return () => { cancelled = true; };
+  }, [nickStorageKey, hasAccountLine, active?.panelUsername, active?.username]);
 
   const fetchChatState = useCallback(
     async (silent = false) => {
@@ -203,6 +242,52 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
       return () => clearTimeout(timer);
     }
   }, [messages.length]);
+
+  const handlePressNickBadge = () => {
+    if (!hasAccountLine) {
+      Alert.alert(
+        'Alterar Nome',
+        'Apenas clientes com conta ou linha ativa Cocas podem alterar o nome de utilizador no chat. Como visitante, pode conversar livremente com o seu nome atribuído.',
+        [{ text: 'Entendido' }]
+      );
+      return;
+    }
+    setEditNickInput(savedNick || '');
+    setEditNickModalVisible(true);
+  };
+
+  const handleSaveNewNick = async () => {
+    const clean = editNickInput.trim().replace(/\s+/g, '_').slice(0, 20);
+    if (clean.length < 2) {
+      Alert.alert('Nome inválido', 'O nome de utilizador deve ter entre 2 e 20 caracteres.');
+      return;
+    }
+    setSavingNick(true);
+    try {
+      const data = await requestChatApi({
+        action: 'chat_change_nick',
+        oldNick: savedNick,
+        newNick: clean,
+        ownerKey,
+        panelUsername: active?.panelUsername || active?.username || '',
+        username: active?.username || '',
+      });
+      if (!data?.ok) {
+        Alert.alert('Nome Indisponível', data?.error || 'Este nome não pode ser utilizado.');
+        return;
+      }
+      const updatedNick = data.nick || clean;
+      await AsyncStorage.setItem(nickStorageKey, updatedNick);
+      setSavedNick(updatedNick);
+      if (data.myProfile) setMyProfile(data.myProfile);
+      setEditNickModalVisible(false);
+      Alert.alert('Sucesso', `O seu nome no chat foi alterado para: ${updatedNick}`);
+    } catch {
+      Alert.alert('Erro', 'Não foi possível alterar o nome. Verifique a sua ligação.');
+    } finally {
+      setSavingNick(false);
+    }
+  };
 
   const handleSaveNick = async () => {
     const clean = nickInput.trim().replace(/\s+/g, '_').slice(0, 20);
@@ -408,47 +493,10 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
     ]);
   };
 
-  // Screen 1: Create Nickname before entering xat-style chat (bypassed if readOnly mode)
   if (!savedNick && !readOnly) {
     return (
-      <View style={[styles.nickSetupWrap, compact && { padding: 12 }]}>
-        <View style={[styles.nickCard, compact && { padding: 16 }]}>
-          <View style={[styles.nickIconCircle, compact && { width: 44, height: 44, borderRadius: 22, marginBottom: 8 }]}>
-            <Ionicons name="chatbubbles" size={compact ? 22 : 32} color="#fff" />
-          </View>
-          <Text style={[styles.nickTitle, compact && { fontSize: 16 }]}>Chat da Comunidade Cocas</Text>
-          <Text style={[styles.nickSub, compact && { fontSize: 12, marginBottom: 10 }]}>
-            Escolha o seu Nickname para conversar enquanto vê TV.
-          </Text>
-
-          <TextInput
-            value={nickInput}
-            onChangeText={setNickInput}
-            placeholder="Ex: Victor_PT"
-            placeholderTextColor={colors.textMuted}
-            autoCapitalize="none"
-            autoCorrect={false}
-            style={[styles.nickInput, compact && { paddingVertical: 8, fontSize: 14 }]}
-          />
-
-          {!compact && (
-            <View style={styles.rankLegendBox}>
-              <Text style={styles.rankLegendTitle}>Estatutos na Sala (Estilo xat):</Text>
-              <View style={styles.rankLegendRow}>
-                <Text style={styles.rankLegendItem}>👑 Dono</Text>
-                <Text style={styles.rankLegendItem}>🛡️ Admin</Text>
-                <Text style={styles.rankLegendItem}>⚔️ Mod</Text>
-                <Text style={styles.rankLegendItem}>⭐ Membro VIP</Text>
-                <Text style={styles.rankLegendItem}>👤 Visitante</Text>
-              </View>
-            </View>
-          )}
-
-          <Pressable onPress={handleSaveNick} style={[styles.enterChatBtn, compact && { paddingVertical: 10, marginTop: 8 }]}>
-            <Ionicons name="enter-outline" size={18} color="#fff" />
-            <Text style={styles.enterChatBtnText}>Entrar no Chat</Text>
-          </Pressable>
-        </View>
+      <View style={[styles.container, styles.center]}>
+        <ActivityIndicator size="small" color={colors.primary} />
       </View>
     );
   }
@@ -541,15 +589,14 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
             <Text style={[styles.usersToggleText, compact && { fontSize: 11 }]}>{chatUsers.length}</Text>
           </Pressable>
           <Pressable
-            onPress={() => {
-              AsyncStorage.removeItem(nickStorageKey).catch(() => {});
-              setSavedNick(null);
-              setMyProfile(null);
-            }}
+            onPress={handlePressNickBadge}
             style={[styles.nickBadgeBtn, compact && { paddingHorizontal: 7, paddingVertical: 4 }]}>
             <Text style={[styles.nickBadgeText, compact && { fontSize: 11 }]}>
               {myRoleMeta.badge} {savedNick}
             </Text>
+            {hasAccountLine && (
+              <Ionicons name="pencil" size={10} color={colors.textMuted} style={{ marginLeft: 3 }} />
+            )}
           </Pressable>
         </View>
       </View>
@@ -687,6 +734,58 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
           </Pressable>
         </View>
       )}
+
+      {/* Modal para Alterar Nome no Chat (Apenas clientes com conta/linha ativa) */}
+      <Modal
+        visible={editNickModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEditNickModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.editNickCard}>
+            <View style={styles.modalHeaderRow}>
+              <Text style={styles.modalTitle}>Alterar Nome no Chat</Text>
+              <Pressable onPress={() => setEditNickModalVisible(false)} hitSlop={8}>
+                <Ionicons name="close" size={20} color={colors.textMuted} />
+              </Pressable>
+            </View>
+            <Text style={styles.modalSub}>
+              Escolha um nickname único para a sua conta Cocas (2 a 20 caracteres).
+            </Text>
+
+            <TextInput
+              value={editNickInput}
+              onChangeText={setEditNickInput}
+              placeholder="Novo nickname..."
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={styles.modalInput}
+            />
+
+            <View style={styles.modalBtnRow}>
+              <Pressable
+                onPress={() => setEditNickModalVisible(false)}
+                style={styles.modalCancelBtn}
+              >
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleSaveNewNick}
+                disabled={savingNick}
+                style={styles.modalSaveBtn}
+              >
+                {savingNick ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.modalSaveText}>Guardar Nome</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -915,5 +1014,79 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  editNickCard: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 20,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  modalSub: {
+    color: colors.textMuted,
+    fontSize: 13,
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  modalInput: {
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    color: '#fff',
+    fontSize: 15,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 16,
+  },
+  modalBtnRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    backgroundColor: colors.surfaceAlt,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalCancelText: {
+    color: '#cbd5e1',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  modalSaveBtn: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalSaveText: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 14,
   },
 });

@@ -444,9 +444,33 @@ module.exports = async function handler(req, res) {
     }
 
     // ---- COMMUNITY CHAT ACTIONS (xat.com style) ----
-    // Each nickname is bound to the account (ownerKey) that created it, so another
-    // login on the same phone is treated as a NEW community member.
-    const NICK_TAKEN_ERR = 'Este nickname já pertence a outro membro da comunidade. Escolha outro.';
+    // Helper: Check if identifier belongs to an active client line inserted by admin in db.users
+    const hasActiveLineOrAccount = (panelUsername, username) => {
+      const candidates = [panelUsername, username]
+        .filter(Boolean)
+        .map((s) => String(s).trim().toLowerCase());
+      if (candidates.length === 0) return false;
+      return (db.users || []).some((u) => {
+        const uName = String(u.username || '').trim().toLowerCase();
+        const m3u = String(u.m3uUrl || '').toLowerCase();
+        const match = candidates.some((c) => c === uName || m3u.includes(c));
+        const notExpired = !u.appExpDate || Date.now() <= Number(u.appExpDate);
+        return match && u.active !== false && notExpired;
+      });
+    };
+
+    // Helper: Enforce nickname uniqueness across the entire chat
+    const NICK_TAKEN_ERR = 'Este nome já está a ser utilizado por outro membro no chat. Escolha um nome diferente.';
+    const isNickTakenByOther = (requestedNick, ownerKey) => {
+      if (!requestedNick) return false;
+      const lower = requestedNick.trim().toLowerCase();
+      if (['cocasbot', 'bot', 'sistema'].includes(lower)) return true;
+      const match = (db.chatUsers || []).find((u) => u.nick && u.nick.toLowerCase() === lower);
+      if (!match) return false;
+      if (!ownerKey || !match.ownerKey) return true;
+      return match.ownerKey !== ownerKey;
+    };
+
     const claimNick = (cu, ownerKey) => {
       if (!cu) return true;
       if (!ownerKey) return !cu.ownerKey;
@@ -457,6 +481,74 @@ module.exports = async function handler(req, res) {
       return cu.ownerKey === ownerKey;
     };
 
+    // Action to change nickname (only allowed for users with an active account / line inserted by admin)
+    if (action === 'chat_change_nick') {
+      const ownerKey = String(body.ownerKey || '').trim();
+      const oldNick = String(body.oldNick || '').trim();
+      const rawNewNick = String(body.newNick || '').trim().replace(/\s+/g, '_').slice(0, 20);
+      const panelUsername = String(body.panelUsername || '').trim();
+      const username = String(body.username || '').trim();
+
+      if (!rawNewNick || rawNewNick.length < 2) {
+        return res.status(400).json({ ok: false, error: 'O nickname deve ter entre 2 e 20 caracteres.' });
+      }
+
+      // 1. Only clients with an active account / line inserted by admin can change nickname
+      const canChangeName = hasActiveLineOrAccount(panelUsername, username);
+      if (!canChangeName) {
+        return res.status(403).json({
+          ok: false,
+          error: 'Apenas utilizadores com conta ou linha ativa Cocas podem alterar o nome de utilizador no chat. Como visitante, pode conversar livremente com o seu nome atribuído.',
+        });
+      }
+
+      // 2. Reserved system names
+      if (['cocasbot', 'bot', 'admin', 'sistema', 'suporte'].includes(rawNewNick.toLowerCase())) {
+        return res.status(400).json({ ok: false, error: 'Este nome está reservado ao sistema Cocas.' });
+      }
+
+      // 3. No duplicate nicknames allowed in chat
+      if (isNickTakenByOther(rawNewNick, ownerKey)) {
+        return res.status(400).json({
+          ok: false,
+          code: 'nick_taken',
+          error: NICK_TAKEN_ERR,
+        });
+      }
+
+      // 4. Update user profile in chatUsers
+      let cu = (db.chatUsers || []).find((u) => (ownerKey && u.ownerKey === ownerKey) || u.nick.toLowerCase() === oldNick.toLowerCase());
+      if (cu) {
+        cu.nick = rawNewNick;
+        cu.ownerKey = ownerKey || cu.ownerKey;
+        cu.role = 'member';
+        cu.lastSeenAt = Date.now();
+      } else {
+        cu = {
+          nick: rawNewNick,
+          ownerKey: ownerKey || null,
+          role: 'member',
+          banned: false,
+          muted: false,
+          room: 'geral',
+          lastSeenAt: Date.now(),
+        };
+        db.chatUsers.push(cu);
+      }
+
+      // Update message authors if oldNick provided
+      if (oldNick && oldNick.toLowerCase() !== rawNewNick.toLowerCase()) {
+        (db.chatMessages || []).forEach((m) => {
+          if (m.nick.toLowerCase() === oldNick.toLowerCase()) {
+            m.nick = rawNewNick;
+          }
+        });
+      }
+
+      await saveDb(db, sha);
+      return res.status(200).json({ ok: true, nick: rawNewNick, myProfile: cu });
+    }
+
     if (action === 'chat_state') {
       const room = String(body.room || 'geral').toLowerCase();
       const nick = String(body.nick || '').trim();
@@ -465,22 +557,31 @@ module.exports = async function handler(req, res) {
 
       let myProfile = null;
       if (nick) {
-        let cu = db.chatUsers.find((u) => u.nick.toLowerCase() === nick.toLowerCase());
-        if (cu && !claimNick(cu, ownerKey)) {
-          return res.status(200).json({ ok: false, code: 'nick_taken', error: NICK_TAKEN_ERR });
+        let cleanNick = nick.trim();
+        // Check if nick is taken by another user
+        if (isNickTakenByOther(cleanNick, ownerKey)) {
+          if (cleanNick.toLowerCase().startsWith('visitante_')) {
+            // Find unused unique guest name
+            let uniqueFound = false;
+            for (let i = 0; i < 50; i++) {
+              const cand = `Visitante_${Math.floor(1000 + Math.random() * 9000)}`;
+              if (!isNickTakenByOther(cand, ownerKey)) {
+                cleanNick = cand;
+                uniqueFound = true;
+                break;
+              }
+            }
+            if (!uniqueFound) cleanNick = `Visitante_${Date.now().toString().slice(-4)}`;
+          } else {
+            return res.status(200).json({ ok: false, code: 'nick_taken', error: NICK_TAKEN_ERR });
+          }
         }
-        const isPaidMember = Boolean(
-          panelUsername &&
-            db.users.some(
-              (u) =>
-                u.username.toLowerCase() === panelUsername.toLowerCase() &&
-                u.active !== false &&
-                (!u.appExpDate || Date.now() <= Number(u.appExpDate))
-            )
-        );
+
+        const isPaidMember = hasActiveLineOrAccount(panelUsername, body.username);
+        let cu = db.chatUsers.find((u) => u.nick.toLowerCase() === cleanNick.toLowerCase());
         if (!cu) {
           cu = {
-            nick,
+            nick: cleanNick,
             ownerKey: ownerKey || null,
             role: isPaidMember ? 'member' : 'guest',
             banned: false,
@@ -492,6 +593,7 @@ module.exports = async function handler(req, res) {
           db.chatUsers.push(cu);
           await saveDb(db, sha).catch(() => {});
         } else {
+          cu.ownerKey = ownerKey || cu.ownerKey;
           if (cu.role === 'guest' && isPaidMember) cu.role = 'member';
           if (body.avatar) cu.avatar = String(body.avatar).trim();
           cu.lastSeenAt = Date.now();
@@ -598,19 +700,11 @@ module.exports = async function handler(req, res) {
         });
       }
 
-      let cu = db.chatUsers.find((u) => u.nick.toLowerCase() === nick.toLowerCase());
-      if (cu && !claimNick(cu, ownerKey)) {
+      if (isNickTakenByOther(nick, ownerKey)) {
         return res.status(403).json({ ok: false, code: 'nick_taken', error: NICK_TAKEN_ERR });
       }
-      const isPaidMember = Boolean(
-        panelUsername &&
-          db.users.some(
-            (u) =>
-              u.username.toLowerCase() === panelUsername.toLowerCase() &&
-              u.active !== false &&
-              (!u.appExpDate || Date.now() <= Number(u.appExpDate))
-          )
-      );
+      const isPaidMember = hasActiveLineOrAccount(panelUsername, body.username);
+      let cu = (db.chatUsers || []).find((u) => u.nick.toLowerCase() === nick.toLowerCase());
 
       if (!cu) {
         cu = {
