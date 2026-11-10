@@ -771,11 +771,6 @@ module.exports = async function handler(req, res) {
         });
       }
 
-      // Upgrade plain password to PBKDF2 hash on login
-      if (!String(found.password).startsWith('pbkdf2$')) {
-        found.password = hashPassword(pwd);
-      }
-
       found.lastSeenAt = Date.now();
       if (body.device) found.device = String(body.device);
       await saveDb(db, sha).catch(() => {});
