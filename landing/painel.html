@@ -4,6 +4,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Painel de Controlo Admin - Cocas IPTV</title>
+  <!-- PostHog Analytics -->
+  <script>
+    (function() {
+      var s = document.createElement('script');
+      s.type = 'text/javascript';
+      s.async = true;
+      s.src = 'https://us-assets.i.posthog.com/static/array.js';
+      s.onload = function() {
+        if (window.posthog && typeof window.posthog.init === 'function') {
+          window.posthog.init('phc_pk34ZrgaJXt8goiuPjJbVeqVpewQjMJFU42nbE2eSE8o', {
+            api_host: 'https://us.i.posthog.com',
+            person_profiles: 'always'
+          });
+        }
+      };
+      document.head.appendChild(s);
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -686,6 +704,9 @@
         return showAlert(data.error || 'Password incorreta.');
       }
       sessionStorage.setItem('kiko_admin_pass', adminPassword);
+      if (window.posthog && typeof window.posthog.capture === 'function') {
+        window.posthog.capture('admin_login_success');
+      }
       document.getElementById('loginCard').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
       currentUsers = data.users || [];
@@ -960,6 +981,9 @@
         if (!data.ok) {
           showAlert(data.error || 'Erro ao guardar utilizador.');
         } else {
+          if (window.posthog && typeof window.posthog.capture === 'function') {
+            window.posthog.capture('admin_user_saved', { username: user.username, planYears: user.planYears });
+          }
           await loadUsers();
           resetForm();
           showAlert('Utilizador, Plano e Linha guardados com sucesso!', true);
@@ -974,6 +998,9 @@
       if (!confirm('Tem a certeza que deseja apagar o utilizador "' + username + '"?')) return;
       const data = await apiCall({ action: 'admin_delete_user', id });
       if (data.ok) {
+        if (window.posthog && typeof window.posthog.capture === 'function') {
+          window.posthog.capture('admin_user_deleted', { username });
+        }
         await loadUsers();
         showAlert('Utilizador removido.', true);
       } else {
