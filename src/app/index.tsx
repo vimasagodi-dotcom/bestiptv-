@@ -119,11 +119,19 @@ export default function Home() {
                   </Text>
                 </View>
                 <View style={styles.statBox}>
-                  <Text style={styles.statLabel}>Expiração</Text>
+                  <Text style={styles.statLabel}>Exp. Linha</Text>
                   <Text style={styles.statVal}>
                     {exp ? formatDate(exp) : 'Ilimitado'}
                   </Text>
                 </View>
+                {active.appExpDate ? (
+                  <View style={styles.statBox}>
+                    <Text style={styles.statLabel}>Acesso Cocas</Text>
+                    <Text style={[styles.statVal, { color: colors.accent }]}>
+                      {formatDate(active.appExpDate)}
+                    </Text>
+                  </View>
+                ) : null}
                 <View style={styles.statBox}>
                   <Text style={styles.statLabel}>Ligações</Text>
                   <Text style={styles.statVal}>
