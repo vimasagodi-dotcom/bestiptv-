@@ -605,11 +605,9 @@
           document.getElementById('uServer').value = m[1];
           document.getElementById('uXtreamUser').value = params.username;
           document.getElementById('uXtreamPass').value = params.password;
+          // NEVER overwrite the login username or password if already filled by admin!
           if (!document.getElementById('uUsername').value.trim()) {
             document.getElementById('uUsername').value = params.username;
-          }
-          if (!document.getElementById('uPassword').value.trim()) {
-            document.getElementById('uPassword').value = params.password;
           }
           if (inspectTimer) clearTimeout(inspectTimer);
           inspectTimer = setTimeout(() => inspectCurrentLine(), 500);
@@ -912,6 +910,7 @@
       document.getElementById('editId').value = u.id;
       document.getElementById('detectedLineExp').value = u.lineExpDate || '';
       document.getElementById('uUsername').value = u.username || '';
+      // Retain the existing raw/login password, never overwrite with IPTV password
       document.getElementById('uPassword').value = u.password || '';
       document.getElementById('uName').value = u.name || '';
       document.getElementById('uActive').value = u.active !== false ? 'true' : 'false';
