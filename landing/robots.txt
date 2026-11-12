@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /painel.html
+Disallow: /api/
+
+Sitemap: https://cocas.online/sitemap.xml

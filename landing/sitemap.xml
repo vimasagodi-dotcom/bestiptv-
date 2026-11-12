@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://cocas.online/</loc>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://cocas.online/?lang=pt" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://cocas.online/?lang=es" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://cocas.online/?lang=en" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://cocas.online/?lang=fr" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://cocas.online/" />
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://cocas.online/chat</loc>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://cocas.online/chat?lang=pt" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://cocas.online/chat?lang=es" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://cocas.online/chat?lang=en" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://cocas.online/chat?lang=fr" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://cocas.online/chat" />
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://cocas.online/termos</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://cocas.online/privacidade</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://cocas.online/contacto</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+</urlset>

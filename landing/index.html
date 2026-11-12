@@ -3,8 +3,46 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cocas - Leitor Multimédia & Comunidade Cocas</title>
-  <meta name="description" content="Reprodutor multimédia neutro para as tuas próprias linhas IPTV e comunidade de utilizadores em tempo real.">
+  <title>Cocas - Reprodutor M3U & IPTV Player Online Grátis</title>
+  <meta name="description" content="Reprodutor multimédia neutro para as tuas próprias linhas IPTV, listas M3U/M3U8 e comunidade de utilizadores em tempo real.">
+  <meta name="keywords" content="iptv player online, leitor m3u web, reproductor iptv online, lecteur iptv en ligne, player m3u8 web, cocas player, smart tv iptv app, xtream codes player">
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <link rel="canonical" href="https://cocas.online/">
+  <link rel="alternate" hreflang="pt" href="https://cocas.online/?lang=pt">
+  <link rel="alternate" hreflang="es" href="https://cocas.online/?lang=es">
+  <link rel="alternate" hreflang="en" href="https://cocas.online/?lang=en">
+  <link rel="alternate" hreflang="fr" href="https://cocas.online/?lang=fr">
+  <link rel="alternate" hreflang="x-default" href="https://cocas.online/">
+
+  <!-- Open Graph & Social SEO -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Cocas Player">
+  <meta property="og:title" content="Cocas - Online IPTV & M3U Web Player (PT / ES / EN / FR)">
+  <meta property="og:description" content="Neutral multimedia player for your own M3U/M3U8 playlists and Xtream Codes on browser, Android, iOS and Smart TV.">
+  <meta property="og:url" content="https://cocas.online/">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Cocas - Online IPTV & M3U Web Player">
+  <meta name="twitter:description" content="Watch your own M3U/Xtream streams in browser, Mobile & Smart TV with live EPG and community chat.">
+
+  <!-- Schema.org Structured Data for Google Rich Results -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Cocas Player",
+    "url": "https://cocas.online/",
+    "applicationCategory": "MultimediaApplication",
+    "operatingSystem": "Web, Android, iOS, Android TV",
+    "inLanguage": ["pt", "es", "en", "fr"],
+    "description": "Neutral multimedia web and mobile player for M3U, M3U8 playlists and Xtream Codes with live EPG and real-time community chat.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "EUR"
+    }
+  }
+  </script>
+  <script src="/i18n.js" defer></script>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Cocas">
@@ -99,7 +137,31 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      flex-wrap: wrap;
     }
+
+    .lang-switcher {
+      display: inline-flex;
+      align-items: center;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 2px;
+      gap: 2px;
+    }
+    .lang-pill-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 5px 8px;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+    .lang-pill-btn:hover { color: #fff; background: rgba(255,255,255,0.06); }
+    .lang-pill-btn.active { background: var(--primary); color: #fff; }
 
     /* BUTTONS */
     .btn {
@@ -1386,8 +1448,14 @@
         Cocas<span>Player</span>
       </a>
       <div class="header-actions">
-        <a href="#tv" class="btn btn-secondary btn-sm">📺 Smart TV</a>
-        <a href="/tv" class="btn btn-primary btn-sm">⬇ Baixar APK</a>
+        <div class="lang-switcher" aria-label="Idioma / Language">
+          <button type="button" class="lang-pill-btn active" data-lang="pt" onclick="setCocasLang('pt')">🇵🇹 PT</button>
+          <button type="button" class="lang-pill-btn" data-lang="es" onclick="setCocasLang('es')">🇪🇸 ES</button>
+          <button type="button" class="lang-pill-btn" data-lang="en" onclick="setCocasLang('en')">🇬🇧 EN</button>
+          <button type="button" class="lang-pill-btn" data-lang="fr" onclick="setCocasLang('fr')">🇫🇷 FR</button>
+        </div>
+        <a href="#tv" class="btn btn-secondary btn-sm" data-i18n="nav_smart_tv">📺 Smart TV</a>
+        <a href="/tv" class="btn btn-primary btn-sm" data-i18n="nav_download_apk">⬇ Baixar APK</a>
       </div>
     </div>
   </header>
@@ -1399,20 +1467,20 @@
          ========================================================================= -->
     <section class="mobile-only-hero">
       <div class="mobile-hero-box">
-        <div class="mobile-badge"><span class="mobile-badge-dot"></span> Leitor Multimédia Cocas</div>
-        <h1>Leitor multimédia para as tuas próprias linhas IPTV em <span>Telemóvel e Smart TV</span></h1>
-        <p>Leitor integrado no topo do ecrã com EPG ao vivo, reconexão automática e modo adaptativo otimizado para Smart TV e TV Box.</p>
+        <div class="mobile-badge"><span class="mobile-badge-dot"></span> <span data-i18n="mob_badge">Leitor Multimédia Cocas</span></div>
+        <h1 data-i18n="mob_h1">Leitor multimédia para as tuas próprias linhas IPTV em <span>Telemóvel e Smart TV</span></h1>
+        <p data-i18n="mob_sub">Leitor integrado no topo do ecrã com EPG ao vivo, reconexão automática e modo adaptativo otimizado para Smart TV e TV Box.</p>
 
         <div class="mobile-btn-col">
           <a href="/tv" class="btn btn-primary">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.551 0 .9993.4482.9993.9993s-.4483.9997-.9993.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993s-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1523-.5676.416.416 0 00-.5676.1523l-2.0223 3.503C15.5902 8.411 13.8559 8.1 12 8.1s-3.5902.311-5.1366.8499L4.8411 5.4469a.416.416 0 00-.5676-.1523.416.416 0 00-.1523.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.78h24c-.3432-4.1211-2.6889-7.5933-6.1185-9.4586"/></svg>
-            Baixar APK (Android / TV Box)
+            <span data-i18n="mob_btn_apk">Baixar APK (Android / TV Box)</span>
           </a>
           <a href="exp://u.expo.dev/6d4ae678-008b-43cb-9dca-fb772b8cc735?channel-name=preview&runtime-version=exposdk%3A58.0.0" class="btn btn-secondary">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.75 1.04-1.8 0.93-2.85-.9.04-1.99.6-2.61 1.34-.55.63-1.03 1.68-.9 2.71 1 .08 2.03-.51 2.58-1.2"/></svg>
-            Abrir no iPhone (iOS)
+            <span data-i18n="mob_btn_ios">Abrir no iPhone (iOS)</span>
           </a>
-          <a href="#tv" class="btn btn-secondary">
+          <a href="#tv" class="btn btn-secondary" data-i18n="mob_btn_tv">
             📺 Instalar em Smart TV
           </a>
         </div>
@@ -1420,18 +1488,18 @@
         <div class="tiles-preview">
           <div class="tile-card live">
             <div class="tile-icon">📺</div>
-            <h3>Leitor Multimédia Otimizado</h3>
-            <p>Vídeo integrado no topo do ecrã enquanto navegas nos grupos e canais da tua linha, ou ecrã inteiro limpo com gaveta lateral.</p>
+            <h3 data-i18n="tile1_h3">Leitor Multimédia Otimizado</h3>
+            <p data-i18n="tile1_p">Vídeo integrado no topo do ecrã enquanto navegas nos grupos e canais da tua linha, ou ecrã inteiro limpo com gaveta lateral.</p>
           </div>
           <div class="tile-card movies">
             <div class="tile-icon">🎬</div>
-            <h3>Reconexão Inteligente</h3>
-            <p>Libertação imediata de ligação ao mudar de canal, reconexão automática e reprodução estável.</p>
+            <h3 data-i18n="tile2_h3">Reconexão Inteligente</h3>
+            <p data-i18n="tile2_p">Libertação imediata de ligação ao mudar de canal, reconexão automática e reprodução estável.</p>
           </div>
           <div class="tile-card series">
             <div class="tile-icon">🖥️</div>
-            <h3>Modo Smart TV (3 Colunas)</h3>
-            <p>Em Smart TVs, Tablets e TV Boxes, a interface adapta-se para Grupos + Canais + Pré-visualização com EPG.</p>
+            <h3 data-i18n="tile3_h3">Modo Smart TV (3 Colunas)</h3>
+            <p data-i18n="tile3_p">Em Smart TVs, Tablets e TV Boxes, a interface adapta-se para Grupos + Canais + Pré-visualização com EPG.</p>
           </div>
         </div>
       </div>
@@ -1443,10 +1511,10 @@
     <section class="web-only-stage">
       <div class="hero-intro">
         <div class="hero-badge">
-          <span class="live-pulse"></span> Leitor Web & Comunidade Cocas
+          <span class="live-pulse"></span> <span data-i18n="web_badge">Leitor Web & Comunidade Cocas</span>
         </div>
-        <h1>Leitor Multimédia & <span>Comunidade Cocas</span></h1>
-        <p>Regista a tua conta para utilizar o leitor no teu navegador ou descarrega a app para a tua televisão enquanto conversas no chat em tempo real.</p>
+        <h1 data-i18n="web_h1">Leitor Multimédia & <span>Comunidade Cocas</span></h1>
+        <p data-i18n="web_sub">Regista a tua conta para utilizar o leitor no teu navegador ou descarrega a app para a tua televisão enquanto conversas no chat em tempo real.</p>
       </div>
 
       <div class="stage-wrapper">
@@ -1460,52 +1528,52 @@
               <div class="auth-card" id="registerCard">
                 <div class="auth-card-head">
                   <div class="auth-card-icon">👑</div>
-                  <h2 class="auth-card-title">Criar Conta Web Cocas</h2>
-                  <p class="auth-card-sub">Cria a tua conta para acederes ao leitor web e participares na Comunidade Cocas.</p>
+                  <h2 class="auth-card-title" data-i18n="auth_reg_title">Criar Conta Web Cocas</h2>
+                  <p class="auth-card-sub" data-i18n="auth_reg_sub">Cria a tua conta para acederes ao leitor web e participares na Comunidade Cocas.</p>
                 </div>
 
                 <div id="registerError" class="auth-err"></div>
 
                 <div class="form-group">
-                  <label class="form-label">Nome (Opcional)</label>
-                  <input type="text" id="regName" class="form-input" placeholder="O teu nome (opcional)" autocomplete="off" value="">
+                  <label class="form-label" data-i18n="auth_name_lbl">Nome (Opcional)</label>
+                  <input type="text" id="regName" class="form-input" data-i18n-ph="auth_name_ph" placeholder="O teu nome (opcional)" autocomplete="off" value="">
                 </div>
 
                 <div class="form-group">
-                  <label class="form-label">Email</label>
-                  <input type="email" id="regEmail" class="form-input" placeholder="O teu email" autocomplete="off" value="">
+                  <label class="form-label" data-i18n="auth_email_lbl">Email</label>
+                  <input type="email" id="regEmail" class="form-input" data-i18n-ph="auth_email_ph" placeholder="O teu email" autocomplete="off" value="">
                 </div>
 
                 <div style="display:flex; gap:8px;">
                   <div class="form-group" style="flex:1;">
-                    <label class="form-label">Username (Login & Chat)</label>
-                    <input type="text" id="regUser" class="form-input" placeholder="Escolhe um username" maxlength="20" autocomplete="off" value="">
+                    <label class="form-label" data-i18n="auth_user_lbl">Username (Login & Chat)</label>
+                    <input type="text" id="regUser" class="form-input" data-i18n-ph="auth_user_ph" placeholder="Escolhe um username" maxlength="20" autocomplete="off" value="">
                   </div>
                   <div class="form-group" style="flex:1;">
-                    <label class="form-label">Palavra-passe</label>
-                    <input type="password" id="regPass" class="form-input" placeholder="Cria uma palavra-passe" autocomplete="new-password" value="">
+                    <label class="form-label" data-i18n="auth_pass_lbl">Palavra-passe</label>
+                    <input type="password" id="regPass" class="form-input" data-i18n-ph="auth_pass_ph" placeholder="Cria uma palavra-passe" autocomplete="new-password" value="">
                   </div>
                 </div>
 
                 <!-- TABS DE LINHA: XTREAM OU M3U -->
                 <div class="auth-tabs" id="regLineTabs">
-                  <button type="button" class="auth-tab-btn active" data-linemode="xtream">⚡ Xtream Codes</button>
-                  <button type="button" class="auth-tab-btn" data-linemode="m3u">📋 Lista M3U</button>
+                  <button type="button" class="auth-tab-btn active" data-linemode="xtream" data-i18n="auth_tab_xtream">⚡ Xtream Codes</button>
+                  <button type="button" class="auth-tab-btn" data-linemode="m3u" data-i18n="auth_tab_m3u">📋 Lista M3U</button>
                 </div>
 
                 <!-- CAMPOS XTREAM -->
                 <div id="regXtreamFields">
                   <div class="form-group" style="margin-bottom:6px;">
-                    <label class="form-label">Servidor / URL Xtream</label>
+                    <label class="form-label" data-i18n="auth_server_lbl">Servidor / URL Xtream</label>
                     <input type="text" id="regServer" class="form-input" placeholder="http://servidor.com:porta" autocomplete="off" value="">
                   </div>
                   <div style="display:flex; gap:8px;">
                     <div class="form-group" style="flex:1;">
-                      <label class="form-label">Utilizador da Linha</label>
+                      <label class="form-label" data-i18n="auth_xuser_lbl">Utilizador da Linha</label>
                       <input type="text" id="regXtreamUser" class="form-input" placeholder="Utilizador" autocomplete="off" value="">
                     </div>
                     <div class="form-group" style="flex:1;">
-                      <label class="form-label">Password da Linha</label>
+                      <label class="form-label" data-i18n="auth_xpass_lbl">Password da Linha</label>
                       <input type="password" id="regXtreamPass" class="form-input" placeholder="Password" autocomplete="new-password" value="">
                     </div>
                   </div>
@@ -1514,7 +1582,7 @@
                 <!-- CAMPOS M3U -->
                 <div id="regM3uFields" style="display:none;">
                   <div class="form-group">
-                    <label class="form-label">Link M3U / get.php</label>
+                    <label class="form-label" data-i18n="auth_m3u_lbl">Link M3U / get.php</label>
                     <input type="text" id="regM3uUrl" class="form-input" placeholder="http://servidor.com:8080/get.php?username=...">
                   </div>
                 </div>
@@ -1530,12 +1598,12 @@
                   </label>
                 </div>
 
-                <button type="button" id="btnDoRegister" class="btn btn-primary" style="justify-content:center; padding:10px; margin-top:2px;">
+                <button type="button" id="btnDoRegister" class="btn btn-primary" style="justify-content:center; padding:10px; margin-top:2px;" data-i18n="auth_btn_reg">
                   ▶ Criar Conta e Entrar no Leitor
                 </button>
 
                 <div class="auth-switch-link">
-                  Já tens conta criada? <a id="btnSwitchToLogin">Iniciar Sessão</a>
+                  <span data-i18n="auth_has_acc">Já tens conta criada?</span> <a id="btnSwitchToLogin" data-i18n="auth_switch_login">Iniciar Sessão</a>
                 </div>
               </div>
 
@@ -1543,28 +1611,28 @@
               <div class="auth-card" id="loginCard" style="display:none;">
                 <div class="auth-card-head">
                   <div class="auth-card-icon">📺</div>
-                  <h2 class="auth-card-title">Iniciar Sessão</h2>
-                  <p class="auth-card-sub">Introduz o teu username e palavra-passe da tua conta Cocas.</p>
+                  <h2 class="auth-card-title" data-i18n="auth_login_title">Iniciar Sessão</h2>
+                  <p class="auth-card-sub" data-i18n="auth_login_sub">Introduz o teu username e palavra-passe da tua conta Cocas.</p>
                 </div>
 
                 <div id="loginError" class="auth-err"></div>
 
                 <div class="form-group">
-                  <label class="form-label">Nome de Utilizador</label>
-                  <input type="text" id="loginUser" class="form-input" placeholder="Nome de utilizador" autocomplete="off" value="">
+                  <label class="form-label" data-i18n="auth_user_lbl">Nome de Utilizador</label>
+                  <input type="text" id="loginUser" class="form-input" placeholder="Nome de utilizador" data-i18n-ph="auth_user_ph" autocomplete="off" value="">
                 </div>
 
                 <div class="form-group">
-                  <label class="form-label">Palavra-passe</label>
-                  <input type="password" id="loginPass" class="form-input" placeholder="Palavra-passe" autocomplete="new-password" value="">
+                  <label class="form-label" data-i18n="auth_pass_lbl">Palavra-passe</label>
+                  <input type="password" id="loginPass" class="form-input" placeholder="Palavra-passe" data-i18n-ph="auth_pass_ph" autocomplete="new-password" value="">
                 </div>
 
-                <button type="button" id="btnDoLogin" class="btn btn-primary" style="justify-content:center; padding:11px;">
+                <button type="button" id="btnDoLogin" class="btn btn-primary" style="justify-content:center; padding:11px;" data-i18n="auth_btn_login">
                   ▶ Entrar e Ver no Navegador
                 </button>
 
                 <div class="auth-switch-link">
-                  Ainda não tens conta? <a id="btnSwitchToRegister">Criar Conta Gratuita</a>
+                  <span data-i18n="auth_no_acc">Ainda não tens conta?</span> <a id="btnSwitchToRegister" data-i18n="auth_switch_reg">Criar Conta Gratuita</a>
                 </div>
               </div>
             </div>
@@ -1918,19 +1986,19 @@
   <footer>
     <div class="container">
       <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 18px 24px; max-width: 820px; margin: 0 auto 16px; text-align: center;">
-        <p style="color: #E2E8F0; font-weight: 700; font-size: 13px; margin-bottom: 6px;">
+        <p style="color: #E2E8F0; font-weight: 700; font-size: 13px; margin-bottom: 6px;" data-i18n="footer_legal_title">
           ⚖️ Aviso Legal
         </p>
-        <p style="color: var(--text-muted); font-size: 12px; line-height: 1.6; margin: 0;">
+        <p style="color: var(--text-muted); font-size: 12px; line-height: 1.6; margin: 0;" data-i18n="footer_legal_text">
           A Cocas é exclusivamente um reprodutor multimédia. Não fornece, aloja nem vende conteúdos. O utilizador é responsável por usar apenas fontes de que tem direitos legais.
         </p>
       </div>
 
       <div style="display:flex; justify-content:center; gap:18px; flex-wrap:wrap; margin-bottom:12px; font-size:13px;">
-        <a href="/termos" style="color:var(--text-muted); text-decoration:underline;">Termos de Uso</a>
-        <a href="/privacidade" style="color:var(--text-muted); text-decoration:underline;">Política de Privacidade</a>
-        <a href="/cookies" style="color:var(--text-muted); text-decoration:underline;">Política de Cookies</a>
-        <a href="/contacto" style="color:var(--text-muted); text-decoration:underline;">Contacto & Notificações</a>
+        <a href="/termos" style="color:var(--text-muted); text-decoration:underline;" data-i18n="footer_terms">Termos de Uso</a>
+        <a href="/privacidade" style="color:var(--text-muted); text-decoration:underline;" data-i18n="footer_privacy">Política de Privacidade</a>
+        <a href="/cookies" style="color:var(--text-muted); text-decoration:underline;" data-i18n="footer_cookies">Política de Cookies</a>
+        <a href="/contacto" style="color:var(--text-muted); text-decoration:underline;" data-i18n="footer_contact">Contacto & Notificações</a>
       </div>
 
       <p style="font-size:12px; color:var(--text-muted);">© Comunidade Cocas · Leitor Multimédia para Android, iOS, Smart TV e Web.</p>

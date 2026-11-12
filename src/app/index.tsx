@@ -11,21 +11,30 @@ import { LiveTvView } from '../components/LiveTvView';
 import { EmptyView, Loading } from '../components/ui';
 import { useApp } from '../context/AppContext';
 import { useAsync } from '../hooks/useAsync';
+import { SupportedLang, useI18n } from '../i18n';
 import { formatDate, formatTime } from '../lib/utils';
 import { colors, radius } from '../theme';
 
 type TabKey = 'live' | 'vod' | 'series' | 'chat' | 'portals';
 
-const TABS: { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap; iconActive: keyof typeof Ionicons.glyphMap }[] = [
-  { key: 'live', label: 'TV em Direto', icon: 'tv-outline', iconActive: 'tv' },
-  { key: 'vod', label: 'Filmes (VOD)', icon: 'film-outline', iconActive: 'film' },
-  { key: 'series', label: 'Séries', icon: 'albums-outline', iconActive: 'albums' },
-  { key: 'chat', label: 'Chat', icon: 'chatbubbles-outline', iconActive: 'chatbubbles' },
-  { key: 'portals', label: 'Portais', icon: 'server-outline', iconActive: 'server' },
+const TABS: { key: TabKey; i18nKey: string; icon: keyof typeof Ionicons.glyphMap; iconActive: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'live', i18nKey: 'tab_live', icon: 'tv-outline', iconActive: 'tv' },
+  { key: 'vod', i18nKey: 'tab_movies', icon: 'film-outline', iconActive: 'film' },
+  { key: 'series', i18nKey: 'tab_series', icon: 'albums-outline', iconActive: 'albums' },
+  { key: 'chat', i18nKey: 'tab_chat', icon: 'chatbubbles-outline', iconActive: 'chatbubbles' },
+  { key: 'portals', i18nKey: 'tab_account', icon: 'server-outline', iconActive: 'server' },
+];
+
+const LANG_OPTIONS: { code: SupportedLang; label: string }[] = [
+  { code: 'pt', label: '🇵🇹 PT' },
+  { code: 'es', label: '🇪🇸 ES' },
+  { code: 'en', label: '🇬🇧 EN' },
+  { code: 'fr', label: '🇫🇷 FR' },
 ];
 
 export default function Home() {
   const { ready, active, playlists, selectPlaylist, removePlaylist, provider, reload } = useApp();
+  const { lang, setLanguage, t } = useI18n();
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<TabKey>('live');
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -199,6 +208,39 @@ export default function Home() {
               );
             })}
 
+            {/* Language Selector Card */}
+            <View style={styles.legalNoticeBox}>
+              <Ionicons name="globe-outline" size={18} color={colors.textMuted} />
+              <View style={{ flex: 1, gap: 8 }}>
+                <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>
+                  {t('settings_language')}
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {LANG_OPTIONS.map((opt) => {
+                    const activeLang = lang === opt.code;
+                    return (
+                      <Pressable
+                        key={opt.code}
+                        onPress={() => setLanguage(opt.code)}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: activeLang ? colors.primary : colors.border,
+                          backgroundColor: activeLang ? 'rgba(229, 9, 20, 0.16)' : colors.surfaceAlt,
+                        }}
+                      >
+                        <Text style={{ color: activeLang ? '#fff' : colors.textMuted, fontSize: 12, fontWeight: '700' }}>
+                          {opt.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            </View>
+
             {/* Legal Disclaimer Card */}
             <View style={styles.legalNoticeBox}>
               <Ionicons name="shield-checkmark-outline" size={18} color={colors.textMuted} />
@@ -213,22 +255,22 @@ export default function Home() {
       {/* Bottom Tab Bar (hidden in fullscreen video mode) */}
       {!hideBars && (
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-          {TABS.map((t) => {
-            const isSelected = tab === t.key;
+          {TABS.map((item) => {
+            const isSelected = tab === item.key;
             return (
               <Pressable
-                key={t.key}
-                onPress={() => setTab(t.key)}
+                key={item.key}
+                onPress={() => setTab(item.key)}
                 style={styles.tabItem}
               >
                 {isSelected && <View style={styles.tabIndicator} />}
                 <Ionicons
-                  name={isSelected ? t.iconActive : t.icon}
+                  name={isSelected ? item.iconActive : item.icon}
                   size={20}
                   color={isSelected ? colors.primary : colors.textMuted}
                 />
                 <Text style={[styles.tabLabel, isSelected && styles.tabLabelActive]} numberOfLines={1}>
-                  {t.label}
+                  {t(item.i18nKey)}
                 </Text>
               </Pressable>
             );

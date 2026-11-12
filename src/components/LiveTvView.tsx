@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useApp } from '../context/AppContext';
 import { useAsync } from '../hooks/useAsync';
+import { useI18n } from '../i18n';
 import { sendPlayerHeartbeat } from '../lib/panel';
 import type { EpgEntry, LiveChannel } from '../lib/types';
 import { formatTime } from '../lib/utils';
@@ -37,6 +38,7 @@ export function LiveTvView({
   onFullscreenChange?: (fs: boolean) => void;
 }) {
   const { provider, active, favorites, recentLiveIds, isFavorite, toggleFavorite, addRecentLive, reload } = useApp();
+  const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const isPhoneLandscape = width > height && Math.min(width, height) < 540;
@@ -998,7 +1000,7 @@ export function LiveTvView({
           color="#fff"
         />
         <Text style={styles.infoToggleText}>
-          {subView === 'chat' ? 'Ver Canais' : 'Abrir Chat'}
+          {subView === 'chat' ? t('view_channels') : t('open_chat')}
         </Text>
       </Pressable>
     </View>
@@ -1088,7 +1090,7 @@ export function LiveTvView({
         {/* Column 2: Channels */}
         <View style={styles.wideChannelsCol}>
           <View style={{ padding: 8 }}>
-            <SearchBar value={search} onChange={setSearch} placeholder="Pesquisar canal..." />
+            <SearchBar value={search} onChange={setSearch} placeholder={t('search_channels')} />
           </View>
           <FlatList
             data={filteredChannels}
@@ -1153,7 +1155,7 @@ export function LiveTvView({
           </View>
 
           <View style={{ paddingHorizontal: 10, paddingBottom: 6 }}>
-            <SearchBar value={search} onChange={setSearch} placeholder="Pesquisar nos canais..." />
+            <SearchBar value={search} onChange={setSearch} placeholder={t('search_channels')} />
           </View>
 
           {/* Channel List */}

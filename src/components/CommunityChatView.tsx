@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 
 import { useApp } from '../context/AppContext';
+import { useI18n } from '../i18n';
 import { formatTime } from '../lib/utils';
 import { colors, radius } from '../theme';
 
@@ -96,6 +97,7 @@ export interface CommunityChatViewProps {
 
 export function CommunityChatView({ activeTab = true, compact = false, readOnly = false }: CommunityChatViewProps) {
   const { active } = useApp();
+  const { t } = useI18n();
   const [savedNick, setSavedNick] = useState<string | null>(null);
   const [nickInput, setNickInput] = useState('');
   const [room, setRoom] = useState('geral');
@@ -504,8 +506,8 @@ export function CommunityChatView({ activeTab = true, compact = false, readOnly 
   const myRoleMeta = ROLE_META[myProfile?.role || 'guest'];
   const activePrivate = privateRooms.find((p) => p.id === room);
   const inputPlaceholder = activePrivate
-    ? `Mensagem privada para ${activePrivate.targetNick}...`
-    : `Escrever em #${room}...`;
+    ? `DM → ${activePrivate.targetNick}...`
+    : `${t('chat_placeholder')} (#${room})`;
 
   return (
     <KeyboardAvoidingView
