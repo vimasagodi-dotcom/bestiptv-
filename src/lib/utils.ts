@@ -102,10 +102,13 @@ export interface ResolvedStreamAttempt {
   label: string;
 }
 
+const STREAM_BRIDGE_BASE = 'https://www.cocas.online/api/stream';
+
 /**
  * Builds intelligent fallback stream candidates across attempts (0..3).
- * Rotates between HLS (.m3u8), MPEG-TS (.ts), direct Xtream stream URLs,
- * and industry-standard IPTV User-Agents so channels open reliably on Android, iOS & Smart TV.
+ * Rotates between HLS (.m3u8), Cocas HLS Bridge (defeating iOS AVPlayer 302 redirect &
+ * expo-video duplicate-request token invalidation bugs, plus wrapping raw .ts into HLS),
+ * MPEG-TS (.ts), and industry-standard IPTV User-Agents.
  */
 export function resolveStreamAttempt(
   rawUrl: string,
@@ -121,6 +124,16 @@ export function resolveStreamAttempt(
     'User-Agent': attempt === 0 && baseHeaders?.['User-Agent'] ? baseHeaders['User-Agent'] : ua,
   };
 
+  const isVodFile = /\.(mp4|mkv|avi|mov|wmv|flv|m4v)($|\?)/i.test(cleanUrl);
+  if (isVodFile) {
+    return {
+      uri: cleanUrl,
+      contentType: undefined,
+      headers: attempt === 0 && isIos ? undefined : attempt === 3 ? undefined : headers,
+      label: `VOD (${attempt + 1})`,
+    };
+  }
+
   const m = cleanUrl.match(XTREAM_LIVE_RE);
   if (m) {
     const [, origin, user, pass, streamId, , qs = ''] = m;
@@ -129,31 +142,91 @@ export function resolveStreamAttempt(
     const tsDirectUrl = `${origin}/${user}/${pass}/${streamId}${qs}`;
 
     if (isIos) {
-      // iOS AVPlayer requires HLS (.m3u8) for live streams; fallback to raw only on later attempts
-      if (attempt === 0) return { uri: hlsUrl, contentType: 'hls', headers, label: 'HLS (.m3u8)' };
-      if (attempt === 1) return { uri: hlsUrl, contentType: 'hls', headers, label: 'HLS (VLC UA)' };
-      if (attempt === 2) return { uri: cleanUrl, contentType: undefined, headers, label: 'Direct Stream' };
-      return { uri: tsDirectUrl, contentType: undefined, headers, label: 'Raw Stream' };
+      // iOS AVPlayer strategy:
+      // Attempt 0: Cocas HLS Bridge (direct=1) — resolves 302 redirects server-side with IPTVSmartersPlayer UA,
+      //            caches manifest for 3s so expo-video's double HTTP request doesn't invalidate Xtream tokens,
+      //            and converts raw .ts-only channels into a live HLS manifest!
+      // Attempt 1: Direct HLS URL without custom headers (avoids AVURLAsset cross-host 302 header rejection)
+      // Attempt 2: Cocas Full HLS Proxy (proxies segments & slices raw .ts streams into 188B-aligned HLS segments)
+      // Attempt 3: Direct HLS URL with VLC User-Agent
+      if (attempt === 0) {
+        return {
+          uri: `${STREAM_BRIDGE_BASE}?hls=1&direct=1&url=${encodeURIComponent(hlsUrl)}&ext=.m3u8`,
+          contentType: 'hls',
+          headers: undefined,
+          label: 'iOS Smart HLS',
+        };
+      }
+      if (attempt === 1) {
+        return {
+          uri: hlsUrl,
+          contentType: undefined,
+          headers: undefined,
+          label: 'Direct HLS',
+        };
+      }
+      if (attempt === 2) {
+        return {
+          uri: `${STREAM_BRIDGE_BASE}?hls=1&url=${encodeURIComponent(tsLiveUrl)}&ext=.m3u8`,
+          contentType: 'hls',
+          headers: undefined,
+          label: 'iOS TS->HLS Proxy',
+        };
+      }
+      return {
+        uri: hlsUrl,
+        contentType: 'hls',
+        headers: { 'User-Agent': 'VLC/3.0.20 LibVLC/3.0.20', Accept: '*/*' },
+        label: 'HLS (VLC UA)',
+      };
     }
 
     // Android & Smart TV (ExoPlayer):
-    // Attempt 0: HLS (.m3u8) -> Attempt 1: MPEG-TS (.ts) -> Attempt 2: Direct (/user/pass/id) -> Attempt 3: Auto-sniff HLS
+    // Attempt 0: HLS (.m3u8) -> Attempt 1: MPEG-TS (.ts) -> Attempt 2: Direct (/user/pass/id) -> Attempt 3: Smart HLS Bridge
     if (attempt === 0) return { uri: hlsUrl, contentType: 'hls', headers, label: 'HLS (.m3u8)' };
     if (attempt === 1) return { uri: tsLiveUrl, contentType: undefined, headers, label: 'MPEG-TS (.ts)' };
     if (attempt === 2) return { uri: tsDirectUrl, contentType: undefined, headers, label: 'Direct TS' };
-    return { uri: hlsUrl, contentType: undefined, headers, label: 'Auto-Detect' };
+    return {
+      uri: `${STREAM_BRIDGE_BASE}?hls=1&direct=1&url=${encodeURIComponent(hlsUrl)}&ext=.m3u8`,
+      contentType: 'hls',
+      headers: undefined,
+      label: 'Smart HLS Bridge',
+    };
   }
 
-  // Non-Xtream URLs (custom M3U links, CDN streams, VOD files)
+  // Non-Xtream URLs (custom M3U links, CDN streams)
   const looksLikeHls = /\.m3u8($|\?)/i.test(cleanUrl) || /extension=m3u8|output=m3u8|type=m3u8/i.test(cleanUrl);
-  const isVodFile = /\.(mp4|mkv|avi|mov|wmv|flv|m4v)($|\?)/i.test(cleanUrl);
 
-  if (isVodFile) {
+  if (isIos) {
+    if (attempt === 0) {
+      return {
+        uri: `${STREAM_BRIDGE_BASE}?hls=1&direct=1&url=${encodeURIComponent(cleanUrl)}&ext=.m3u8`,
+        contentType: 'hls',
+        headers: undefined,
+        label: 'iOS Smart HLS',
+      };
+    }
+    if (attempt === 1) {
+      return {
+        uri: cleanUrl,
+        contentType: looksLikeHls ? 'hls' : undefined,
+        headers: undefined,
+        label: 'Direct iOS',
+      };
+    }
+    if (attempt === 2) {
+      return {
+        uri: `${STREAM_BRIDGE_BASE}?hls=1&url=${encodeURIComponent(cleanUrl)}&ext=.m3u8`,
+        contentType: 'hls',
+        headers: undefined,
+        label: 'iOS Proxy HLS',
+      };
+    }
     return {
       uri: cleanUrl,
       contentType: undefined,
-      headers: attempt === 3 ? undefined : headers,
-      label: `VOD (${attempt + 1})`,
+      headers,
+      label: 'Direct UA',
     };
   }
 
@@ -166,7 +239,6 @@ export function resolveStreamAttempt(
     };
   }
   if (attempt === 1) {
-    // Flip contentType hint in case an extensionless URL is actually HLS (or vice-versa)
     return {
       uri: cleanUrl,
       contentType: looksLikeHls ? undefined : 'hls',
@@ -176,10 +248,10 @@ export function resolveStreamAttempt(
   }
   if (attempt === 2) {
     return {
-      uri: cleanUrl,
-      contentType: undefined,
-      headers,
-      label: 'TiviMate UA',
+      uri: `${STREAM_BRIDGE_BASE}?hls=1&direct=1&url=${encodeURIComponent(cleanUrl)}&ext=.m3u8`,
+      contentType: 'hls',
+      headers: undefined,
+      label: 'Smart Bridge',
     };
   }
   return {

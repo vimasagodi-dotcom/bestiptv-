@@ -2679,7 +2679,7 @@
 
       let playUrl = targetUrl;
       if (targetUrl && (targetUrl.startsWith('http://') || !targetUrl.includes('cocas.online'))) {
-        playUrl = '/api/stream?url=' + encodeURIComponent(targetUrl);
+        playUrl = '/api/stream?hls=1&url=' + encodeURIComponent(targetUrl);
       }
 
       if (hlsInstance) {
