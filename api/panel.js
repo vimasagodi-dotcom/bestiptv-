@@ -145,13 +145,16 @@ function ensureDbShape(db) {
   db.adminPassword = db.adminPassword || 'admin';
   db.users = Array.isArray(db.users) ? db.users : [];
   db.chatUsers = Array.isArray(db.chatUsers) ? db.chatUsers : [];
+  // Ensure CocasBot and CocasSystem are internal bots and not stored as regular chat users
+  db.chatUsers = db.chatUsers.filter((u) => u && u.nick && !['cocasbot', 'cocassystem', 'bot'].includes(u.nick.toLowerCase()));
   db.chatMessages = Array.isArray(db.chatMessages) ? db.chatMessages : [
     {
       id: 'welcome-1',
       room: 'geral',
       nick: 'CocasBot',
-      role: 'owner',
-      text: 'Bem-vindo ao Chat da Comunidade Cocas! Lembra-te: é estritamente proibido partilhar listas ou links de terceiros.',
+      role: 'bot',
+      avatar: '🤖',
+      text: 'Bem-vindo ao Chat da Comunidade Cocas! Lembra-te: é estritamente proibido partilhar listas ou credenciais. Escreve !ajuda para veres os comandos.',
       ts: Date.now(),
     },
   ];
@@ -685,8 +688,22 @@ module.exports = async function handler(req, res) {
       // 1. Legal & Anti-Piracy filter: block IPTV playlist / credential leaks & pirate lines (public or private rooms)
       const IPTV_PATTERN = /(?:player_api\.php|get\.php\?|\.m3u8?(?:$|[?&#\s])|username=[^&\s]+&password=[^&\s]+|xtream(?:-codes)?|server_info|user_info|mag\/stb|:\d{2,5}\/(?:live|movie|series)|(?:(?:user|utilizador|usuario|conta)\s*[:=]\s*[^\s]+[\s,]+(?:pass|senha|password|chave)\s*[:=]\s*[^\s]+)|(?:(?:dns|servidor|host|url|link)\s*[:=]\s*http[s]?:\/\/[^\s]+))/i;
       if (IPTV_PATTERN.test(text)) {
+        const botWarning = {
+          id: `${Date.now().toString(36)}botwarn${Math.random().toString(36).slice(2, 6)}`,
+          room,
+          nick: 'CocasBot',
+          role: 'bot',
+          avatar: '🤖',
+          text: `⚠️ [Aviso CocasBot] @${nick}: A tua mensagem foi bloqueada. As regras proíbem estritamente a partilha de listas IPTV, credenciais ou servidores!`,
+          ts: Date.now(),
+        };
+        db.chatMessages.push(botWarning);
+        if (db.chatMessages.length > 150) db.chatMessages = db.chatMessages.slice(-150);
+        await saveDb(db, sha);
+        const messages = db.chatMessages.filter((m) => (m.room || 'geral') === room).slice(-50);
         return res.status(400).json({
           ok: false,
+          messages,
           error: 'Aviso do CocasBot: É expressamente proibido partilhar credenciais de linhas IPTV, listas (.m3u/.m3u8) ou servidores no chat, tanto em salas públicas como em mensagens privadas.',
         });
       }
@@ -694,8 +711,22 @@ module.exports = async function handler(req, res) {
       // 2. Profanity filter: block swear words and offensive slurs in Portuguese (public or private rooms)
       const PROFANITY_PATTERN = /\b(?:caralh[oa]s?|caralhinho|foda-se|fodasse|foda|foder|fode|fod[ao]es|fud[ei]u|puta[s]?|putedo|merda[s]?|cabr[aã]o|cabr[oõ]es|filh[oa]s?\s+d[ae]\s+puta|fdp|cona[s]?|pila[s]?|paneleir[oa]s?|panasca|cagalh[aã]o|piroca[s]?|bosta[s]?|vai\s+po\s+caralho|vai\s+para\s+o\s+caralho)\b/i;
       if (PROFANITY_PATTERN.test(text)) {
+        const botWarning = {
+          id: `${Date.now().toString(36)}botwarn${Math.random().toString(36).slice(2, 6)}`,
+          room,
+          nick: 'CocasBot',
+          role: 'bot',
+          avatar: '🤖',
+          text: `⚠️ [Aviso CocasBot] @${nick}: Mensagem bloqueada. Não é permitido o uso de palavrões ou linguagem ofensiva no chat. Vamos manter o respeito!`,
+          ts: Date.now(),
+        };
+        db.chatMessages.push(botWarning);
+        if (db.chatMessages.length > 150) db.chatMessages = db.chatMessages.slice(-150);
+        await saveDb(db, sha);
+        const messages = db.chatMessages.filter((m) => (m.room || 'geral') === room).slice(-50);
         return res.status(400).json({
           ok: false,
+          messages,
           error: 'Aviso do CocasBot: Não é permitido o uso de palavrões ou linguagem ofensiva no chat (público ou privado). Vamos manter a comunidade limpa e respeitosa!',
         });
       }
@@ -749,21 +780,38 @@ module.exports = async function handler(req, res) {
       };
       db.chatMessages.push(msg);
 
-      // Automated CocasBot reactions and commands (!ajuda, !regras, !app, !suporte, !canais, @CocasBot)
+      // Automated CocasBot reactions, answers, and commands
       const cleanLower = text.trim().toLowerCase();
+      const isPrivateWithBot = String(room || '').toLowerCase().startsWith('priv_') && String(room || '').toLowerCase().includes('cocasbot');
+      const mentionsBot = cleanLower.includes('@cocasbot') || cleanLower.includes('@bot') || cleanLower.startsWith('bot ') || cleanLower === 'bot' || cleanLower.includes('bot?') || cleanLower.includes('cocasbot');
       let botResponse = null;
-      if (cleanLower === '!ajuda' || cleanLower === '!help') {
-        botResponse = '🤖 Comandos CocasBot:\n• !regras — Ver as regras da comunidade\n• !app — Descarregar ou atualizar a app Cocas\n• !suporte — Apoio técnico e suporte oficial\n• !canais — Como ver a lista de canais\nNota: Partilha de linhas IPTV e palavrões são estritamente proibidos em público e privado!';
-      } else if (cleanLower === '!regras') {
-        botResponse = '🤖 Regras Oficiais Cocas:\n1. 🚫 Proibido partilhar linhas, listas IPTV ou credenciais (no chat ou em privado);\n2. 🚫 Proibido palavrões, ofensas ou desrespeito;\n3. 💬 Utilize as mensagens privadas com bom senso;\n4. ✅ Respeite todos os utilizadores da comunidade.';
-      } else if (cleanLower === '!app') {
-        botResponse = '🤖 Aplicação Oficial Cocas TV:\nDescarregue a app para Android / Firestick / Smart TV e telemóveis em https://cocas.online/tv';
-      } else if (cleanLower === '!suporte') {
-        botResponse = '🤖 Suporte Cocas:\nPara assistência com a sua conta ou ativação, visite https://cocas.online/contacto.html ou fale com a administração.';
-      } else if (cleanLower === '!canais') {
-        botResponse = '🤖 Guia de Canais:\nClique no botão "📋 Ver Canais" no reprodutor para aceder à lista completa e alternar de emissão.';
-      } else if (cleanLower.includes('@cocasbot')) {
-        botResponse = `🤖 Olá @${cu.nick}! Estou ativo 24/7 a moderar o chat. Escreva !ajuda para ver os comandos disponíveis.`;
+
+      if (cleanLower === '!ajuda' || cleanLower === '!help' || cleanLower === '!comandos' || (isPrivateWithBot && (cleanLower.includes('ajuda') || cleanLower.includes('help')))) {
+        botResponse = '🤖 Comandos CocasBot:\n• !regras — Ver as regras da comunidade\n• !app — Descarregar ou atualizar a app Cocas\n• !tv — Instalação e modo Smart TV\n• !canais — Como ver a lista de canais\n• !suporte — Apoio técnico oficial\nNota: Partilha de linhas IPTV e palavrões são estritamente proibidos em público e privado!';
+      } else if (cleanLower === '!regras' || (isPrivateWithBot && cleanLower.includes('regras'))) {
+        botResponse = '🤖 Regras Oficiais Cocas:\n1. 🚫 Proibido partilhar linhas, listas IPTV ou credenciais (no chat ou em privado);\n2. 🚫 Proibido palavrões, ofensas ou desrespeito;\n3. 💬 Utilizar as mensagens privadas com bom senso;\n4. ✅ Respeitar todos os utilizadores da comunidade.';
+      } else if (cleanLower === '!app' || cleanLower === '!apk' || (isPrivateWithBot && (cleanLower.includes('app') || cleanLower.includes('apk') || cleanLower.includes('baixar') || cleanLower.includes('download')))) {
+        botResponse = '🤖 Aplicação Oficial Cocas TV:\nDescarrega a app para Android, Firestick e Smart TV em https://cocas.online/tv';
+      } else if (cleanLower === '!tv' || (isPrivateWithBot && (cleanLower.includes('tv') || cleanLower.includes('smart tv') || cleanLower.includes('firestick')))) {
+        botResponse = '🤖 Guia Smart TV Cocas:\nPodes usar a aplicação em Android TV, Firestick ou abrir https://cocas.online diretamente no navegador da tua Smart TV com o modo de 3 colunas adaptativo.';
+      } else if (cleanLower === '!suporte' || (isPrivateWithBot && (cleanLower.includes('suporte') || cleanLower.includes('contacto') || cleanLower.includes('admin')))) {
+        botResponse = '🤖 Suporte Cocas:\nPara assistência com a tua conta ou ativação, visita https://cocas.online/contacto ou contacta a administração do painel.';
+      } else if (cleanLower === '!canais' || (isPrivateWithBot && (cleanLower.includes('canais') || cleanLower.includes('lista') || cleanLower.includes('ver tv')))) {
+        botResponse = '🤖 Guia de Canais:\nClica no botão "Ver Canais" no reprodutor para acederes à grelha completa de canais e emissão em direto.';
+      } else if (isPrivateWithBot && (cleanLower.includes('olá') || cleanLower.includes('ola') || cleanLower.includes('boas') || cleanLower.includes('bom dia') || cleanLower.includes('boa tarde') || cleanLower.includes('boa noite') || cleanLower.includes('oi') || cleanLower.includes('hey'))) {
+        botResponse = `🤖 Olá @${cu.nick}! Sou o CocasBot oficial da comunidade. Em que posso ajudar-te? Escreve !ajuda para veres os comandos ou coloca-me uma dúvida sobre o leitor ou a app!`;
+      } else if (isPrivateWithBot) {
+        botResponse = `🤖 Olá @${cu.nick}! Recebi a tua mensagem. Como assistente oficial, posso ajudar-te com informações sobre a !app, as !regras da comunidade ou o !suporte técnico. Escreve !ajuda para ver os comandos!`;
+      } else if (mentionsBot) {
+        if (cleanLower.includes('olá') || cleanLower.includes('ola') || cleanLower.includes('boas') || cleanLower.includes('bom dia') || cleanLower.includes('boa tarde') || cleanLower.includes('boa noite') || cleanLower.includes('oi')) {
+          botResponse = `🤖 Olá @${cu.nick}! Estou aqui 24/7 a moderar o chat e pronto para ajudar. Escreve !ajuda para veres os comandos!`;
+        } else if (cleanLower.includes('regras')) {
+          botResponse = `🤖 @${cu.nick}: Lembra-te que é proibido partilhar linhas/listas e usar palavrões em público ou privado. Escreve !regras para mais detalhes.`;
+        } else if (cleanLower.includes('app') || cleanLower.includes('tv') || cleanLower.includes('apk') || cleanLower.includes('download')) {
+          botResponse = `🤖 @${cu.nick}: Podes descarregar a app oficial para Telemóvel e Smart TV em https://cocas.online/tv`;
+        } else {
+          botResponse = `🤖 Olá @${cu.nick}! Estou ativo a vigiar o chat e a manter a sala segura. Podes escrever !ajuda para ver os comandos ou mandar-me mensagem em privado!`;
+        }
       }
 
       if (botResponse) {
@@ -1412,11 +1460,16 @@ module.exports = async function handler(req, res) {
         };
       });
 
+      // Filtrar chatUsers: apenas utilizadores com cargo (owner, admin, mod, member), nunca visitantes nem bots, máx. 10
+      const rankedChatUsers = (db.chatUsers || [])
+        .filter((u) => u && u.nick && u.role && u.role !== 'guest' && !['cocasbot', 'cocassystem', 'bot'].includes(u.nick.toLowerCase()))
+        .slice(0, 10);
+
       return res.status(200).json({
         ok: true,
         users: enriched,
         plans: PLANS,
-        chatUsers: db.chatUsers,
+        chatUsers: rankedChatUsers,
         chatTopic: db.chatTopic,
         adConfig: db.adConfig,
         firebaseInfo: {
@@ -1440,7 +1493,10 @@ module.exports = async function handler(req, res) {
       if (typeof body.muted === 'boolean') cu.muted = body.muted;
       if (body.chatTopic !== undefined) db.chatTopic = String(body.chatTopic);
       await saveDb(db, sha);
-      return res.status(200).json({ ok: true, chatUsers: db.chatUsers, chatTopic: db.chatTopic });
+      const rankedChatUsers = (db.chatUsers || [])
+        .filter((u) => u && u.nick && u.role && u.role !== 'guest' && !['cocasbot', 'cocassystem', 'bot'].includes(u.nick.toLowerCase()))
+        .slice(0, 10);
+      return res.status(200).json({ ok: true, chatUsers: rankedChatUsers, chatTopic: db.chatTopic });
     }
 
     // Admin Save Ad Config

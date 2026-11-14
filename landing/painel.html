@@ -762,12 +762,19 @@
     function renderChatUsers(list) {
       const box = document.getElementById('chatUsersList');
       if (!box) return;
-      if (!list.length) {
-        box.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">Ainda nenhum utilizador entrou no chat.</p>';
+
+      // Filtrar: apenas utilizadores com cargo ativo (owner, admin, mod, member), nunca visitantes normais nem bots, e apenas os primeiros 10
+      const validRoles = ['owner', 'admin', 'mod', 'member'];
+      const filtered = (list || [])
+        .filter(cu => cu && cu.nick && validRoles.includes(cu.role) && !['cocasbot', 'cocassystem', 'bot'].includes(cu.nick.toLowerCase()))
+        .slice(0, 10);
+
+      if (!filtered.length) {
+        box.innerHTML = '<p style="color:var(--text-muted);font-size:13px;padding:8px 0;">Nenhum utilizador com cargo especial registado (máx. 10). Os visitantes normais não aparecem nesta lista.</p>';
         return;
       }
-      const badges = { owner: '👑 Dono', admin: '🛡️ Admin', mod: '⚔️ Mod', member: '⭐ Membro', guest: '👤 Visitante' };
-      box.innerHTML = list.map(cu => `
+      const badges = { owner: '👑 Dono', admin: '🛡️ Admin', mod: '⚔️ Mod', member: '⭐ Membro' };
+      box.innerHTML = filtered.map(cu => `
         <div class="user-card" style="padding:12px;margin-top:8px;">
           <div class="user-top">
             <div class="user-badges">
@@ -779,6 +786,7 @@
             <div style="display:flex;gap:6px;flex-wrap:wrap;">
               <button class="btn btn-secondary" style="padding:6px 10px;font-size:12px;" onclick='quickChatRole(${JSON.stringify(cu.nick)}, "admin")'>🛡️ Dar Admin</button>
               <button class="btn btn-secondary" style="padding:6px 10px;font-size:12px;" onclick='quickChatRole(${JSON.stringify(cu.nick)}, "mod")'>⚔️ Dar Mod</button>
+              <button class="btn btn-secondary" style="padding:6px 10px;font-size:12px;" onclick='quickChatRole(${JSON.stringify(cu.nick)}, "guest")'>👤 Tirar Cargo</button>
               <button class="btn btn-secondary" style="padding:6px 10px;font-size:12px;" onclick='quickChatMute(${JSON.stringify(cu.nick)}, ${!cu.muted})'>${cu.muted ? '🔊 Desilenciar' : '🔇 Mute'}</button>
               <button class="btn btn-danger" style="padding:6px 10px;font-size:12px;" onclick='quickChatBan(${JSON.stringify(cu.nick)}, ${!cu.banned})'>${cu.banned ? 'Desbanir' : '🚫 Banir'}</button>
             </div>
