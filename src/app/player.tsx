@@ -6,7 +6,7 @@ import * as ScreenOrientation from 'expo-screen-orientation';
 import { StatusBar } from 'expo-status-bar';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { filterByCategory } from '../components/ContentBrowser';
@@ -14,7 +14,7 @@ import { useApp } from '../context/AppContext';
 import { useAsync } from '../hooks/useAsync';
 import { sendPlayerHeartbeat } from '../lib/panel';
 import type { EpgEntry, LiveChannel } from '../lib/types';
-import { formatTime } from '../lib/utils';
+import { formatTime, resolveStreamAttempt } from '../lib/utils';
 import { colors } from '../theme';
 
 type Params = { kind: 'live' | 'vod'; id?: string; categoryId?: string; url?: string; title?: string };
@@ -82,14 +82,24 @@ export default function Player() {
 
       retryTimerRef.current = setTimeout(() => {
         if (seq !== loadSeqRef.current) return;
-        const contentType = uri.includes('.m3u8') ? ('hls' as const) : undefined;
+        const resolved = resolveStreamAttempt(
+          uri,
+          retryCountRef.current,
+          provider?.headers,
+          Platform.OS === 'ios',
+        );
         player
-          .replaceAsync({ uri, contentType, headers: provider?.headers, metadata: { title } })
+          .replaceAsync({
+            uri: resolved.uri,
+            contentType: resolved.contentType,
+            headers: resolved.headers,
+            metadata: { title },
+          })
           .then(() => {
             if (seq === loadSeqRef.current) player.play();
           })
           .catch(() => {});
-      }, 150);
+      }, 200);
     },
     [uri, player, provider, title],
   );

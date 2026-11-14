@@ -35,7 +35,7 @@ export class XtreamProvider implements ContentProvider {
     this.pass = (playlist.password ?? '').trim();
     this.liveExt = playlist.liveFormat ?? 'm3u8';
     this.headers = {
-      'User-Agent': playlist.userAgent?.trim() || 'CocasMediaPlayer/1.0',
+      'User-Agent': playlist.userAgent?.trim() || 'IPTVSmartersPlayer',
       Accept: '*/*',
     };
   }
@@ -50,6 +50,11 @@ export class XtreamProvider implements ContentProvider {
     let res: Response;
     try {
       res = await fetch(url, { headers: this.headers });
+      if (!res.ok) {
+        res = await fetch(url, {
+          headers: { 'User-Agent': 'VLC/3.0.20 LibVLC/3.0.20', Accept: '*/*' },
+        });
+      }
     } catch {
       // Retry without custom headers if CORS/network rejects custom headers
       res = await fetch(url);

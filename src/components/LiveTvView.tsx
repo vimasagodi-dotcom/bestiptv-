@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   BackHandler,
   FlatList,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -22,7 +23,7 @@ import { useAsync } from '../hooks/useAsync';
 import { useI18n } from '../i18n';
 import { sendPlayerHeartbeat } from '../lib/panel';
 import type { EpgEntry, LiveChannel } from '../lib/types';
-import { formatTime } from '../lib/utils';
+import { formatTime, resolveStreamAttempt } from '../lib/utils';
 import { colors, radius } from '../theme';
 import { CommunityChatView } from './CommunityChatView';
 import { ALL, FAV } from './ContentBrowser';
@@ -220,19 +221,24 @@ export function LiveTvView({
       setRetrying(attempt > 0);
       try {
         player.pause();
+        player.replace(null);
       } catch {}
 
-      // Wait briefly so single-connection Xtream servers release the previous socket
-      const delay = attempt === 0 ? 140 : 900;
+      // Wait briefly so single-connection Xtream servers release the previous socket cleanly
+      const delay = attempt === 0 ? 220 : 650;
       retryTimerRef.current = setTimeout(() => {
         if (loadSeqRef.current !== seq) return;
-        const uri = ch.url;
-        const contentType = uri.includes('.m3u8') ? ('hls' as const) : undefined;
+        const resolved = resolveStreamAttempt(
+          ch.url,
+          attempt,
+          provider?.headers,
+          Platform.OS === 'ios',
+        );
         player
           .replaceAsync({
-            uri,
-            contentType,
-            headers: provider?.headers,
+            uri: resolved.uri,
+            contentType: resolved.contentType,
+            headers: resolved.headers,
             metadata: { title: ch.name },
           })
           .then(() => {
@@ -241,7 +247,11 @@ export function LiveTvView({
               setRetrying(false);
             }
           })
-          .catch(() => {});
+          .catch(() => {
+            if (loadSeqRef.current === seq && attempt < 3) {
+              loadChannel(ch, attempt + 1);
+            }
+          });
       }, delay);
     },
     [player, provider, activeTab],
@@ -269,17 +279,17 @@ export function LiveTvView({
         } catch {}
       }
     } else if (status === 'error' && activeTab && currentChannel && retryCount < 3) {
-      // Auto-retry up to 3 times if server rejected initial switch
+      // Auto-fallback across HLS (.m3u8), MPEG-TS (.ts), Direct TS & User-Agents
       loadChannel(currentChannel, retryCount + 1);
     }
   }, [status, activeTab, currentChannel, retryCount, player, loadChannel]);
 
-  // Watchdog: if stuck in loading for >8s on first attempt, auto-reconnect once
+  // Watchdog: if stuck in loading for >4.5s, switch to next stream format/UA candidate automatically
   useEffect(() => {
-    if (status !== 'loading' || !activeTab || !currentChannel || retryCount >= 2) return;
+    if (status !== 'loading' || !activeTab || !currentChannel || retryCount >= 3) return;
     const t = setTimeout(() => {
       loadChannel(currentChannel, retryCount + 1);
-    }, 8000);
+    }, 4500);
     return () => clearTimeout(t);
   }, [status, activeTab, currentChannel, retryCount, loadChannel]);
 

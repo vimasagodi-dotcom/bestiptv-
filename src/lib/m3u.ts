@@ -22,20 +22,25 @@ export interface M3UEntry {
 const ATTR_RE = /([\w-]+)="([^"]*)"/g;
 
 export function parseM3U(text: string): M3UEntry[] {
-  const lines = text.split(/\r?\n/);
   const out: M3UEntry[] = [];
   let current: Omit<M3UEntry, 'url'> | null = null;
   let extGrp: string | undefined;
 
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
+  const len = text.length;
+  let pos = 0;
+
+  while (pos < len) {
+    let nextNl = text.indexOf('\n', pos);
+    if (nextNl === -1) nextNl = len;
+    const line = text.slice(pos, nextNl).trim();
+    pos = nextNl + 1;
+
     if (!line) continue;
     if (line.startsWith('#EXTINF')) {
       const attrs: Record<string, string> = {};
       for (const m of line.matchAll(ATTR_RE)) attrs[m[1].toLowerCase()] = m[2];
-      const rest = line.replace(ATTR_RE, '');
-      const idx = rest.indexOf(',');
-      const name = (idx >= 0 ? rest.slice(idx + 1) : '').trim() || attrs['tvg-name'] || 'Sem nome';
+      const commaIdx = line.lastIndexOf(',');
+      const name = (commaIdx >= 0 ? line.slice(commaIdx + 1) : '').trim() || attrs['tvg-name'] || 'Sem nome';
       current = {
         name,
         group: attrs['group-title'] || '',
@@ -46,7 +51,8 @@ export function parseM3U(text: string): M3UEntry[] {
       extGrp = undefined;
     } else if (line.startsWith('#EXTGRP:')) {
       extGrp = line.slice(8).trim();
-    } else if (!line.startsWith('#')) {
+    } else if (line.charCodeAt(0) !== 35) {
+      // Not starting with '#'
       if (current) {
         out.push({ ...current, group: current.group || extGrp || 'Sem categoria', url: line });
       } else {
@@ -91,7 +97,10 @@ export class M3UProvider implements ContentProvider {
 
   constructor(playlist: Playlist) {
     this.url = (playlist.url ?? '').trim();
-    if (playlist.userAgent) this.headers = { 'User-Agent': playlist.userAgent };
+    this.headers = {
+      'User-Agent': playlist.userAgent?.trim() || 'IPTVSmartersPlayer',
+      Accept: '*/*',
+    };
   }
 
   /** Downloads the list and checks it is a valid M3U. */
@@ -111,7 +120,17 @@ export class M3UProvider implements ContentProvider {
   }
 
   private async fetchAndParse(): Promise<Parsed> {
-    const res = await fetch(this.url, { headers: this.headers });
+    let res: Response;
+    try {
+      res = await fetch(this.url, { headers: this.headers });
+      if (!res.ok) {
+        res = await fetch(this.url, {
+          headers: { 'User-Agent': 'VLC/3.0.20 LibVLC/3.0.20', Accept: '*/*' },
+        });
+      }
+    } catch {
+      res = await fetch(this.url);
+    }
     if (!res.ok) throw new Error(`Não foi possível descarregar a lista (HTTP ${res.status})`);
     const text = await res.text();
     if (!text.includes('#EXTINF') && !text.includes('#EXTM3U')) {

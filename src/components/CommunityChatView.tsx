@@ -1027,7 +1027,7 @@ const styles = StyleSheet.create({
   editNickCard: {
     width: '100%',
     maxWidth: 380,
-    backgroundColor: colors.surfaceCard,
+    backgroundColor: colors.surfaceAlt,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
