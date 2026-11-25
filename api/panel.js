@@ -38,7 +38,7 @@ const DEFAULT_AD_CONFIG = {
   bannerSubtext: 'Visite daportas.pt · Qualidade e Design',
   bannerImageUrl: '',
   bannerLinkUrl: '',
-  apkDownloadUrl: 'https://expo.dev/artifacts/eas/SZp1mYng3LMok3awjQyWVvyqq3eCt9Z_zaPK3Fv2fHM.apk',
+  apkDownloadUrl: 'https://expo.dev/artifacts/eas/Ad8w4UszQ003CwxR9hnxn9m5ykhkRY5iAb3Xnnp0fj8.apk',
 };
 
 function getKey() {

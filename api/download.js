@@ -1,7 +1,7 @@
 // Dynamic download endpoint for cocas.online/tv and cocas.online/cocas.apk
 // Always redirects to the latest active APK URL configured in the panel / firestore
 
-const FALLBACK_APK_URL = 'https://expo.dev/artifacts/eas/SZp1mYng3LMok3awjQyWVvyqq3eCt9Z_zaPK3Fv2fHM.apk';
+const FALLBACK_APK_URL = 'https://expo.dev/artifacts/eas/Ad8w4UszQ003CwxR9hnxn9m5ykhkRY5iAb3Xnnp0fj8.apk';
 
 module.exports = async function handler(req, res) {
   // Never cache aggressively so changing the APK link takes effect instantly
