@@ -253,7 +253,10 @@ module.exports = async (req, res) => {
             }
             return resolved;
           }
-          return `${originUrl}/api/stream?url=${encodeURIComponent(resolved)}`;
+          if (/\.m3u8($|\?)/i.test(resolved)) {
+            return `${originUrl}/api/stream?hls=1&url=${encodeURIComponent(resolved)}&ext=.m3u8`;
+          }
+          return `${originUrl}/api/stream?url=${encodeURIComponent(resolved)}&ext=.ts`;
         } catch {
           return line;
         }
@@ -286,13 +289,14 @@ module.exports = async (req, res) => {
         '#EXT-X-TARGETDURATION:3',
         `#EXT-X-MEDIA-SEQUENCE:${seq}`,
         '#EXTINF:2.8,',
-        `${segBase}&seq=${seq}`,
+        `${segBase}&seq=${seq}&ext=.ts`,
         '#EXTINF:2.8,',
-        `${segBase}&seq=${seq + 1}`,
+        `${segBase}&seq=${seq + 1}&ext=.ts`,
         '#EXTINF:2.8,',
-        `${segBase}&seq=${seq + 2}`,
+        `${segBase}&seq=${seq + 2}&ext=.ts`,
       ].join('\n');
 
+      manifestCache.set(cacheKey, { ts: Date.now(), body: syntheticM3u8 });
       res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       return res.status(200).send(syntheticM3u8);
@@ -300,7 +304,13 @@ module.exports = async (req, res) => {
 
     // Otherwise stream binary content (.ts, .mp4, etc.) directly
     res.status(upstreamRes.status);
-    if (contentType) res.setHeader('Content-Type', contentType);
+    if (contentType && contentType !== 'application/octet-stream') {
+      res.setHeader('Content-Type', contentType);
+    } else if (/\.ts($|\?)/i.test(finalUrl) || req.query.ext === '.ts') {
+      res.setHeader('Content-Type', 'video/mp2t');
+    } else if (contentType) {
+      res.setHeader('Content-Type', contentType);
+    }
     const contentLen = upstreamRes.headers.get('content-length');
     if (contentLen) res.setHeader('Content-Length', contentLen);
     res.setHeader('Cache-Control', 'no-cache');

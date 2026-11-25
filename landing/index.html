@@ -1655,7 +1655,7 @@
               </div>
 
               <div class="video-viewport">
-                <video id="videoPlayer" controls playsinline autoplay></video>
+                <video id="videoPlayer" controls playsinline webkit-playsinline x-webkit-airplay="allow" autoplay></video>
                 <div class="video-overlay-msg" id="videoLoadingMsg" style="display:none;">A ligar à emissão...</div>
 
                 <!-- EMPTY STATE QUANDO NÃO HÁ CANAL / LINHA PRÉ-CARREGADA -->
@@ -2661,7 +2661,48 @@
       document.body.removeChild(a);
     };
 
-    // --- VIDEO STREAM PLAYER (HLS + MPEG-TS + HTTPS SERVER PROXY) ---
+    window.openCurrentChannelInVlc = function() {
+      if (!currentPlayingChannel) return;
+      const ch = currentPlayingChannel;
+      const rawUrl = ch.tsUrl || ch.directUrl || ch.url || '';
+      if (!rawUrl) return;
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile) {
+        window.location.href = 'vlc://' + rawUrl;
+      } else {
+        window.downloadCurrentChannelM3u();
+      }
+    };
+
+    // --- VIDEO STREAM PLAYER (SAFARI iOS HLS + HLS.JS + MPEG-TS + AUTO-FALLBACK) ---
+    let activeStreamSeq = 0;
+    let activeStreamWatchdog = null;
+    let activeVideoCleanup = null;
+
+    function cleanupWebPlayer() {
+      if (activeStreamWatchdog) {
+        clearTimeout(activeStreamWatchdog);
+        activeStreamWatchdog = null;
+      }
+      if (activeVideoCleanup) {
+        activeVideoCleanup();
+        activeVideoCleanup = null;
+      }
+      if (hlsInstance) {
+        try { hlsInstance.destroy(); } catch {}
+        hlsInstance = null;
+      }
+      if (mpegtsInstance) {
+        try { mpegtsInstance.destroy(); } catch {}
+        mpegtsInstance = null;
+      }
+      try {
+        videoPlayer.pause();
+        videoPlayer.removeAttribute('src');
+        videoPlayer.load();
+      } catch {}
+    }
+
     function playStream(chOrUrl, channelName) {
       let targetUrl = '';
       let chName = channelName;
@@ -2673,122 +2714,265 @@
         targetUrl = chOrUrl;
       }
 
+      const seq = ++activeStreamSeq;
+      cleanupWebPlayer();
+
       currentChannelName.textContent = chName || 'Emissão em Direto';
       videoLoadingMsg.style.display = 'block';
       videoLoadingMsg.innerHTML = 'A ligar à emissão...';
 
-      let playUrl = targetUrl;
-      if (targetUrl && (targetUrl.startsWith('http://') || !targetUrl.includes('cocas.online'))) {
-        playUrl = '/api/stream?hls=1&url=' + encodeURIComponent(targetUrl);
-      }
+      if (!targetUrl) return;
 
-      if (hlsInstance) {
-        hlsInstance.destroy();
-        hlsInstance = null;
-      }
-      if (mpegtsInstance) {
-        mpegtsInstance.destroy();
-        mpegtsInstance = null;
+      const rawTs = (currentPlayingChannel && currentPlayingChannel.tsUrl)
+        || targetUrl.replace(/\.m3u8(\?|$)/i, '.ts$1');
+      const rawHls = /\.m3u8(\?|$)/i.test(targetUrl)
+        ? targetUrl
+        : targetUrl.replace(/\.ts(\?|$)/i, '.m3u8$1');
+
+      const hlsProxyUrl = '/api/stream?hls=1&url=' + encodeURIComponent(rawHls) + '&ext=.m3u8';
+      const tsAsHlsProxyUrl = '/api/stream?hls=1&url=' + encodeURIComponent(rawTs) + '&ext=.m3u8';
+      const tsDirectProxyUrl = '/api/stream?url=' + encodeURIComponent(rawTs) + '&ext=.ts';
+
+      function showTapToPlay() {
+        if (seq !== activeStreamSeq) return;
+        videoLoadingMsg.style.display = 'block';
+        videoLoadingMsg.innerHTML = `
+          <button type="button" id="btnTapPlayOverlay" class="btn btn-primary btn-sm" style="font-size:13px; padding:9px 16px;">
+            ▶ Tocar para iniciar emissão
+          </button>
+        `;
+        const btn = document.getElementById('btnTapPlayOverlay');
+        if (btn) {
+          btn.onclick = () => {
+            videoPlayer.muted = false;
+            videoPlayer.play().then(() => {
+              videoLoadingMsg.style.display = 'none';
+            }).catch(() => {});
+          };
+        }
       }
 
       function showBrowserPlaybackWarning() {
+        if (seq !== activeStreamSeq) return;
+        cleanupWebPlayer();
+        const isIos = /iPhone|iPad|iPod/i.test(navigator.userAgent);
         videoLoadingMsg.style.display = 'block';
         videoLoadingMsg.innerHTML = `
-          <div style="font-size:13px; font-weight:700; margin-bottom:5px; color:#FCA5A5;">⚠️ Fluxo restrito no navegador</div>
+          <div style="font-size:13px; font-weight:700; margin-bottom:5px; color:#FCA5A5;">⚠️ Canal incompatível com o navegador</div>
           <div style="font-size:11px; color:#CBD5E1; margin-bottom:8px; line-height:1.35;">
-            Os navegadores web não suportam áudio AC3/fluxo bruto MPEG-TS deste canal.
+            ${isIos
+              ? 'O Safari do iPhone não suporta o codec deste canal (ex: H.265/AC3/MPEG-TS bruto). Podes abrir diretamente no VLC.'
+              : 'Os navegadores web não suportam o codec/áudio AC3 ou MPEG-TS bruto deste canal.'}
           </div>
           <div style="display:flex; gap:6px; justify-content:center; flex-wrap:wrap;">
-            <button type="button" class="btn btn-primary btn-sm" onclick="window.downloadCurrentChannelM3u()" style="font-size:11px; padding:5px 9px;">
-              ⚡ Abrir no VLC / PC
+            <button type="button" class="btn btn-primary btn-sm" onclick="window.openCurrentChannelInVlc()" style="font-size:11px; padding:6px 10px;">
+              ⚡ Abrir no VLC
             </button>
-            <a href="#download" class="btn btn-secondary btn-sm" style="font-size:11px; padding:5px 9px;">
-              📱 Usar App
-            </a>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="playStream(currentPlayingChannel)" style="font-size:11px; padding:6px 10px;">
+              🔄 Tentar novamente
+            </button>
           </div>
         `;
       }
 
-      function startMpegTs() {
-        if (window.mpegts && mpegts.isSupported()) {
-          try {
-            videoLoadingMsg.textContent = 'A ligar via MPEG-TS...';
-            const rawTs = (currentPlayingChannel && currentPlayingChannel.tsUrl) || targetUrl.replace(/\.m3u8(\?|$)/i, '.ts$1');
-            const tsProxyUrl = '/api/stream?url=' + encodeURIComponent(rawTs);
+      const isSafariNativeHls = !window.Hls?.isSupported() && !!videoPlayer.canPlayType('application/vnd.apple.mpegurl');
 
-            mpegtsInstance = mpegts.createPlayer({
-              type: 'mse',
-              isLive: true,
-              url: tsProxyUrl,
-            }, {
-              enableWorker: true,
-              lazyLoadMaxDuration: 2 * 60,
-              seekType: 'range',
-            });
-            mpegtsInstance.attachMediaElement(videoPlayer);
-            mpegtsInstance.load();
-            mpegtsInstance.play().then(() => {
-              videoLoadingMsg.style.display = 'none';
-            }).catch(() => {
-              showBrowserPlaybackWarning();
-            });
-            return true;
-          } catch (e) {
-            return false;
+      // ---- PATH A: iPhone / iPad Safari (Native AVPlayer HLS + Multi-Attempt Fallback) ----
+      if (isSafariNativeHls) {
+        const candidates = [
+          { url: hlsProxyUrl, label: 'A ligar à emissão...' },
+          { url: tsAsHlsProxyUrl, label: 'A tentar formato alternativo (2/3)...' },
+          ...(rawHls.startsWith('https://') ? [{ url: rawHls, label: 'A tentar ligação direta (3/3)...' }] : []),
+        ];
+
+        function trySafariAttempt(idx) {
+          if (seq !== activeStreamSeq) return;
+          if (idx >= candidates.length) {
+            showBrowserPlaybackWarning();
+            return;
           }
+          cleanupWebPlayer();
+          const c = candidates[idx];
+          videoLoadingMsg.style.display = 'block';
+          videoLoadingMsg.textContent = c.label;
+
+          let settled = false;
+          const onReady = () => {
+            if (seq !== activeStreamSeq || settled) return;
+            settled = true;
+            if (activeStreamWatchdog) { clearTimeout(activeStreamWatchdog); activeStreamWatchdog = null; }
+            videoPlayer.play().then(() => {
+              if (seq === activeStreamSeq) videoLoadingMsg.style.display = 'none';
+            }).catch((err) => {
+              if (err && err.name === 'NotAllowedError') {
+                showTapToPlay();
+              } else {
+                trySafariAttempt(idx + 1);
+              }
+            });
+          };
+          const onPlaying = () => {
+            if (seq !== activeStreamSeq) return;
+            settled = true;
+            if (activeStreamWatchdog) { clearTimeout(activeStreamWatchdog); activeStreamWatchdog = null; }
+            videoLoadingMsg.style.display = 'none';
+          };
+          const onError = () => {
+            if (seq !== activeStreamSeq || settled) return;
+            settled = true;
+            if (activeStreamWatchdog) { clearTimeout(activeStreamWatchdog); activeStreamWatchdog = null; }
+            trySafariAttempt(idx + 1);
+          };
+
+          videoPlayer.addEventListener('loadedmetadata', onReady);
+          videoPlayer.addEventListener('canplay', onReady);
+          videoPlayer.addEventListener('playing', onPlaying);
+          videoPlayer.addEventListener('error', onError);
+          activeVideoCleanup = () => {
+            videoPlayer.removeEventListener('loadedmetadata', onReady);
+            videoPlayer.removeEventListener('canplay', onReady);
+            videoPlayer.removeEventListener('playing', onPlaying);
+            videoPlayer.removeEventListener('error', onError);
+          };
+
+          activeStreamWatchdog = setTimeout(() => {
+            if (seq === activeStreamSeq && !settled) {
+              settled = true;
+              trySafariAttempt(idx + 1);
+            }
+          }, 9000);
+
+          videoPlayer.src = c.url;
+          videoPlayer.load();
         }
-        return false;
+
+        trySafariAttempt(0);
+        return;
       }
 
-      const isExplicitTs = targetUrl && (targetUrl.endsWith('.ts') || !targetUrl.includes('.m3u8'));
+      // ---- PATH B: Desktop / Android / Smart TV Browsers (HLS.js -> MPEGTS.js -> TS-HLS Slicer) ----
+      function startMpegTs(onFail) {
+        if (!window.mpegts || !mpegts.isSupported()) return false;
+        try {
+          cleanupWebPlayer();
+          videoLoadingMsg.style.display = 'block';
+          videoLoadingMsg.textContent = 'A ligar via MPEG-TS...';
 
-      if (!isExplicitTs && Hls.isSupported()) {
+          mpegtsInstance = mpegts.createPlayer({
+            type: 'mse',
+            isLive: true,
+            url: tsDirectProxyUrl,
+          }, {
+            enableWorker: true,
+            lazyLoadMaxDuration: 2 * 60,
+            seekType: 'range',
+          });
+
+          let failed = false;
+          mpegtsInstance.on(mpegts.Events.ERROR, () => {
+            if (seq !== activeStreamSeq || failed) return;
+            failed = true;
+            if (onFail) onFail();
+            else showBrowserPlaybackWarning();
+          });
+
+          activeStreamWatchdog = setTimeout(() => {
+            if (seq === activeStreamSeq && !failed && videoPlayer.readyState < 2) {
+              failed = true;
+              if (onFail) onFail();
+              else showBrowserPlaybackWarning();
+            }
+          }, 8500);
+
+          mpegtsInstance.attachMediaElement(videoPlayer);
+          mpegtsInstance.load();
+          mpegtsInstance.play().then(() => {
+            if (seq === activeStreamSeq) {
+              if (activeStreamWatchdog) { clearTimeout(activeStreamWatchdog); activeStreamWatchdog = null; }
+              videoLoadingMsg.style.display = 'none';
+            }
+          }).catch((err) => {
+            if (err && err.name === 'NotAllowedError') {
+              showTapToPlay();
+            } else if (!failed) {
+              failed = true;
+              if (onFail) onFail();
+              else showBrowserPlaybackWarning();
+            }
+          });
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
+      function startHlsJs(sourceUrl, label, onFail) {
+        if (!window.Hls || !Hls.isSupported()) return false;
+        cleanupWebPlayer();
+        videoLoadingMsg.style.display = 'block';
+        videoLoadingMsg.textContent = label;
+
         hlsInstance = new Hls({
           enableWorker: true,
-          lowLatencyMode: true,
-          manifestLoadingTimeOut: 8000,
+          lowLatencyMode: false,
+          manifestLoadingTimeOut: 9000,
           manifestLoadingMaxRetry: 2,
-          levelLoadingTimeOut: 8000,
+          levelLoadingTimeOut: 9000,
           fragLoadingTimeOut: 12000,
+          fragLoadingMaxRetry: 3,
         });
 
-        hlsInstance.loadSource(playUrl);
+        let mediaRecoveries = 0;
+        let failed = false;
+
+        hlsInstance.loadSource(sourceUrl);
         hlsInstance.attachMedia(videoPlayer);
 
         hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+          if (seq !== activeStreamSeq) return;
+          if (activeStreamWatchdog) { clearTimeout(activeStreamWatchdog); activeStreamWatchdog = null; }
           videoLoadingMsg.style.display = 'none';
-          videoPlayer.play().catch(() => {});
+          videoPlayer.play().catch((err) => {
+            if (err && err.name === 'NotAllowedError') showTapToPlay();
+          });
         });
 
         hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+          if (seq !== activeStreamSeq || failed) return;
           if (data.fatal) {
-            // If HLS fails, try MPEG-TS engine
-            if (!startMpegTs()) {
-              showBrowserPlaybackWarning();
+            if (data.type === Hls.ErrorTypes.MEDIA_ERROR && mediaRecoveries < 2) {
+              mediaRecoveries++;
+              hlsInstance.recoverMediaError();
+              return;
             }
+            failed = true;
+            if (onFail) onFail();
+            else showBrowserPlaybackWarning();
           }
         });
-      } else if (isExplicitTs) {
-        if (!startMpegTs()) {
-          videoPlayer.src = playUrl;
-          videoLoadingMsg.style.display = 'none';
-          videoPlayer.play().catch(() => {
-            showBrowserPlaybackWarning();
-          });
+
+        activeStreamWatchdog = setTimeout(() => {
+          if (seq === activeStreamSeq && !failed && videoPlayer.readyState < 2) {
+            failed = true;
+            if (onFail) onFail();
+            else showBrowserPlaybackWarning();
+          }
+        }, 9500);
+        return true;
+      }
+
+      const isExplicitTs = targetUrl && /\.ts(\?|$)/i.test(targetUrl);
+      if (isExplicitTs) {
+        if (!startMpegTs(() => startHlsJs(tsAsHlsProxyUrl, 'A converter fluxo TS → HLS...', showBrowserPlaybackWarning))) {
+          startHlsJs(tsAsHlsProxyUrl, 'A ligar à emissão...', showBrowserPlaybackWarning);
         }
-      } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
-        videoPlayer.src = playUrl;
-        videoPlayer.addEventListener('loadedmetadata', () => {
-          videoLoadingMsg.style.display = 'none';
-          videoPlayer.play().catch(() => {});
-        });
       } else {
-        if (!startMpegTs()) {
-          videoPlayer.src = playUrl;
-          videoLoadingMsg.style.display = 'none';
-          videoPlayer.play().catch(() => {
-            showBrowserPlaybackWarning();
-          });
+        if (!startHlsJs(hlsProxyUrl, 'A ligar à emissão...', () => {
+          if (!startMpegTs(() => startHlsJs(tsAsHlsProxyUrl, 'A tentar modo alternativo...', showBrowserPlaybackWarning))) {
+            startHlsJs(tsAsHlsProxyUrl, 'A tentar modo alternativo...', showBrowserPlaybackWarning);
+          }
+        })) {
+          startMpegTs(showBrowserPlaybackWarning);
         }
       }
     }
