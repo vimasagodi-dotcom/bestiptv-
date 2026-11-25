@@ -1,15 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEvent } from 'expo';
 import { Image } from 'expo-image';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { StatusBar } from 'expo-status-bar';
-import { useVideoPlayer, VideoView } from 'expo-video';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   BackHandler,
   FlatList,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -23,10 +20,11 @@ import { useAsync } from '../hooks/useAsync';
 import { useI18n } from '../i18n';
 import { sendPlayerHeartbeat } from '../lib/panel';
 import type { EpgEntry, LiveChannel } from '../lib/types';
-import { formatTime, resolveStreamAttempt } from '../lib/utils';
+import { formatTime } from '../lib/utils';
 import { colors, radius } from '../theme';
 import { CommunityChatView } from './CommunityChatView';
 import { ALL, FAV } from './ContentBrowser';
+import { IptvPlayer, type IptvPlayerRef, type IptvPlayerState } from './IptvPlayer';
 import { EmptyView, ErrorView, IconButton, Loading, SearchBar } from './ui';
 
 const RECENT = '__recent';
@@ -56,8 +54,6 @@ export function LiveTvView({
   const [fit, setFit] = useState<'contain' | 'cover'>('contain');
   const [overlay, setOverlay] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-  const [retrying, setRetrying] = useState(false);
   const [subView, setSubView] = useState<'channels' | 'chat'>('channels');
 
   // Fullscreen Live Chat Overlay (Read-only on TV/Live match) & Sponsor Banner
@@ -189,109 +185,26 @@ export function LiveTvView({
     return () => sub.remove();
   }, [isFull, drawerOpen, exitFullscreen]);
 
-  // ---- Video Player with connection release & auto-retry ----
-  const player = useVideoPlayer(null, (p) => {
-    p.staysActiveInBackground = false;
-    p.showNowPlayingNotification = true;
+  // ---- Video Player (LibVLC / FFmpeg engine on native builds, expo-video fallback on Web/Expo Go) ----
+  const playerRef = useRef<IptvPlayerRef>(null);
+  const [playerState, setPlayerState] = useState<IptvPlayerState>({
+    status: 'idle',
+    isPlaying: false,
+    retrying: false,
+    attempt: 0,
+    maxAttempts: 3,
+    engine: 'libvlc',
   });
-  const { status, error: playerError } = useEvent(player, 'statusChange', {
-    status: player.status,
-    error: undefined,
-  });
-  const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
+  const isPlaying = playerState.isPlaying;
+  const retryCount = playerState.attempt;
+  const retrying = playerState.retrying;
 
-  const loadSeqRef = useRef(0);
-  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const loadChannel = useCallback(
-    (ch: LiveChannel | null, attempt = 0) => {
-      if (retryTimerRef.current) {
-        clearTimeout(retryTimerRef.current);
-        retryTimerRef.current = null;
-      }
-      const seq = ++loadSeqRef.current;
-      if (!ch || !activeTab) {
-        try {
-          player.pause();
-          player.replace(null);
-        } catch {}
-        return;
-      }
-      setRetryCount(attempt);
-      setRetrying(attempt > 0);
-      try {
-        player.pause();
-        player.replace(null);
-      } catch {}
-
-      // Wait briefly so single-connection Xtream servers release the previous socket cleanly
-      const delay = attempt === 0 ? 220 : 650;
-      retryTimerRef.current = setTimeout(() => {
-        if (loadSeqRef.current !== seq) return;
-        const resolved = resolveStreamAttempt(
-          ch.url,
-          attempt,
-          provider?.headers,
-          Platform.OS === 'ios',
-        );
-        player
-          .replaceAsync({
-            uri: resolved.uri,
-            contentType: resolved.contentType,
-            headers: resolved.headers,
-            metadata: { title: ch.name },
-          })
-          .then(() => {
-            if (loadSeqRef.current === seq) {
-              player.play();
-              setRetrying(false);
-            }
-          })
-          .catch(() => {
-            if (loadSeqRef.current === seq && attempt < 3) {
-              loadChannel(ch, attempt + 1);
-            }
-          });
-      }, delay);
-    },
-    [player, provider, activeTab],
-  );
-
-  // Trigger load when channel or tab changes
   useEffect(() => {
-    loadChannel(currentChannel, 0);
     if (currentChannel && activeTab) {
       addRecentLive(currentChannel.id);
     }
-    return () => {
-      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentChannel?.id, currentChannel?.url, activeTab]);
-
-  // Ensure playback starts as soon as player transitions to readyToPlay
-  useEffect(() => {
-    if (status === 'readyToPlay' && activeTab && currentChannel) {
-      setRetrying(false);
-      if (!player.playing) {
-        try {
-          player.play();
-        } catch {}
-      }
-    } else if (status === 'error' && activeTab && currentChannel && retryCount < 3) {
-      // Auto-fallback across HLS (.m3u8), MPEG-TS (.ts), Direct TS & User-Agents
-      loadChannel(currentChannel, retryCount + 1);
-    }
-  }, [status, activeTab, currentChannel, retryCount, player, loadChannel]);
-
-  // Watchdog: if stuck in loading for >4.5s, switch to next stream format/UA candidate automatically
-  useEffect(() => {
-    if (status !== 'loading' || !activeTab || !currentChannel || retryCount >= 3) return;
-    const t = setTimeout(() => {
-      loadChannel(currentChannel, retryCount + 1);
-    }, 4500);
-    return () => clearTimeout(t);
-  }, [status, activeTab, currentChannel, retryCount, loadChannel]);
+  }, [currentChannel?.id, activeTab]);
 
   // ---- Report online status & currently watched channel to Admin Panel ----
   useEffect(() => {
@@ -341,14 +254,8 @@ export function LiveTvView({
   }, []);
 
   const toggleMute = useCallback(() => {
-    setMuted((prev) => {
-      const next = !prev;
-      try {
-        player.muted = next;
-      } catch {}
-      return next;
-    });
-  }, [player]);
+    setMuted((prev) => !prev);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -383,8 +290,8 @@ export function LiveTvView({
   if (!data?.items.length) return <EmptyView icon="tv-outline" message="Adiciona a tua própria linha para começar" />;
 
   const isFav = currentChannel ? isFavorite('live', currentChannel.id) : false;
-  const showSpinner = status === 'loading' || status === 'idle' || retrying;
-  const showError = status === 'error' && !retrying && retryCount >= 3;
+  const showSpinner = playerState.status === 'loading' || (playerState.status === 'idle' && !!currentChannel && activeTab) || retrying;
+  const showError = playerState.status === 'error' && !retrying;
 
   // ---- Shared Clean Player Controls Overlay (Anexo 1: 100% clean when idle, Anexo 2: controls on tap) ----
   const renderCleanOverlay = (inFullscreen: boolean) => (
@@ -566,7 +473,7 @@ export function LiveTvView({
               </Pressable>
               <Pressable
                 onPress={() => {
-                  loadChannel(currentChannel, 1);
+                  playerRef.current?.reload(0);
                   setSettingsOpen(false);
                   bumpOverlay();
                 }}
@@ -617,8 +524,8 @@ export function LiveTvView({
             <Pressable
               hitSlop={18}
               onPress={() => {
-                if (isPlaying) player.pause();
-                else player.play();
+                if (isPlaying) playerRef.current?.pause();
+                else playerRef.current?.play();
                 bumpOverlay();
               }}
             >
@@ -668,12 +575,17 @@ export function LiveTvView({
   // ---- Docked Player Surface (Portrait / Wide Tablet) ----
   const playerBox = (
     <View style={isWide ? styles.widePlayerWrap : styles.dockedPlayerWrap}>
-      <VideoView
-        player={player}
-        style={StyleSheet.absoluteFill}
+      <IptvPlayer
+        ref={playerRef}
+        uri={currentChannel?.url}
+        title={currentChannel?.name}
+        headers={provider?.headers}
+        isLive
+        active={activeTab && !isFull}
         contentFit={fit}
-        nativeControls={false}
+        muted={muted}
         allowsPictureInPicture
+        onStatusChange={setPlayerState}
       />
 
       {showSpinner && (
@@ -687,12 +599,12 @@ export function LiveTvView({
         <View style={styles.playerCenter}>
           <Ionicons name="warning-outline" size={36} color={colors.danger} />
           <Text style={styles.errorTitle}>Canal temporariamente indisponível</Text>
-          {playerError?.message ? (
+          {playerState.errorMessage ? (
             <Text style={styles.errorSub} numberOfLines={2}>
-              {playerError.message}
+              {playerState.errorMessage}
             </Text>
           ) : null}
-          <Pressable onPress={() => loadChannel(currentChannel, 1)} style={styles.retryBtn}>
+          <Pressable onPress={() => playerRef.current?.reload(0)} style={styles.retryBtn}>
             <Ionicons name="refresh" size={16} color="#fff" />
             <Text style={styles.retryBtnText}>Reconectar</Text>
           </Pressable>
@@ -777,12 +689,17 @@ export function LiveTvView({
 
             {/* Video View Surface */}
             <View style={styles.fsVideoSurface}>
-              <VideoView
-                player={player}
-                style={StyleSheet.absoluteFill}
+              <IptvPlayer
+                ref={playerRef}
+                uri={currentChannel?.url}
+                title={currentChannel?.name}
+                headers={provider?.headers}
+                isLive
+                active={activeTab && isFull}
                 contentFit={fit}
-                nativeControls={false}
+                muted={muted}
                 allowsPictureInPicture
+                onStatusChange={setPlayerState}
               />
 
               {showSpinner && (
@@ -796,12 +713,12 @@ export function LiveTvView({
                 <View style={styles.playerCenter}>
                   <Ionicons name="warning-outline" size={36} color={colors.danger} />
                   <Text style={styles.errorTitle}>Canal temporariamente indisponível</Text>
-                  {playerError?.message ? (
+                  {playerState.errorMessage ? (
                     <Text style={styles.errorSub} numberOfLines={2}>
-                      {playerError.message}
+                      {playerState.errorMessage}
                     </Text>
                   ) : null}
-                  <Pressable onPress={() => loadChannel(currentChannel, 1)} style={styles.retryBtn}>
+                  <Pressable onPress={() => playerRef.current?.reload(0)} style={styles.retryBtn}>
                     <Ionicons name="refresh" size={16} color="#fff" />
                     <Text style={styles.retryBtnText}>Reconectar</Text>
                   </Pressable>

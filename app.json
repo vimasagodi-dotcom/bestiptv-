@@ -17,7 +17,6 @@
           "NSAllowsArbitraryLoads": true
         },
         "UIBackgroundModes": [
-          "audio",
           "audio"
         ]
       }
@@ -54,7 +53,15 @@
           }
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-libvlc-player",
+        {
+          "localNetworkPermission": "Permitir que a Cocas aceda à rede local para reproduzir streams.",
+          "supportsBackgroundPlayback": true,
+          "supportsPictureInPicture": true
+        }
+      ]
     ],
     "extra": {
       "router": {

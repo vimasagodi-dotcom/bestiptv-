@@ -102,6 +102,77 @@ export interface ResolvedStreamAttempt {
   label: string;
 }
 
+export interface ResolvedVlcAttempt {
+  uri: string;
+  options: string[];
+  label: string;
+}
+
+/**
+ * Builds MYTVOnline-grade LibVLC stream candidates & FFmpeg/VLC options across attempts (0..3).
+ * LibVLC natively decodes raw MPEG-TS (.ts), HLS (.m3u8), MKV, H.265/HEVC, MPEG-2, AC3/E-AC3/MP2/DTS
+ * on both Android and iOS without needing HLS proxy transcoding.
+ */
+export function resolveVlcStreamAttempt(
+  rawUrl: string,
+  attempt: number,
+  baseHeaders?: Record<string, string>,
+  isLive = true,
+): ResolvedVlcAttempt {
+  const cleanUrl = rawUrl.trim();
+  const ua =
+    attempt === 0 && baseHeaders?.['User-Agent']
+      ? baseHeaders['User-Agent']
+      : FALLBACK_USER_AGENTS[attempt % FALLBACK_USER_AGENTS.length];
+
+  const baseOptions = [
+    `--http-user-agent=${ua}`,
+    `--network-caching=${isLive ? 1500 : 2500}`,
+    `--live-caching=${isLive ? 1500 : 2500}`,
+    '--http-reconnect',
+    '--rtsp-tcp',
+    '--clock-jitter=0',
+    '--clock-synchro=0',
+    '--drop-late-frames',
+    '--skip-frames',
+  ];
+
+  // On attempt 2+, disable hardware acceleration fallback in case a specific channel's
+  // H.265/MPEG-2 profile triggers a buggy device hardware decoder (falls back to FFmpeg software decode)
+  if (attempt >= 2) {
+    baseOptions.push('--avcodec-hw=none');
+  }
+
+  const isVodFile = /\.(mp4|mkv|avi|mov|wmv|flv|m4v)($|\?)/i.test(cleanUrl);
+  if (isVodFile || !isLive) {
+    return {
+      uri: cleanUrl,
+      options: baseOptions,
+      label: `LibVLC VOD (${attempt + 1})`,
+    };
+  }
+
+  const m = cleanUrl.match(XTREAM_LIVE_RE);
+  if (m) {
+    const [, origin, user, pass, streamId, , qs = ''] = m;
+    const tsLiveUrl = `${origin}/live/${user}/${pass}/${streamId}.ts${qs}`;
+    const hlsUrl = `${origin}/live/${user}/${pass}/${streamId}.m3u8${qs}`;
+    const tsDirectUrl = `${origin}/${user}/${pass}/${streamId}${qs}`;
+
+    // MYTVOnline order: raw MPEG-TS first (instant zap, lowest latency), then HLS, then direct TS, then SW decode
+    if (attempt === 0) return { uri: tsLiveUrl, options: baseOptions, label: 'LibVLC MPEG-TS (.ts)' };
+    if (attempt === 1) return { uri: hlsUrl, options: baseOptions, label: 'LibVLC HLS (.m3u8)' };
+    if (attempt === 2) return { uri: tsDirectUrl, options: baseOptions, label: 'LibVLC Direct TS' };
+    return { uri: tsLiveUrl, options: baseOptions, label: 'LibVLC SW Decode' };
+  }
+
+  return {
+    uri: cleanUrl,
+    options: baseOptions,
+    label: `LibVLC (${attempt + 1})`,
+  };
+}
+
 const STREAM_BRIDGE_BASE = 'https://www.cocas.online/api/stream';
 
 /**

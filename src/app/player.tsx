@@ -1,23 +1,36 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEvent } from 'expo';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { StatusBar } from 'expo-status-bar';
-import { useVideoPlayer, VideoView } from 'expo-video';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { filterByCategory } from '../components/ContentBrowser';
+import {
+  IptvPlayer,
+  IS_LIBVLC_AVAILABLE,
+  type IptvPlayerRef,
+  type IptvPlayerState,
+} from '../components/IptvPlayer';
 import { useApp } from '../context/AppContext';
 import { useAsync } from '../hooks/useAsync';
 import { sendPlayerHeartbeat } from '../lib/panel';
 import type { EpgEntry, LiveChannel } from '../lib/types';
-import { formatTime, resolveStreamAttempt } from '../lib/utils';
+import { formatTime } from '../lib/utils';
 import { colors } from '../theme';
 
 type Params = { kind: 'live' | 'vod'; id?: string; categoryId?: string; url?: string; title?: string };
+
+function formatDurationMs(ms = 0): string {
+  const totalSec = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
 
 export default function Player() {
   const params = useLocalSearchParams<Params>();
@@ -50,91 +63,17 @@ export default function Player() {
   const uri = isLive ? channel?.url : params.url;
   const title = isLive ? (channel?.name ?? '') : (params.title ?? '');
 
-  // ---- Player with connection-safe release & auto-retry ----
-  const player = useVideoPlayer(null, (p) => {
-    p.staysActiveInBackground = false;
-    p.showNowPlayingNotification = true;
+  // ---- LibVLC (FFmpeg + HW decode) with automatic fallback ----
+  const playerRef = useRef<IptvPlayerRef>(null);
+  const [playerState, setPlayerState] = useState<IptvPlayerState>({
+    status: 'idle',
+    isPlaying: false,
+    retrying: false,
+    attempt: 0,
+    maxAttempts: 3,
+    engine: IS_LIBVLC_AVAILABLE ? 'libvlc' : 'expo-video',
   });
-  const { status, error } = useEvent(player, 'statusChange', { status: player.status, error: undefined });
-  const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
-
-  const loadSeqRef = useRef(0);
-  const retryCountRef = useRef(0);
-  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [retrying, setRetrying] = useState(false);
-
-  const load = useCallback(
-    (isRetry = false) => {
-      if (!uri) return;
-      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
-      if (!isRetry) {
-        retryCountRef.current = 0;
-        setRetrying(false);
-      }
-      const seq = ++loadSeqRef.current;
-
-      try {
-        player.pause();
-        player.replace(null);
-      } catch {
-        // ignore
-      }
-
-      retryTimerRef.current = setTimeout(() => {
-        if (seq !== loadSeqRef.current) return;
-        const resolved = resolveStreamAttempt(
-          uri,
-          retryCountRef.current,
-          provider?.headers,
-          Platform.OS === 'ios',
-        );
-        player
-          .replaceAsync({
-            uri: resolved.uri,
-            contentType: resolved.contentType,
-            headers: resolved.headers,
-            metadata: { title },
-          })
-          .then(() => {
-            if (seq === loadSeqRef.current) player.play();
-          })
-          .catch(() => {});
-      }, 200);
-    },
-    [uri, player, provider, title],
-  );
-
-  useEffect(() => {
-    load(false);
-    return () => {
-      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
-      try {
-        player.pause();
-        player.replace(null);
-      } catch {
-        // ignore
-      }
-    };
-  }, [load, player]);
-
-  useEffect(() => {
-    if (status === 'readyToPlay') {
-      setRetrying(false);
-      retryCountRef.current = 0;
-      if (!player.playing) player.play();
-    } else if (status === 'error' && uri) {
-      if (retryCountRef.current < 3) {
-        retryCountRef.current += 1;
-        setRetrying(true);
-        const seq = loadSeqRef.current;
-        retryTimerRef.current = setTimeout(() => {
-          if (seq === loadSeqRef.current) load(true);
-        }, 900);
-      } else {
-        setRetrying(false);
-      }
-    }
-  }, [status, uri, player, load]);
+  const { status, isPlaying, retrying, attempt, errorMessage, timeMs = 0, durationMs = 0 } = playerState;
 
   useEffect(() => {
     if (!active || !title) return;
@@ -186,29 +125,36 @@ export default function Player() {
   const now = epg[0];
   const next = epg[1];
   const progress = now ? Math.min(1, Math.max(0, (Date.now() - now.start) / (now.end - now.start))) : 0;
+  const vodProgress = durationMs > 0 ? Math.min(1, Math.max(0, timeMs / durationMs)) : 0;
 
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
   const pad = { paddingLeft: Math.max(insets.left, 16), paddingRight: Math.max(insets.right, 16) };
 
   const showSpinner = status === 'loading' || retrying || (status === 'idle' && !!uri);
   const showError = status === 'error' && !retrying;
+  const useCustomVodOverlay = !isLive && IS_LIBVLC_AVAILABLE;
 
   return (
     <View style={styles.container}>
       <StatusBar hidden />
-      <VideoView
-        player={player}
-        style={StyleSheet.absoluteFill}
+      <IptvPlayer
+        ref={playerRef}
+        uri={uri}
+        title={title}
+        headers={provider?.headers}
+        isLive={isLive}
+        active
         contentFit="contain"
-        nativeControls={!isLive}
+        nativeControls={!isLive && !IS_LIBVLC_AVAILABLE}
         allowsPictureInPicture
+        onStatusChange={setPlayerState}
       />
 
       {showSpinner && (
         <View style={styles.center} pointerEvents="none">
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>
-            {retrying ? `A reconectar (${retryCountRef.current}/3)...` : 'A carregar...'}
+            {retrying ? `A reconectar (${attempt}/3)...` : 'A carregar...'}
           </Text>
         </View>
       )}
@@ -216,8 +162,8 @@ export default function Player() {
         <View style={styles.center}>
           <Ionicons name="warning-outline" size={42} color={colors.danger} />
           <Text style={styles.errorText}>Não foi possível reproduzir este conteúdo.</Text>
-          {error?.message ? <Text style={styles.errorDetail}>{error.message}</Text> : null}
-          <Pressable onPress={() => load(false)} style={styles.retry}>
+          {errorMessage ? <Text style={styles.errorDetail}>{errorMessage}</Text> : null}
+          <Pressable onPress={() => playerRef.current?.reload(0)} style={styles.retry}>
             <Text style={{ color: '#fff', fontWeight: '700' }}>Tentar novamente</Text>
           </Pressable>
         </View>
@@ -245,8 +191,8 @@ export default function Player() {
                   icon={isPlaying ? 'pause' : 'play'}
                   size={40}
                   onPress={() => {
-                    if (isPlaying) player.pause();
-                    else player.play();
+                    if (isPlaying) playerRef.current?.pause();
+                    else playerRef.current?.play();
                     bumpOverlay();
                   }}
                 />
@@ -304,6 +250,59 @@ export default function Player() {
                 )}
               />
             </View>
+          )}
+        </>
+      ) : useCustomVodOverlay ? (
+        <>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => (overlay ? setOverlay(false) : bumpOverlay())} />
+
+          {overlay && (
+            <>
+              <View style={[styles.topBar, pad, { paddingTop: insets.top + 10 }]}>
+                <CircleBtn icon="arrow-back" onPress={close} />
+                <Text style={styles.chTitle} numberOfLines={1}>
+                  {title}
+                </Text>
+              </View>
+
+              <View style={styles.centerControls} pointerEvents="box-none">
+                <CircleBtn
+                  icon="play-back"
+                  size={30}
+                  onPress={() => {
+                    playerRef.current?.seek(Math.max(0, timeMs - 10_000));
+                    bumpOverlay();
+                  }}
+                />
+                <CircleBtn
+                  icon={isPlaying ? 'pause' : 'play'}
+                  size={40}
+                  onPress={() => {
+                    if (isPlaying) playerRef.current?.pause();
+                    else playerRef.current?.play();
+                    bumpOverlay();
+                  }}
+                />
+                <CircleBtn
+                  icon="play-forward"
+                  size={30}
+                  onPress={() => {
+                    playerRef.current?.seek(durationMs > 0 ? Math.min(durationMs, timeMs + 10_000) : timeMs + 10_000);
+                    bumpOverlay();
+                  }}
+                />
+              </View>
+
+              <View style={[styles.bottomBar, pad, { paddingBottom: insets.bottom + 12 }]}>
+                <View style={styles.vodTimeRow}>
+                  <Text style={styles.epgNext}>{formatDurationMs(timeMs)}</Text>
+                  <Text style={styles.epgNext}>{formatDurationMs(durationMs)}</Text>
+                </View>
+                <View style={styles.progressBg}>
+                  <View style={[styles.progressFg, { width: `${vodProgress * 100}%` }]} />
+                </View>
+              </View>
+            </>
           )}
         </>
       ) : (
@@ -366,6 +365,7 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: '#000b',
   },
+  vodTimeRow: { flexDirection: 'row', justifyContent: 'space-between' },
   epgNow: { color: '#fff', fontSize: 15, fontWeight: '600' },
   epgNext: { color: '#ddd', fontSize: 13 },
   progressBg: { height: 4, borderRadius: 2, backgroundColor: '#ffffff33', overflow: 'hidden' },
